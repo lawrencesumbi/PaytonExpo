@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { supabase } from '../../lib/supabase';
 
 type Role = 'Personal' | 'Spender' | 'Sponsor';
 
@@ -14,10 +15,35 @@ export default function RoleSelectionScreen() {
     { type: 'Sponsor', description: 'Fund wallets, handle allowances, or oversee allocations.' },
   ];
 
-  const handleFinalize = () => {
-    if (selectedRole) {
-      // Save metadata logic goes here
+  const handleFinalize = async () => {
+    if (!selectedRole) return;
+
+    try {
+      // 1. Get the current authenticated user's ID
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+      if (userError || !user) {
+        Alert.alert("Error", "No active session found. Please log in again.");
+        router.replace('/login');
+        return;
+      }
+
+      // 2. Update the profile row that the trigger automatically created
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ role: selectedRole })
+        .eq('id', user.id);
+
+      if (updateError) {
+        Alert.alert("Error updating role", updateError.message);
+        return;
+      }
+
+      // 3. Now that the DB is updated, send them to check their email
       router.push('/verify-email');
+
+    } catch (error) {
+      Alert.alert("Error", "An unexpected error occurred.");
     }
   };
 
