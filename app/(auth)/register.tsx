@@ -1,16 +1,49 @@
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { supabase } from '../../lib/supabase';
 
 export default function RegisterScreen() {
   const router = useRouter();
+  const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleRegister = () => {
-    // Proceed to Role Selection upon initial registration input validation
-    router.push('/role-selection');
+  const handleRegister = async () => {
+    if (!fullName || !email || !password || !confirmPassword) {
+      Alert.alert("Error", "Please fill out all fields.");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      Alert.alert("Error", "Passwords do not match.");
+      return;
+    }
+
+    setIsLoading(true);
+
+    // Initial sign up with Supabase, passing meta data to the DB trigger
+    const { data, error } = await supabase.auth.signUp({
+      email: email,
+      password: password,
+      options: {
+        data: {
+          full_name: fullName,
+          // Note: Default role is handled by database, but can be updated on the next screen
+        }
+      }
+    });
+
+    setIsLoading(false);
+
+    if (error) {
+      Alert.alert("Signup Failed", error.message);
+    } else {
+      // Advance to select account mode stack features
+      router.push('/role-selection');
+    }
   };
 
   return (
@@ -22,6 +55,14 @@ export default function RegisterScreen() {
         </View>
 
         <View style={styles.form}>
+          <TextInput
+            style={styles.input}
+            placeholder="Full Name"
+            placeholderTextColor="#8A9A93"
+            value={fullName}
+            onChangeText={setFullName}
+            autoCapitalize="words"
+          />
           <TextInput
             style={styles.input}
             placeholder="Email Address"
@@ -48,8 +89,12 @@ export default function RegisterScreen() {
             secureTextEntry
           />
 
-          <TouchableOpacity style={styles.primaryButton} onPress={handleRegister}>
-            <Text style={styles.buttonText}>Continue</Text>
+          <TouchableOpacity 
+            style={[styles.primaryButton, isLoading && styles.disabledButton]} 
+            onPress={handleRegister}
+            disabled={isLoading}
+          >
+            <Text style={styles.buttonText}>{isLoading ? "Creating Account..." : "Continue"}</Text>
           </TouchableOpacity>
         </View>
 
@@ -87,6 +132,9 @@ const styles = StyleSheet.create({
     padding: 16,
     alignItems: 'center',
     marginTop: 8,
+  },
+  disabledButton: {
+    backgroundColor: '#A3B4AB',
   },
   buttonText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' },
   footer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
