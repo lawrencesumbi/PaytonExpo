@@ -71,7 +71,7 @@ export default function SponsorHomeScreen() {
       icon: 'archive',
       color: '#213502',
       bgColor: '#E8EDE5',
-      onPress: () => Alert.alert('Archive', 'Archive feature coming soon'),
+      onPress: () => router.push('/(sponsorTabs)/profile'),
     },
     {
       id: '4',
@@ -215,7 +215,7 @@ export default function SponsorHomeScreen() {
           </View>
         </LinearGradient>
 
-        {/* Quick Actions Grid - Below Balance Card */}
+        {/* Quick Actions Grid */}
         <View style={styles.quickActionsContainer}>
           <FlatList
             data={quickActions}

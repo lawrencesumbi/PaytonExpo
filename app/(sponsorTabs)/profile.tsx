@@ -4,8 +4,18 @@ import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, Image, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Image, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { supabase } from '../../lib/supabase';
+
+type ArchiveItem = {
+  id: string;
+  reference: string;
+  period: string;
+  spender: string;
+  status: 'Inactive' | 'Expired';
+  amount: string;
+  archivedDate: string;
+};
 
 export default function SponsorProfileScreen() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -13,12 +23,44 @@ export default function SponsorProfileScreen() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
   
   // Personal Information State
   const [fullName, setFullName] = useState('Patricia Ann Mae Obaob');
   const [email, setEmail] = useState('patriciaannmaeobaob721@gmail.com');
   const [originalFullName, setOriginalFullName] = useState('Patricia Ann Mae Obaob');
   const [originalEmail, setOriginalEmail] = useState('patriciaannmaeobaob721@gmail.com');
+
+  // Archive Data
+  const [archiveData, setArchiveData] = useState<ArchiveItem[]>([
+    {
+      id: '1',
+      reference: 'March 25-30',
+      period: 'Mar 25—Mar 30, 2026',
+      spender: 'Lawrence Sumbi',
+      status: 'Inactive',
+      amount: '₱500.00',
+      archivedDate: 'Mar 31, 2026',
+    },
+    {
+      id: '2',
+      reference: 'February 1 - 15',
+      period: 'Feb 01—Feb 15, 2026',
+      spender: 'Lawrence Sumbi',
+      status: 'Inactive',
+      amount: '₱400.00',
+      archivedDate: 'Feb 16, 2026',
+    },
+    {
+      id: '3',
+      reference: 'January 10-20',
+      period: 'Jan 10—Jan 20, 2026',
+      spender: 'King James',
+      status: 'Expired',
+      amount: '₱2,000.00',
+      archivedDate: 'Jan 21, 2026',
+    },
+  ]);
 
   const handleLogout = async () => {
     Alert.alert(
@@ -93,7 +135,6 @@ export default function SponsorProfileScreen() {
 
   const handleEditToggle = () => {
     if (isEditing) {
-      // Cancel editing - revert changes
       setFullName(originalFullName);
       setEmail(originalEmail);
     }
@@ -106,16 +147,11 @@ export default function SponsorProfileScreen() {
       return;
     }
 
-    // Update original values
     setOriginalFullName(fullName);
     setOriginalEmail(email);
     setIsEditing(false);
     
-    Alert.alert(
-      'Success', 
-      'Profile changes saved successfully!',
-      [{ text: 'OK' }]
-    );
+    Alert.alert('Success', 'Profile changes saved successfully!');
   };
 
   const handleUpdatePassword = () => {
@@ -127,6 +163,85 @@ export default function SponsorProfileScreen() {
     setCurrentPassword('');
     setNewPassword('');
   };
+
+  const handleRestore = (id: string, reference: string) => {
+    Alert.alert(
+      'Restore Allowance',
+      `Are you sure you want to restore "${reference}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Restore',
+          onPress: () => {
+            setArchiveData(archiveData.filter(item => item.id !== id));
+            Alert.alert('Success', `"${reference}" has been restored.`);
+          }
+        }
+      ]
+    );
+  };
+
+  const handleDeleteArchive = (id: string, reference: string) => {
+    Alert.alert(
+      'Delete Allowance',
+      `Are you sure you want to permanently delete "${reference}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            setArchiveData(archiveData.filter(item => item.id !== id));
+            Alert.alert('Success', `"${reference}" has been deleted.`);
+          }
+        }
+      ]
+    );
+  };
+
+  const renderArchiveItem = ({ item }: { item: ArchiveItem }) => (
+    <View style={styles.archiveCard}>
+      <View style={styles.archiveHeader}>
+        <View style={styles.referenceContainer}>
+          <Text style={styles.referenceText}>{item.reference}</Text>
+          <Text style={styles.periodText}>{item.period}</Text>
+        </View>
+        <View style={[styles.statusBadge, item.status === 'Inactive' ? styles.inactiveBadge : styles.expiredBadge]}>
+          <Text style={styles.statusText}>{item.status}</Text>
+        </View>
+      </View>
+      
+      <View style={styles.archiveBody}>
+        <View style={styles.spenderContainer}>
+          <View style={styles.avatarCircle}>
+            <Text style={styles.avatarText}>{item.spender.charAt(0)}</Text>
+          </View>
+          <Text style={styles.spenderText}>{item.spender}</Text>
+        </View>
+        <Text style={styles.amountText}>{item.amount}</Text>
+      </View>
+      
+      <View style={styles.archiveFooter}>
+        <Text style={styles.archivedDateText}>Archived: {item.archivedDate}</Text>
+        <View style={styles.actionButtons}>
+          <TouchableOpacity 
+            style={[styles.actionButton, styles.restoreButton]} 
+            onPress={() => handleRestore(item.id, item.reference)}
+          >
+            <Ionicons name="refresh-outline" size={16} color="#0CD964" />
+            <Text style={styles.restoreButtonText}>Restore</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.actionButton, styles.deleteButton]} 
+            onPress={() => handleDeleteArchive(item.id, item.reference)}
+          >
+            <Ionicons name="trash-outline" size={16} color="#DC2626" />
+            <Text style={styles.deleteButtonText}>Delete</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -300,6 +415,47 @@ export default function SponsorProfileScreen() {
               <Ionicons name="create-outline" size={18} color="#FFFFFF" />
               <Text style={styles.editButtonText}>Edit Profile</Text>
             </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Archived Allowances Section */}
+        <View style={styles.section}>
+          <TouchableOpacity 
+            style={styles.archiveHeaderToggle}
+            onPress={() => setShowArchived(!showArchived)}
+          >
+            <View style={styles.archiveHeaderLeft}>
+              <Ionicons name="archive" size={22} color="#213502" />
+              <Text style={styles.sectionTitle}>Archived Allowances</Text>
+            </View>
+            <View style={styles.archiveHeaderRight}>
+              <Text style={styles.archiveCount}>{archiveData.length} items</Text>
+              <Ionicons 
+                name={showArchived ? "chevron-up" : "chevron-down"} 
+                size={20} 
+                color="#7DA08E" 
+              />
+            </View>
+          </TouchableOpacity>
+
+          {showArchived && (
+            <View>
+              {archiveData.length === 0 ? (
+                <View style={styles.emptyArchiveContainer}>
+                  <Ionicons name="archive-outline" size={48} color="#D1D5DB" />
+                  <Text style={styles.emptyArchiveText}>No archived allowances</Text>
+                  <Text style={styles.emptyArchiveSubtext}>Archived records will appear here</Text>
+                </View>
+              ) : (
+                <FlatList
+                  data={archiveData}
+                  renderItem={renderArchiveItem}
+                  keyExtractor={(item) => item.id}
+                  scrollEnabled={false}
+                  contentContainerStyle={styles.archiveList}
+                />
+              )}
+            </View>
           )}
         </View>
 
@@ -662,5 +818,164 @@ const styles = StyleSheet.create({
   },
   footerSpacing: {
     height: 20,
+  },
+  // Archive Styles
+  archiveHeaderToggle: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  archiveHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  archiveHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  archiveCount: {
+    fontSize: 13,
+    color: '#7DA08E',
+  },
+  archiveList: {
+    paddingTop: 12,
+  },
+  archiveCard: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  archiveHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 10,
+  },
+  referenceContainer: {
+    flex: 1,
+  },
+  referenceText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#213502',
+  },
+  periodText: {
+    fontSize: 12,
+    color: '#7DA08E',
+    marginTop: 2,
+  },
+  statusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 10,
+  },
+  inactiveBadge: {
+    backgroundColor: '#FEE2E2',
+  },
+  expiredBadge: {
+    backgroundColor: '#FEF3C7',
+  },
+  statusText: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#DC2626',
+  },
+  archiveBody: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+    paddingTop: 10,
+    marginBottom: 10,
+  },
+  spenderContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  avatarCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#7DA08E',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  spenderText: {
+    fontSize: 13,
+    color: '#213502',
+  },
+  amountText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#0CD964',
+  },
+  archiveFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+    paddingTop: 10,
+  },
+  archivedDateText: {
+    fontSize: 11,
+    color: '#7DA08E',
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    gap: 3,
+  },
+  restoreButton: {
+    backgroundColor: '#E8F5E9',
+  },
+  restoreButtonText: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#0CD964',
+  },
+  deleteButton: {
+    backgroundColor: '#FEE2E2',
+  },
+  deleteButtonText: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#DC2626',
+  },
+  emptyArchiveContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+  },
+  emptyArchiveText: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#213502',
+    marginTop: 8,
+  },
+  emptyArchiveSubtext: {
+    fontSize: 13,
+    color: '#7DA08E',
+    marginTop: 2,
   },
 });

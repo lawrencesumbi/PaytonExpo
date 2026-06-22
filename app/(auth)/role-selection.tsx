@@ -21,7 +21,7 @@ export default function RoleSelectionScreen() {
     },
     { 
       type: 'Sponsor', 
-      description: 'Allocate allowances and set budgets for your spenders while monitoring their expense logs in real-time.' 
+      description: 'Allocate allowances for your spenders while monitoring their expense logs in real-time.' 
     },
   ];
 

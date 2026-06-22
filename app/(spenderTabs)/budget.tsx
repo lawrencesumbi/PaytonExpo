@@ -2,7 +2,6 @@ import { Feather } from '@expo/vector-icons';
 import React from 'react';
 import {
   Dimensions,
-  FlatList,
   Platform,
   SafeAreaView,
   ScrollView,
@@ -13,6 +12,7 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import BudgetCard from '../../app/(spenderTabs)/budgetCard';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = SCREEN_WIDTH - 40; 
@@ -115,17 +115,19 @@ export default function BudgetScreen() {
       >
         
         {/* CAROUSEL HORIZONTAL BUDGET CARDS */}
-        <View style={styles.carouselWrapper}>
-          <FlatList
-            data={BUDGET_DATA}
-            renderItem={renderBudgetCard}
-            keyExtractor={(item) => item.id}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            snapToInterval={CARD_WIDTH + 16} // Gi-add ang gap sa snap snapping alignment
-            decelerationRate="fast"
-            contentContainerStyle={styles.carouselContainer}
-          />
+        <View style={{ paddingHorizontal: 20, gap: 16 }}>
+          {BUDGET_DATA.map((item) => (
+            <BudgetCard
+              key={item.id}
+              category={item.category}
+              amount={item.amount}
+              percent={item.percent}
+              color={item.color}
+              indicatorColor={item.indicatorColor}
+              fillColor={item.fillColor}
+              onPressViewAll={() => console.log(`${item.category} clicked`)}
+            />
+          ))}
         </View>
 
         {/* SEARCH BAR */}
