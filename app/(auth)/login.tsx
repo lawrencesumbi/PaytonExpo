@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { supabase } from '../../lib/supabase';
 
 export default function LoginScreen() {
@@ -47,7 +47,8 @@ export default function LoginScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.innerContainer}>
         <View style={styles.headerContainer}>
-          <Text style={styles.title}>Welcome back to Payton</Text>
+          <Image source = {require("@/assets/images/logo-dark.jpg")} style ={styles.logo} />
+          <Text style={styles.title}>Welcome! Back to Payton</Text>
           <Text style={styles.subtitle}>Log in to manage your finances seamlessly</Text>
         </View>
 
@@ -94,11 +95,18 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F7F9F8' },
+  container: { flex: 1, backgroundColor: '#000000' },
   innerContainer: { flex: 1, padding: 24, justifyContent: 'center' },
   headerContainer: { marginBottom: 32 },
-  title: { fontSize: 28, fontWeight: 'bold', color: '#1B3623', marginBottom: 8 },
-  subtitle: { fontSize: 16, color: '#586A61' },
+  title: { 
+    fontSize: 28, 
+    fontWeight: 'bold', 
+    color: '#ffffff', 
+    marginBottom: 8, 
+  },
+  subtitle: { 
+    fontSize: 16, 
+    color: '#559266' },
   form: { width: '100%', marginBottom: 24 },
   input: {
     backgroundColor: '#FFFFFF',
@@ -127,4 +135,11 @@ const styles = StyleSheet.create({
   footer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
   footerText: { color: '#586A61', fontSize: 14 },
   linkText: { color: '#89B443', fontWeight: 'bold', fontSize: 14 },
+  logo:{
+    width: 100,
+    height: 100,
+    justifyContent: "center",
+    alignSelf: "center",
+    marginBottom: 20,
+  }
 });

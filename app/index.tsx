@@ -13,7 +13,7 @@ export default function WelcomeScreen() {
       {/* Top / Center Content */}
       <View style={styles.contentContainer}>
         <Image 
-          source={require('../assets/images/logo-light.png')} 
+          source={require('../assets/images/logo-dark.jpg')} 
           style={styles.logo}
           resizeMode="contain"
         />
@@ -37,7 +37,7 @@ export default function WelcomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F7F9F8',
+    backgroundColor: '#000000',
     justifyContent: 'space-between',
   },
   contentContainer: {
@@ -55,13 +55,13 @@ const styles = StyleSheet.create({
   brandName: {
     fontSize: 36,
     fontWeight: 'bold',
-    color: '#1B3623',
+    color: '#ffffff',
     marginBottom: 12,
     letterSpacing: 0.5,
   },
   tagline: {
     fontSize: 16,
-    color: '#586A61',
+    color: '#ffffff',
     textAlign: 'center',
     lineHeight: 24,
   },

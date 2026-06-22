@@ -10,9 +10,25 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Expo Public Supabase Environment Variables!');
 }
 
+// SSR-safe storage wrapper to prevent Node.js / Expo Router build crashes
+const ssrSafeStorage = {
+  getItem: async (key: string) => {
+    if (typeof window === 'undefined') return null; // Safely returns null during SSR build
+    return AsyncStorage.getItem(key);
+  },
+  setItem: async (key: string, value: string) => {
+    if (typeof window === 'undefined') return;
+    return AsyncStorage.setItem(key, value);
+  },
+  removeItem: async (key: string) => {
+    if (typeof window === 'undefined') return;
+    return AsyncStorage.removeItem(key);
+  },
+};
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    storage: AsyncStorage,
+    storage: ssrSafeStorage, // <-- Swapped standard AsyncStorage for the SSR safe version
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
