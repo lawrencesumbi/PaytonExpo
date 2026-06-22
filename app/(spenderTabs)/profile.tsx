@@ -236,7 +236,9 @@ export default function SpenderProfileScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <View style={{ width: 40 }} />
+        <TouchableOpacity style={styles.navButton} onPress={() => setIsEditing(false)}>
+            <Ionicons name="chevron-back" size={22} color="#58B0A5" />
+          </TouchableOpacity>
         <Text style={styles.headerTitle}>Profile</Text>
         <TouchableOpacity style={styles.navButton} onPress={() => setIsEditing(true)}>
           <Ionicons name="create-outline" size={20} color="#58B0A5" />
@@ -259,15 +261,18 @@ export default function SpenderProfileScreen() {
           </View>
         </View>
 
-        {/* Menu Navigation Items matching image reference structure */}
+        {/* Menu Navigation Items updated with your custom ordered settings items */}
         <View style={styles.menuContainer}>
           {[
             { id: 'personal', label: 'Personal Information', icon: 'person-outline', action: () => setIsEditing(true) },
-            { id: 'payments', label: 'Payment Preferences', icon: 'wallet-outline' },
-            { id: 'cards', label: 'Banks and Cards', icon: 'card-outline' },
-            { id: 'notifications', label: 'Notifications', icon: 'notifications-outline', badge: '2' },
-            { id: 'messages', label: 'Message Center', icon: 'chatbubble-outline' },
-            { id: 'settings', label: 'Settings', icon: 'settings-outline' },
+            { id: 'password', label: 'Change Password', icon: 'lock-closed-outline', action: () => router.push('/profile/change-password' as any) },
+            { id: 'appearance', label: 'Appearance', icon: 'color-palette-outline', action: () => router.push('/profile/appearance' as any) },
+            { id: 'notifications', label: 'Notification', icon: 'notifications-outline', action: () => router.push('/profile/notifications' as any) },
+            { id: 'archive', label: 'Archive', icon: 'archive-outline', action: () => router.push('/profile/archive' as any) },
+            { id: 'export', label: 'Export Data', icon: 'download-outline', action: () => router.push('/profile/export' as any) },
+            { id: 'help', label: 'Help Center', icon: 'help-circle-outline', action: () => router.push('/profile/help' as any) },
+            { id: 'terms', label: 'Terms of Service', icon: 'document-text-outline', action: () => router.push('/profile/terms' as any) },
+            { id: 'about', label: 'About', icon: 'information-circle-outline', action: () => router.push('/profile/about' as any) },
           ].map((item) => (
             <TouchableOpacity key={item.id} style={styles.menuItem} onPress={item.action}>
               <View style={styles.menuItemLeft}>
@@ -275,11 +280,6 @@ export default function SpenderProfileScreen() {
                 <Text style={styles.menuItemLabel}>{item.label}</Text>
               </View>
               <View style={styles.menuItemRight}>
-                {item.badge && (
-                  <View style={styles.badge}>
-                    <Text style={styles.badgeText}>{item.badge}</Text>
-                  </View>
-                )}
                 <Ionicons name="chevron-forward" size={16} color="#A3B4AB" />
               </View>
             </TouchableOpacity>
@@ -308,7 +308,7 @@ const styles = StyleSheet.create({
   scrollContent: { paddingBottom: 40 },
   
   // Custom Top Appbar Navigation Layout
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 12, paddingBottom: 20 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 50 },
   navButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0' },
   headerTitle: { fontSize: 18, fontWeight: '700', color: '#1B3623' },
 
@@ -319,13 +319,11 @@ const styles = StyleSheet.create({
   heroName: { fontSize: 20, fontWeight: '700', color: '#1B3623' },
   heroRole: { fontSize: 13, color: '#586A61', marginTop: 2 },
   
-  menuContainer: { marginTop: 20, borderTopWidth: 1, borderColor: '#E2E8F0' },
+  menuContainer: { borderTopWidth: 1, borderColor: '#E2E8F0' },
   menuItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 18, paddingHorizontal: 24, borderBottomWidth: 1, borderColor: '#E2E8F0', backgroundColor: '#FFFFFF' },
   menuItemLeft: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   menuItemLabel: { fontSize: 15, color: '#1B3623', fontWeight: '500' },
   menuItemRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  badge: { backgroundColor: '#EF4444', minWidth: 18, height: 18, borderRadius: 9, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 4 },
-  badgeText: { color: '#FFFFFF', fontSize: 10, fontWeight: '700' },
 
   // Screen 2: Edit Profile specific UI items
   avatarEditContainer: { alignSelf: 'center', position: 'relative', marginTop: 20 },
@@ -347,6 +345,6 @@ const styles = StyleSheet.create({
   saveChangesBtn: { backgroundColor: '#58B0A5', height: 56, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginTop: 10 },
   saveChangesBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
   
-  logoutBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginHorizontal: 24, marginTop: 32, height: 54, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8F0' },
+  logoutBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginHorizontal: 24, marginTop: 12, height: 54, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8F0' },
   logoutBtnText: { color: '#EF4444', fontSize: 15, fontWeight: '600' }
 });

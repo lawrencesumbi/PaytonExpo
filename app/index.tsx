@@ -10,7 +10,6 @@ export default function WelcomeScreen() {
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
       
-      {/* Top / Center Content */}
       <View style={styles.contentContainer}>
         <Image 
           source={require('../assets/images/logo-light.png')} 
@@ -21,7 +20,6 @@ export default function WelcomeScreen() {
         <Text style={styles.tagline}>Your all-in-one financial companion.</Text>
       </View>
 
-      {/* Bottom Action Area */}
       <View style={styles.footerContainer}>
         <TouchableOpacity 
           style={styles.button} 

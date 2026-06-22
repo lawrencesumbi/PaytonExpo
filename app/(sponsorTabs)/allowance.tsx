@@ -1,5 +1,6 @@
  // app/(sponsorTabs)/allowance.tsx
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -68,20 +69,24 @@ export default function AllowanceScreen() {
             <Text style={styles.headerSubtitle}>Tracking all active allowance.</Text>
           </View>
           <TouchableOpacity style={styles.filterIcon}>
-            <Ionicons name="options-outline" size={24} color="#1F2937" />
+            <Ionicons name="options-outline" size={24} color="#213502" />
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Stats Cards */}
       <View style={styles.statsContainer}>
+        <LinearGradient
+          colors={['#0CD964', '#213502']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[styles.statCard, styles.statCardHighlight]}
+        >
+          <Text style={[styles.statCardLabel, { color: 'rgba(255,255,255,0.8)' }]}>Current Allowance</Text>
+          <Text style={[styles.statCardValue, { color: '#FFFFFF' }]}>₱11,000.00</Text>
+        </LinearGradient>
         <View style={styles.statCard}>
-          <Text style={styles.statCardLabel}>Current Allowance</Text>
-          <Text style={styles.statCardValue}>₱11,000.00</Text>
-        </View>
-        <View style={[styles.statCard, styles.statCardHighlight]}>
-          <Text style={[styles.statCardLabel, { color: 'rgba(255,255,255,0.7)' }]}>Total Spent</Text>
-          <Text style={[styles.statCardValue, { color: '#FFFFFF' }]}>₱1,500.00</Text>
+          <Text style={styles.statCardLabel}>Total Spent</Text>
+          <Text style={styles.statCardValue}>₱1,500.00</Text>
         </View>
       </View>
 
@@ -93,13 +98,12 @@ export default function AllowanceScreen() {
         showsVerticalScrollIndicator={false}
       />
 
-      {/* Floating Action Button - Navigates to Create Allowance */}
       <TouchableOpacity 
         style={styles.fab} 
-        onPress={() => router.push('/create-allowance')}
+        onPress={() => router.push('/(sponsorTabs)/create-allowance')}
         activeOpacity={0.8}
       >
-        <Ionicons name="add" size={28} color="#FFFFFF" />
+        <Ionicons name="add" size={28} color="#213502" />
       </TouchableOpacity>
     </SafeAreaView>
   );
@@ -123,11 +127,11 @@ const styles = StyleSheet.create({
   greeting: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#1F2937',
+    color: '#213502',
   },
   headerSubtitle: {
     fontSize: 14,
-    color: '#6B7280',
+    color: '#7DA08E',
     marginTop: 2,
   },
   filterIcon: {
@@ -161,109 +165,14 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   statCardHighlight: {
-    backgroundColor: '#2D7A5E',
+    backgroundColor: '#0CD964',
   },
   statCardLabel: {
     fontSize: 12,
-    color: '#6B7280',
+    color: '#7DA08E',
     marginBottom: 4,
   },
   statCardValue: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#1F2937',
-  },
-  listContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 100,
-  },
-  allowanceCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  allowanceHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  referenceText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1F2937',
-  },
-  periodText: {
-    fontSize: 13,
-    color: '#6B7280',
-    marginTop: 2,
-  },
-  activeBadge: {
-    backgroundColor: '#D1FAE5',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  activeText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#065F46',
-  },
-  allowanceFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-    paddingTop: 12,
-  },
-  spenderContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  avatarCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#E8F5E9',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#2D7A5E',
-  },
-  spenderText: {
-    fontSize: 14,
-    color: '#1F2937',
-  },
-  amountText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2D7A5E',
-  },
-  fab: {
-    position: 'absolute',
-    bottom: 30,
-    right: 20,
-    backgroundColor: '#2D7A5E',
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-});
+    color

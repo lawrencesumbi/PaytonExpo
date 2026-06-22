@@ -1,4 +1,4 @@
- // app/(sponsorTabs)/_layout.tsx - Only 4 tabs (Home, Allowance, Monitoring, Profile)
+ // app/(sponsorTabs)/_layout.tsx
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import { Platform, StyleSheet, View } from 'react-native';
@@ -7,18 +7,17 @@ export default function SponsorTabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: '#2D7A5E',
-        tabBarInactiveTintColor: '#9CA3AF',
+        tabBarActiveTintColor: '#0CD964',
+        tabBarInactiveTintColor: '#7DA08E',
         tabBarStyle: {
-          backgroundColor: '#FFFFFF',
-          borderTopWidth: 1,
-          borderTopColor: '#E5E7EB',
+          backgroundColor: '#213502',
+          borderTopWidth: 0,
           height: Platform.OS === 'ios' ? 85 : 65,
           paddingBottom: Platform.OS === 'ios' ? 20 : 6,
           paddingTop: 6,
           shadowColor: '#000',
           shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: 0.05,
+          shadowOpacity: 0.1,
           shadowRadius: 4,
           elevation: 4,
         },
@@ -109,6 +108,6 @@ const styles = StyleSheet.create({
     minHeight: 30,
   },
   tabIconActive: {
-    backgroundColor: 'rgba(45, 122, 94, 0.12)',
+    backgroundColor: 'rgba(12, 217, 100, 0.15)',
   },
 });

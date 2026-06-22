@@ -25,7 +25,7 @@ export default function LoginScreen() {
       .from('profiles')
       .select('role')
       .eq('id', authData.user.id)
-      .single();
+      .maybeSingle();
 
     if (profileError || !profile) {
       Alert.alert("Error", "Could not fetch user profile details.");

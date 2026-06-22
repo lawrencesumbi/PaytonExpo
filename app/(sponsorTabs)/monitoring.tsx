@@ -1,5 +1,6 @@
  // app/(sponsorTabs)/monitoring.tsx
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useState } from 'react';
 import { FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -30,10 +31,10 @@ export default function MonitoringScreen() {
 
   const getCategoryColor = (category: string) => {
     switch(category) {
-      case 'Food & Dining': return { bg: '#E8F5E9', icon: '#2D7A5E', name: 'restaurant-outline' };
-      case 'Transportation': return { bg: '#E3F2FD', icon: '#1565C0', name: 'car-outline' };
-      case 'Bills & Utilities': return { bg: '#FFF3E0', icon: '#E65100', name: 'flash-outline' };
-      default: return { bg: '#F3E5F5', icon: '#7B1FA2', name: 'grid-outline' };
+      case 'Food & Dining': return { bg: '#E3F2FD', icon: '#0288D1', name: 'restaurant-outline' };
+      case 'Transportation': return { bg: '#E3F2FD', icon: '#0288D1', name: 'car-outline' };
+      case 'Bills & Utilities': return { bg: '#E3F2FD', icon: '#0288D1', name: 'flash-outline' };
+      default: return { bg: '#E3F2FD', icon: '#0288D1', name: 'grid-outline' };
     }
   };
 
@@ -90,18 +91,28 @@ export default function MonitoringScreen() {
 
         {/* Stats Cards */}
         <View style={styles.statsContainer}>
-          <View style={[styles.statCard, styles.statCardHighlight]}>
-            <Text style={[styles.statLabel, { color: 'rgba(255,255,255,0.7)' }]}>Total Allowance</Text>
+          <LinearGradient
+            colors={['#4FC3F7', '#0288D1']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={[styles.statCard, styles.statCardHighlight]}
+          >
+            <Text style={[styles.statLabel, { color: 'rgba(255,255,255,0.8)' }]}>Total Allowance</Text>
             <Text style={[styles.statValue, { color: '#FFFFFF' }]}>₱1,000.00</Text>
-          </View>
+          </LinearGradient>
           <View style={styles.statCard}>
             <Text style={styles.statLabel}>Total Spent</Text>
             <Text style={[styles.statValue, { color: '#DC2626' }]}>₱854.00</Text>
           </View>
-          <View style={[styles.statCard, styles.statCardHighlight]}>
-            <Text style={[styles.statLabel, { color: 'rgba(255,255,255,0.7)' }]}>Allowance Left</Text>
+          <LinearGradient
+            colors={['#4FC3F7', '#0288D1']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={[styles.statCard, styles.statCardHighlight]}
+          >
+            <Text style={[styles.statLabel, { color: 'rgba(255,255,255,0.8)' }]}>Allowance Left</Text>
             <Text style={[styles.statValue, { color: '#FFFFFF' }]}>₱146.00</Text>
-          </View>
+          </LinearGradient>
         </View>
 
         {/* Transactions */}
@@ -210,7 +221,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   statCardHighlight: {
-    backgroundColor: '#2D7A5E',
+    backgroundColor: '#0288D1',
   },
   statLabel: {
     fontSize: 10,

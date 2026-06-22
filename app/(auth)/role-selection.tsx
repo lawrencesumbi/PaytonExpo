@@ -11,9 +11,18 @@ export default function RoleSelectionScreen() {
   const [isLoading, setIsLoading] = useState(false);
 
   const roles: { type: Role; description: string }[] = [
-    { type: 'Personal', description: 'Manage your individual expenses and standard budgets.' },
-    { type: 'Spender', description: 'Track group shared-costs and request payment structures.' },
-    { type: 'Sponsor', description: 'Fund wallets, handle allowances, or oversee allocations.' },
+    { 
+      type: 'Personal', 
+      description: 'Set your own budget/allowances, log individual expenses, manage calendar reminders, and split bills.' 
+    },
+    { 
+      type: 'Spender', 
+      description: 'Log daily expenses, receive reminders, and split shared costs with your network.' 
+    },
+    { 
+      type: 'Sponsor', 
+      description: 'Allocate allowances and set budgets for your spenders while monitoring their expense logs in real-time.' 
+    },
   ];
 
   const handleFinalize = async () => {

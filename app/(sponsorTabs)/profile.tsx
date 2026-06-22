@@ -1,5 +1,6 @@
- // app/(sponsorTabs)/profile.tsx - Light Theme
+ // app/(sponsorTabs)/profile.tsx
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -38,7 +39,6 @@ export default function SponsorProfileScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <View>
@@ -50,8 +50,13 @@ export default function SponsorProfileScreen() {
           </View>
         </View>
 
-        {/* Profile Card */}
-        <View style={styles.profileCard}>
+        {/* Profile Card - Sky Blue Gradient */}
+        <LinearGradient
+          colors={['#4FC3F7', '#0288D1']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.profileCard}
+        >
           <View style={styles.profileInfo}>
             <View style={styles.profileImageContainer}>
               <View style={styles.profileImagePlaceholder}>
@@ -69,7 +74,7 @@ export default function SponsorProfileScreen() {
               </View>
             </View>
           </View>
-        </View>
+        </LinearGradient>
 
         {/* Profile Completion */}
         <View style={styles.section}>
@@ -211,16 +216,10 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   profileCard: {
-    backgroundColor: '#FFFFFF',
     marginHorizontal: 20,
     padding: 20,
     borderRadius: 20,
     marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
   },
   profileInfo: {
     flexDirection: 'row',
@@ -234,7 +233,7 @@ const styles = StyleSheet.create({
     width: 70,
     height: 70,
     borderRadius: 35,
-    backgroundColor: '#2D7A5E',
+    backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -242,27 +241,27 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 0,
     right: 0,
-    backgroundColor: '#2D7A5E',
+    backgroundColor: '#FFFFFF',
     width: 28,
     height: 28,
     borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#FFFFFF',
+    borderColor: '#0288D1',
   },
   profileName: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1F2937',
+    color: '#FFFFFF',
   },
   profileEmail: {
     fontSize: 13,
-    color: '#6B7280',
+    color: 'rgba(255,255,255,0.8)',
     marginTop: 2,
   },
   roleBadge: {
-    backgroundColor: '#E8F5E9',
+    backgroundColor: 'rgba(255,255,255,0.2)',
     paddingHorizontal: 12,
     paddingVertical: 2,
     borderRadius: 12,
@@ -272,7 +271,7 @@ const styles = StyleSheet.create({
   roleText: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#2D7A5E',
+    color: '#FFFFFF',
     letterSpacing: 0.5,
   },
   section: {
@@ -305,7 +304,7 @@ const styles = StyleSheet.create({
   completionPercentage: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#2D7A5E',
+    color: '#0288D1',
   },
   completionItem: {
     flexDirection: 'row',
@@ -327,7 +326,7 @@ const styles = StyleSheet.create({
   },
   completionFill: {
     height: '100%',
-    backgroundColor: '#2D7A5E',
+    backgroundColor: '#0288D1',
     borderRadius: 3,
   },
   completionPercent: {
@@ -350,7 +349,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   saveButton: {
-    backgroundColor: '#2D7A5E',
+    backgroundColor: '#0288D1',
     paddingVertical: 10,
     borderRadius: 8,
     alignItems: 'center',

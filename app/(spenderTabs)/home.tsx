@@ -41,7 +41,7 @@ export default function HomeScreen() {
         </View>
 
         <LinearGradient
-          colors={['#86EFAC', '#c9e797', '#084858']} 
+          colors={['#79b5c7', '#ccf3d7']} 
           start={{ x: 0.0, y: 0.0 }}
           end={{ x: 1.1, y: 1.0 }}
           style={styles.gradient1}
@@ -147,7 +147,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#F8FAFC", // Off-white clean layout base
+    backgroundColor: "#F8FAFC", 
     paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
   },
   container: {
@@ -194,9 +194,8 @@ const styles = StyleSheet.create({
     tintColor: "black", 
   },
   iconCalendar: {
-    width: 30,
-    height: 30,
-    tintColor: "#334155", 
+    width: 35,
+    height: 35,
   },
   gradient1: {
     flexDirection: "row",
@@ -221,13 +220,13 @@ const styles = StyleSheet.create({
     flexDirection: "column",
   },
   cardLabelLight: {
-    color: "#CCFBF1", 
+    color: "#094b3d", 
     fontSize: 13,
     fontWeight: "600",
     marginBottom: 4,
   },
   allowanceText: {
-    fontSize: 26,
+    fontSize: 32,
     color: "#ffffff",
     fontWeight: "bold",
   },
@@ -391,30 +390,31 @@ const styles = StyleSheet.create({
   },
   dateText: {
     fontSize: 13,
-    color: "#334155",
+    color: "#052450",
     marginBottom: 16,
   },
   progressBarContainer: {
     width: '100%',
-    height: 36,
-    backgroundColor: '#FFFFFF', 
-    borderRadius: 18,
+    height: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.45)', 
+    borderRadius: 16,
     overflow: 'hidden',
     position: 'relative',
     justifyContent: 'center',
+    marginTop: 10,
   },
   progressBarFill: {
     height: '100%',
-    borderRadius: 18,
+    borderRadius: 16,
     position: 'absolute',
     left: 0,
     top: 0,
   },
   progressText: {
     alignSelf: 'center',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: 'bold',
-    color: '#000000',
-    zIndex: 1, 
+    color: '#1E293B', 
+    zIndex: 1,
   },
 });

@@ -1,5 +1,6 @@
- // app/(sponsorTabs)/home.tsx - Removed Archive from quick actions since it's not a tab
+ // app/(sponsorTabs)/home.tsx
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Alert, FlatList, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -13,6 +14,12 @@ type BudgetItem = {
   status: 'Active' | 'Inactive';
 };
 
+type Member = {
+  id: string;
+  name: string;
+  email: string;
+};
+
 const budgetData: BudgetItem[] = [
   { id: '1', name: 'Lawrence Sumbi', amount: '₱500.00', endDate: 'Mar 30, 2026', status: 'Inactive' },
   { id: '2', name: 'King James', amount: '₱10,000.00', endDate: 'Mar 31, 2026', status: 'Active' },
@@ -20,15 +27,17 @@ const budgetData: BudgetItem[] = [
   { id: '4', name: 'Lawrence Sumbi', amount: '₱400.00', endDate: 'Feb 15, 2026', status: 'Inactive' },
 ];
 
+const initialMembers: Member[] = [
+  { id: '1', name: 'King James', email: 'king@gmail.com' },
+  { id: '2', name: 'Lawrence Sumbi', email: 'lawrence@gmail.com' },
+];
+
 export default function SponsorHomeScreen() {
   const [inviteModalVisible, setInviteModalVisible] = useState(false);
   const [email, setEmail] = useState('');
+  const [name, setName] = useState('');
   const [membersModalVisible, setMembersModalVisible] = useState(false);
-
-  const members = [
-    { id: '1', name: 'King James', email: 'king@gmail.com' },
-    { id: '2', name: 'Lawrence Sumbi', email: 'lawrence@gmail.com' },
-  ];
+  const [members, setMembers] = useState<Member[]>(initialMembers);
 
   const renderBudgetItem = ({ item }: { item: BudgetItem }) => (
     <TouchableOpacity 
@@ -51,19 +60,57 @@ export default function SponsorHomeScreen() {
   );
 
   const handleSendInvite = () => {
-    if (email) {
-      Alert.alert('Success', `Invitation sent to ${email}`);
-      setEmail('');
-      setInviteModalVisible(false);
+    if (!email) {
+      Alert.alert('Error', 'Please enter an email address');
+      return;
     }
+
+    const newMember: Member = {
+      id: Date.now().toString(),
+      name: name || email.split('@')[0],
+      email: email,
+    };
+
+    setMembers([...members, newMember]);
+    setEmail('');
+    setName('');
+    setInviteModalVisible(false);
+    
+    Alert.alert('Success', `Invitation sent to ${email}`);
   };
 
-  const handleRemoveMember = (name: string) => {
+  const handleRemoveMember = (id: string, name: string) => {
     Alert.alert('Remove Member', `Are you sure you want to remove ${name}?`, [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Remove', style: 'destructive' },
+      { 
+        text: 'Remove', 
+        style: 'destructive',
+        onPress: () => {
+          setMembers(members.filter(member => member.id !== id));
+        }
+      },
     ]);
   };
+
+  const renderMemberItem = ({ item }: { item: Member }) => (
+    <View style={styles.memberRow}>
+      <View style={styles.memberInfo}>
+        <View style={styles.memberAvatar}>
+          <Text style={styles.memberAvatarText}>{item.name.charAt(0).toUpperCase()}</Text>
+        </View>
+        <View>
+          <Text style={styles.memberNameText}>{item.name}</Text>
+          <Text style={styles.memberEmailText}>{item.email}</Text>
+        </View>
+      </View>
+      <TouchableOpacity 
+        style={styles.memberRemoveButton}
+        onPress={() => handleRemoveMember(item.id, item.name)}
+      >
+        <Text style={styles.memberRemoveText}>Remove</Text>
+      </TouchableOpacity>
+    </View>
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -72,77 +119,101 @@ export default function SponsorHomeScreen() {
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <View>
-              <Text style={styles.greeting}>Hello, Patricia 👋</Text>
-              <Text style={styles.headerSubtitle}>Sponsor Overview</Text>
+              <Text style={styles.greeting}>Hello, Jema 👋</Text>
+              <Text style={styles.headerSubtitle}>Spender Overview</Text>
             </View>
             <View style={styles.headerActions}>
               <TouchableOpacity style={styles.iconButton}>
-                <Ionicons name="notifications-outline" size={22} color="#1F2937" />
+                <Ionicons name="notifications-outline" size={22} color="#213502" />
                 <View style={styles.notificationDot} />
               </TouchableOpacity>
               <TouchableOpacity style={styles.iconButton}>
-                <Ionicons name="search-outline" size={22} color="#1F2937" />
+                <Ionicons name="search-outline" size={22} color="#213502" />
               </TouchableOpacity>
             </View>
           </View>
         </View>
 
-        {/* Balance Card */}
-        <View style={styles.balanceCard}>
-          <Text style={styles.balanceLabel}>Total Capital Allocated</Text>
-          <Text style={styles.balanceAmount}>₱11,900.00</Text>
-          <View style={styles.balanceFooter}>
-            <View style={styles.balanceStat}>
-              <Text style={styles.statLabel}>Current Allowance</Text>
-              <Text style={styles.statValue}>₱11,000.00</Text>
-            </View>
-            <View style={styles.balanceDivider} />
+        {/* Balance Card - Green Gradient */}
+        <LinearGradient
+          colors={['#0CD964', '#213502']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.balanceCard}
+        >
+          <Text style={styles.balanceLabel}>Total Budget</Text>
+          <Text style={styles.balanceAmount}>₱ 6,000.00/₱ 10,000</Text>
+          <Text style={styles.balancePeriod}>September 1 - 30, 2025</Text>
+          
+          <View style={styles.balanceStats}>
             <View style={styles.balanceStat}>
               <Text style={styles.statLabel}>Total Spent</Text>
-              <Text style={styles.statValue}>₱1,500.00</Text>
+              <Text style={styles.statValue}>₱ 200.00</Text>
             </View>
             <View style={styles.balanceDivider} />
             <View style={styles.balanceStat}>
               <Text style={styles.statLabel}>Available</Text>
-              <Text style={styles.statValue}>₱9,500.00</Text>
+              <Text style={styles.statValue}>₱ 11,800.00</Text>
+            </View>
+          </View>
+        </LinearGradient>
+
+        {/* Upcoming Payment - List style */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Upcoming payment</Text>
+
+          <View style={styles.paymentItem}>
+            <View style={styles.paymentLeft}>
+              <Text style={styles.paymentName}>Adobe Premium</Text>
+              <Text style={styles.paymentAmount}>₱ 580.16/month</Text>
+            </View>
+            <View style={styles.paymentBadge}>
+              <Text style={styles.paymentBadgeText}>2 days left</Text>
+            </View>
+          </View>
+
+          <View style={styles.paymentItem}>
+            <View style={styles.paymentLeft}>
+              <Text style={styles.paymentName}>Apple Premium</Text>
+              <Text style={styles.paymentAmount}>₱ 580.16/month</Text>
+            </View>
+            <View style={styles.paymentBadge}>
+              <Text style={styles.paymentBadgeText}>2 days left</Text>
             </View>
           </View>
         </View>
 
-        {/* Quick Actions */}
-        <View style={styles.quickActions}>
-          <TouchableOpacity style={styles.actionButton} onPress={() => setMembersModalVisible(true)}>
-            <View style={[styles.actionIcon, { backgroundColor: '#E8F5E9' }]}>
-              <Ionicons name="people" size={22} color="#2D7A5E" />
+        {/* Recent Activities - List style */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Recent Activities</Text>
+
+          <View style={styles.activityItem}>
+            <View style={styles.activityLeft}>
+              <Text style={styles.activityName}>Apple Inc.</Text>
+              <Text style={styles.activityDate}>21 Sept, 03:02 PM</Text>
             </View>
-            <Text style={styles.actionLabel}>Members</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/(sponsorTabs)/allowance')}>
-            <View style={[styles.actionIcon, { backgroundColor: '#E3F2FD' }]}>
-              <Ionicons name="wallet" size={22} color="#1565C0" />
+            <Text style={styles.activityAmount}>₱ 230.50</Text>
+          </View>
+
+          <View style={styles.activityItem}>
+            <View style={styles.activityLeft}>
+              <Text style={styles.activityName}>Adobe</Text>
+              <Text style={styles.activityDate}>21 Sept, 03:22 PM</Text>
             </View>
-            <Text style={styles.actionLabel}>Allowance</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/archive')}>
-            <View style={[styles.actionIcon, { backgroundColor: '#FFF3E0' }]}>
-              <Ionicons name="archive" size={22} color="#E65100" />
-            </View>
-            <Text style={styles.actionLabel}>Archive</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton} onPress={() => setInviteModalVisible(true)}>
-            <View style={[styles.actionIcon, { backgroundColor: '#F3E5F5' }]}>
-              <Ionicons name="person-add" size={22} color="#7B1FA2" />
-            </View>
-            <Text style={styles.actionLabel}>Invite</Text>
+            <Text style={styles.activityAmount}>₱ 130.50</Text>
+          </View>
+
+          <TouchableOpacity style={styles.seeAllButton}>
+            <Text style={styles.seeAllText}>See all</Text>
           </TouchableOpacity>
         </View>
 
         {/* Budget Distribution */}
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
+          <View style={styles.budgetSectionHeader}>
             <Text style={styles.sectionTitle}>Budget Distribution</Text>
             <TouchableOpacity onPress={() => router.push('/(sponsorTabs)/allowance')}>
-              <Text style={styles.seeAll}>See all →</Text>
+              <Text style={styles.seeAll}>See all</Text>
             </TouchableOpacity>
           </View>
           
@@ -174,9 +245,9 @@ export default function SponsorHomeScreen() {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: '#FFFFFF' }]}>
             <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: '#1F2937' }]}>Manage Members</Text>
+              <Text style={[styles.modalTitle, { color: '#213502' }]}>Manage Members</Text>
               <TouchableOpacity onPress={() => setMembersModalVisible(false)}>
-                <Ionicons name="close" size={24} color="#1F2937" />
+                <Ionicons name="close" size={24} color="#213502" />
               </TouchableOpacity>
             </View>
 
@@ -186,18 +257,18 @@ export default function SponsorHomeScreen() {
               <Text style={[styles.memberHeaderText, styles.memberActionHeader]}>Actions</Text>
             </View>
 
-            {members.map((member) => (
-              <View key={member.id} style={[styles.memberRow, { borderBottomColor: '#E5E7EB' }]}>
-                <Text style={[styles.memberText, styles.memberName, { color: '#1F2937' }]}>{member.name}</Text>
-                <Text style={[styles.memberText, styles.memberEmail, { color: '#6B7280' }]}>{member.email}</Text>
-                <TouchableOpacity 
-                  style={styles.removeButton}
-                  onPress={() => handleRemoveMember(member.name)}
-                >
-                  <Text style={styles.removeButtonText}>Remove</Text>
-                </TouchableOpacity>
-              </View>
-            ))}
+            <FlatList
+              data={members}
+              renderItem={renderMemberItem}
+              keyExtractor={(item) => item.id}
+              scrollEnabled={false}
+              ListEmptyComponent={
+                <View style={styles.emptyMembersContainer}>
+                  <Text style={styles.emptyMembersText}>No members yet</Text>
+                  <Text style={styles.emptyMembersSubtext}>Invite your first team member</Text>
+                </View>
+              }
+            />
 
             <TouchableOpacity 
               style={styles.inviteButton}
@@ -206,7 +277,7 @@ export default function SponsorHomeScreen() {
                 setInviteModalVisible(true);
               }}
             >
-              <Ionicons name="person-add" size={20} color="#FFFFFF" />
+              <Ionicons name="person-add" size={20} color="#213502" />
               <Text style={styles.inviteButtonText}>Invite New Member</Text>
             </TouchableOpacity>
           </View>
@@ -223,19 +294,33 @@ export default function SponsorHomeScreen() {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: '#FFFFFF' }]}>
             <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: '#1F2937' }]}>Invite Member</Text>
+              <Text style={[styles.modalTitle, { color: '#213502' }]}>Invite Member</Text>
               <TouchableOpacity onPress={() => setInviteModalVisible(false)}>
-                <Ionicons name="close" size={24} color="#1F2937" />
+                <Ionicons name="close" size={24} color="#213502" />
               </TouchableOpacity>
             </View>
-            <Text style={[styles.modalSubtitle, { color: '#6B7280' }]}>Enter an email address to send a workspace invitation.</Text>
             
+            <Text style={[styles.modalSubtitle, { color: '#7DA08E' }]}>
+              Enter an email address to send a workspace invitation.
+            </Text>
+
             <View style={styles.inputContainer}>
-              <Text style={[styles.inputLabel, { color: '#6B7280' }]}>Email Address</Text>
+              <Text style={[styles.inputLabel, { color: '#54090C' }]}>Full Name</Text>
               <TextInput
-                style={[styles.input, { backgroundColor: '#F9FAFB', borderColor: '#E5E7EB', color: '#1F2937' }]}
+                style={[styles.input, { backgroundColor: '#F9FAFB', borderColor: '#7DA08E', color: '#213502' }]}
+                placeholder="e.g. John Doe"
+                placeholderTextColor="#7DA08E"
+                value={name}
+                onChangeText={setName}
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={[styles.inputLabel, { color: '#54090C' }]}>Email Address</Text>
+              <TextInput
+                style={[styles.input, { backgroundColor: '#F9FAFB', borderColor: '#7DA08E', color: '#213502' }]}
                 placeholder="e.g. name@company.com"
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor="#7DA08E"
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
@@ -282,12 +367,12 @@ const styles = StyleSheet.create({
   greeting: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#1F2937',
+    color: '#213502',
     marginBottom: 2,
   },
   headerSubtitle: {
     fontSize: 14,
-    color: '#6B7280',
+    color: '#7DA08E',
   },
   headerActions: {
     flexDirection: 'row',
@@ -314,39 +399,38 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#EF4444',
+    backgroundColor: '#F47590',
     borderWidth: 2,
     borderColor: '#FFFFFF',
   },
   balanceCard: {
-    backgroundColor: '#E8F5E9',
     marginHorizontal: 20,
     padding: 20,
     borderRadius: 20,
     marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 4,
   },
   balanceLabel: {
-    color: 'rgba(0,0,0,0.6)',
+    color: 'rgba(255,255,255,0.7)',
     fontSize: 14,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   balanceAmount: {
-    color: '#1F2937',
-    fontSize: 34,
+    color: '#FFFFFF',
+    fontSize: 28,
     fontWeight: '700',
+    marginBottom: 2,
+  },
+  balancePeriod: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 13,
     marginBottom: 16,
   },
-  balanceFooter: {
+  balanceStats: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.08)',
+    borderTopColor: 'rgba(255,255,255,0.2)',
     paddingTop: 16,
   },
   balanceStat: {
@@ -356,59 +440,107 @@ const styles = StyleSheet.create({
   balanceDivider: {
     width: 1,
     height: 30,
-    backgroundColor: 'rgba(0,0,0,0.08)',
+    backgroundColor: 'rgba(255,255,255,0.2)',
   },
   statLabel: {
-    color: 'rgba(0,0,0,0.5)',
+    color: 'rgba(255,255,255,0.6)',
     fontSize: 11,
     marginBottom: 2,
   },
   statValue: {
-    color: '#1F2937',
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
   },
-  quickActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
+  section: {
     paddingHorizontal: 20,
     marginBottom: 20,
   },
-  actionButton: {
-    alignItems: 'center',
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#213502',
+    marginBottom: 12,
   },
-  actionIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  actionLabel: {
-    fontSize: 11,
-    color: '#4B5563',
-    fontWeight: '500',
-  },
-  section: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-  },
-  sectionHeader: {
+  budgetSectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1F2937',
-  },
   seeAll: {
     fontSize: 14,
-    color: '#2D7A5E',
+    color: '#0CD964',
     fontWeight: '500',
+  },
+  seeAllButton: {
+    alignItems: 'flex-end',
+    marginTop: 4,
+  },
+  seeAllText: {
+    fontSize: 14,
+    color: '#0CD964',
+    fontWeight: '500',
+  },
+  // Payment Items - List style without card background
+  paymentItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  paymentLeft: {
+    flex: 1,
+  },
+  paymentName: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#213502',
+  },
+  paymentAmount: {
+    fontSize: 12,
+    color: '#7DA08E',
+    marginTop: 2,
+  },
+  paymentBadge: {
+    backgroundColor: '#F47590',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  paymentBadgeText: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#FFFFFF',
+  },
+  // Activity Items - List style without card background
+  activityItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  activityLeft: {
+    flex: 1,
+  },
+  activityName: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#213502',
+  },
+  activityDate: {
+    fontSize: 12,
+    color: '#7DA08E',
+    marginTop: 2,
+  },
+  activityAmount: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0CD964',
   },
   budgetList: {
     backgroundColor: '#FFFFFF',
@@ -430,7 +562,7 @@ const styles = StyleSheet.create({
   headerText: {
     fontSize: 12,
     fontWeight: '500',
-    color: '#6B7280',
+    color: '#7DA08E',
   },
   budgetNameHeader: {
     flex: 1,
@@ -462,11 +594,11 @@ const styles = StyleSheet.create({
   budgetName: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#1F2937',
+    color: '#213502',
   },
   budgetDate: {
     fontSize: 12,
-    color: '#6B7280',
+    color: '#7DA08E',
     marginTop: 1,
   },
   budgetRight: {
@@ -477,7 +609,7 @@ const styles = StyleSheet.create({
   budgetAmount: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1F2937',
+    color: '#213502',
     minWidth: 70,
     textAlign: 'right',
   },
@@ -489,20 +621,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   activeBadge: {
-    backgroundColor: '#D1FAE5',
+    backgroundColor: '#0CD964',
   },
   inactiveBadge: {
-    backgroundColor: '#FEE2E2',
+    backgroundColor: '#F47590',
   },
   statusText: {
     fontSize: 11,
     fontWeight: '500',
   },
   activeText: {
-    color: '#065F46',
+    color: '#FFFFFF',
   },
   inactiveText: {
-    color: '#991B1B',
+    color: '#FFFFFF',
   },
   modalOverlay: {
     flex: 1,
@@ -525,35 +657,37 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#1F2937',
+    color: '#213502',
   },
   modalSubtitle: {
     fontSize: 14,
-    color: '#6B7280',
+    color: '#7DA08E',
     marginBottom: 20,
   },
   inputContainer: {
-    marginBottom: 20,
+    marginBottom: 16,
   },
   inputLabel: {
     fontSize: 13,
-    color: '#6B7280',
+    fontWeight: '500',
+    color: '#54090C',
     marginBottom: 6,
   },
   input: {
     backgroundColor: '#F9FAFB',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#7DA08E',
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
-    color: '#1F2937',
+    color: '#213502',
   },
   modalActions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
     gap: 12,
+    marginTop: 8,
   },
   modalButton: {
     paddingHorizontal: 20,
@@ -566,15 +700,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#F3F4F6',
   },
   cancelButtonText: {
-    color: '#6B7280',
+    color: '#7DA08E',
     fontSize: 14,
     fontWeight: '500',
   },
   sendButton: {
-    backgroundColor: '#2D7A5E',
+    backgroundColor: '#0CD964',
   },
   sendButtonText: {
-    color: '#FFFFFF',
+    color: '#213502',
     fontSize: 14,
     fontWeight: '500',
   },
@@ -588,7 +722,7 @@ const styles = StyleSheet.create({
   memberHeaderText: {
     fontSize: 12,
     fontWeight: '500',
-    color: '#6B7280',
+    color: '#7DA08E',
   },
   memberNameHeader: {
     flex: 2,
@@ -602,37 +736,54 @@ const styles = StyleSheet.create({
   },
   memberRow: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
   },
-  memberText: {
-    fontSize: 14,
-    color: '#1F2937',
-  },
-  memberName: {
-    flex: 2,
-  },
-  memberEmail: {
-    flex: 2,
-  },
-  removeButton: {
+  memberInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
     flex: 1,
-    backgroundColor: '#FEE2E2',
+  },
+  memberAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#7DA08E',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  memberAvatarText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  memberNameText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#213502',
+  },
+  memberEmailText: {
+    fontSize: 12,
+    color: '#7DA08E',
+  },
+  memberRemoveButton: {
+    backgroundColor: '#F47590',
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 8,
-    alignItems: 'center',
   },
-  removeButtonText: {
-    color: '#DC2626',
+  memberRemoveText: {
+    color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '500',
   },
   inviteButton: {
     flexDirection: 'row',
-    backgroundColor: '#2D7A5E',
+    backgroundColor: '#0CD964',
     padding: 14,
     borderRadius: 10,
     alignItems: 'center',
@@ -641,8 +792,23 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   inviteButtonText: {
-    color: '#FFFFFF',
+    color: '#213502',
     fontSize: 14,
     fontWeight: '500',
+  },
+  emptyMembersContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 30,
+  },
+  emptyMembersText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#213502',
+  },
+  emptyMembersSubtext: {
+    fontSize: 14,
+    color: '#7DA08E',
+    marginTop: 4,
   },
 });
