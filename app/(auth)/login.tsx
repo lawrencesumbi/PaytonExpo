@@ -55,7 +55,7 @@ export default function LoginScreen() {
               Hello!{'\n'}Welcome to <Text style={styles.brandText}>Payton</Text>
             </Text>
             <Text style={styles.subtitle}>
-              Access your account separately by using your email and password.
+              Access your account using your email and password.
             </Text>
           </View>
 

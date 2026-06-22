@@ -1,39 +1,131 @@
  // app/(sponsorTabs)/profile.tsx
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { supabase } from '../../lib/supabase';
 
 export default function SponsorProfileScreen() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [profileImage, setProfileImage] = useState<string | null>(null);
+  
+  // Personal Information State
+  const [fullName, setFullName] = useState('Patricia Ann Mae Obaob');
+  const [email, setEmail] = useState('patriciaannmaeobaob721@gmail.com');
+  const [originalFullName, setOriginalFullName] = useState('Patricia Ann Mae Obaob');
+  const [originalEmail, setOriginalEmail] = useState('patriciaannmaeobaob721@gmail.com');
 
   const handleLogout = async () => {
     Alert.alert(
       "Log Out",
       "Are you sure you want to log out of Payton?",
       [
-        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Cancel", 
+          style: "cancel" 
+        },
         {
           text: "Log Out",
           style: "destructive",
           onPress: async () => {
             setIsLoggingOut(true);
-            const { error } = await supabase.auth.signOut();
-            setIsLoggingOut(false);
-
-            if (error) {
-              Alert.alert("Error", error.message);
-            } else {
-              router.replace('/');
+            try {
+              const { error } = await supabase.auth.signOut();
+              if (error) {
+                Alert.alert("Error", error.message);
+              } else {
+                router.replace('/');
+              }
+            } catch (error) {
+              Alert.alert("Error", "Something went wrong. Please try again.");
+            } finally {
+              setIsLoggingOut(false);
             }
           }
         }
       ]
     );
+  };
+
+  const handleChangePhoto = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Please grant camera roll permissions to change your profile photo.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled) {
+      setProfileImage(result.assets[0].uri);
+      Alert.alert('Success', 'Profile photo updated successfully!');
+    }
+  };
+
+  const handleRemovePhoto = () => {
+    Alert.alert(
+      'Remove Photo',
+      'Are you sure you want to remove your profile photo?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: () => {
+            setProfileImage(null);
+            Alert.alert('Success', 'Profile photo removed successfully!');
+          }
+        }
+      ]
+    );
+  };
+
+  const handleEditToggle = () => {
+    if (isEditing) {
+      // Cancel editing - revert changes
+      setFullName(originalFullName);
+      setEmail(originalEmail);
+    }
+    setIsEditing(!isEditing);
+  };
+
+  const handleSaveChanges = () => {
+    if (!fullName.trim() || !email.trim()) {
+      Alert.alert('Error', 'Please fill in all fields.');
+      return;
+    }
+
+    // Update original values
+    setOriginalFullName(fullName);
+    setOriginalEmail(email);
+    setIsEditing(false);
+    
+    Alert.alert(
+      'Success', 
+      'Profile changes saved successfully!',
+      [{ text: 'OK' }]
+    );
+  };
+
+  const handleUpdatePassword = () => {
+    if (!currentPassword || !newPassword) {
+      Alert.alert('Error', 'Please fill in both password fields.');
+      return;
+    }
+    Alert.alert('Success', 'Password updated successfully!');
+    setCurrentPassword('');
+    setNewPassword('');
   };
 
   return (
@@ -44,8 +136,12 @@ export default function SponsorProfileScreen() {
             <View>
               <Text style={styles.greeting}>Profile</Text>
             </View>
-            <TouchableOpacity style={styles.settingsIcon}>
-              <Ionicons name="settings-outline" size={22} color="#213502" />
+            <TouchableOpacity style={styles.settingsIcon} onPress={handleEditToggle}>
+              <Ionicons 
+                name={isEditing ? "close-outline" : "settings-outline"} 
+                size={22} 
+                color={isEditing ? "#DC2626" : "#213502"} 
+              />
             </TouchableOpacity>
           </View>
         </View>
@@ -59,22 +155,64 @@ export default function SponsorProfileScreen() {
         >
           <View style={styles.profileInfo}>
             <View style={styles.profileImageContainer}>
-              <View style={styles.profileImagePlaceholder}>
-                <Ionicons name="person" size={50} color="#213502" />
-              </View>
-              <TouchableOpacity style={styles.editImageButton}>
+              {profileImage ? (
+                <Image source={{ uri: profileImage }} style={styles.profileImage} />
+              ) : (
+                <View style={styles.profileImagePlaceholder}>
+                  <Ionicons name="person" size={50} color="#213502" />
+                </View>
+              )}
+              <TouchableOpacity style={styles.editImageButton} onPress={handleChangePhoto}>
                 <Ionicons name="camera" size={16} color="#FFFFFF" />
               </TouchableOpacity>
             </View>
             <View>
-              <Text style={styles.profileName}>Patricia Ann Mae Obaob</Text>
-              <Text style={styles.profileEmail}>patriciaannmaeobaob721@gmail.com</Text>
+              {isEditing ? (
+                <TextInput
+                  style={[styles.profileNameInput, { color: '#FFFFFF' }]}
+                  value={fullName}
+                  onChangeText={setFullName}
+                  placeholder="Full Name"
+                  placeholderTextColor="rgba(255,255,255,0.6)"
+                />
+              ) : (
+                <Text style={styles.profileName}>{fullName}</Text>
+              )}
+              {isEditing ? (
+                <TextInput
+                  style={[styles.profileEmailInput, { color: 'rgba(255,255,255,0.8)' }]}
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholder="Email Address"
+                  placeholderTextColor="rgba(255,255,255,0.5)"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+              ) : (
+                <Text style={styles.profileEmail}>{email}</Text>
+              )}
               <View style={styles.roleBadge}>
                 <Text style={styles.roleText}>SPONSOR</Text>
               </View>
             </View>
           </View>
         </LinearGradient>
+
+        {/* Photo Actions */}
+        <View style={styles.photoActions}>
+          <TouchableOpacity style={[styles.photoButton, styles.changePhotoButton]} onPress={handleChangePhoto}>
+            <Ionicons name="camera-outline" size={18} color="#213502" />
+            <Text style={styles.photoButtonText}>Change Photo</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.photoButton, styles.savePhotoButton]} onPress={handleSaveChanges}>
+            <Ionicons name="save-outline" size={18} color="#FFFFFF" />
+            <Text style={[styles.photoButtonText, { color: '#FFFFFF' }]}>Save</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.photoButton, styles.removePhotoButton]} onPress={handleRemovePhoto}>
+            <Ionicons name="trash-outline" size={18} color="#DC2626" />
+            <Text style={[styles.photoButtonText, { color: '#DC2626' }]}>Remove</Text>
+          </TouchableOpacity>
+        </View>
 
         {/* Profile Completion */}
         <View style={styles.section}>
@@ -116,18 +254,53 @@ export default function SponsorProfileScreen() {
 
         {/* Personal Information */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Personal Information</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Personal Information</Text>
+            {isEditing && (
+              <TouchableOpacity onPress={handleSaveChanges}>
+                <Text style={styles.saveText}>Save</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Full Name</Text>
-            <Text style={styles.infoValue}>Patricia Ann Mae Obaob</Text>
+            {isEditing ? (
+              <TextInput
+                style={styles.infoInput}
+                value={fullName}
+                onChangeText={setFullName}
+                placeholder="Enter your full name"
+                placeholderTextColor="#9CA3AF"
+              />
+            ) : (
+              <Text style={styles.infoValue}>{fullName}</Text>
+            )}
           </View>
+          
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Email Address</Text>
-            <Text style={styles.infoValue}>patriciaannmaeobaob721@gmail.com</Text>
+            {isEditing ? (
+              <TextInput
+                style={styles.infoInput}
+                value={email}
+                onChangeText={setEmail}
+                placeholder="Enter your email"
+                placeholderTextColor="#9CA3AF"
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+            ) : (
+              <Text style={styles.infoValue}>{email}</Text>
+            )}
           </View>
-          <TouchableOpacity style={styles.saveButton}>
-            <Text style={styles.saveButtonText}>Save Changes</Text>
-          </TouchableOpacity>
+
+          {!isEditing && (
+            <TouchableOpacity style={styles.editButton} onPress={handleEditToggle}>
+              <Ionicons name="create-outline" size={18} color="#FFFFFF" />
+              <Text style={styles.editButtonText}>Edit Profile</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Security */}
@@ -155,7 +328,7 @@ export default function SponsorProfileScreen() {
               onChangeText={setNewPassword}
             />
           </View>
-          <TouchableOpacity style={[styles.saveButton, styles.updatePasswordButton]}>
+          <TouchableOpacity style={[styles.saveButton, styles.updatePasswordButton]} onPress={handleUpdatePassword}>
             <Text style={styles.saveButtonText}>Update Password</Text>
           </TouchableOpacity>
         </View>
@@ -165,9 +338,10 @@ export default function SponsorProfileScreen() {
           style={[styles.logoutButton, isLoggingOut && styles.disabledButton]} 
           onPress={handleLogout}
           disabled={isLoggingOut}
+          activeOpacity={0.7}
         >
           {isLoggingOut ? (
-            <ActivityIndicator color="#FFFFFF" />
+            <ActivityIndicator color="#FFFFFF" size="small" />
           ) : (
             <View style={styles.logoutContent}>
               <Ionicons name="log-out-outline" size={20} color="#FFFFFF" />
@@ -219,7 +393,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     padding: 20,
     borderRadius: 20,
-    marginBottom: 20,
+    marginBottom: 16,
   },
   profileInfo: {
     flexDirection: 'row',
@@ -228,6 +402,11 @@ const styles = StyleSheet.create({
   },
   profileImageContainer: {
     position: 'relative',
+  },
+  profileImage: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
   },
   profileImagePlaceholder: {
     width: 70,
@@ -255,10 +434,26 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#FFFFFF',
   },
+  profileNameInput: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.3)',
+    paddingBottom: 2,
+  },
   profileEmail: {
     fontSize: 13,
     color: 'rgba(255,255,255,0.8)',
     marginTop: 2,
+  },
+  profileEmailInput: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: 2,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.3)',
+    paddingBottom: 2,
   },
   roleBadge: {
     backgroundColor: 'rgba(255,255,255,0.2)',
@@ -274,6 +469,35 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     letterSpacing: 0.5,
   },
+  photoActions: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginHorizontal: 20,
+    gap: 8,
+    marginBottom: 16,
+  },
+  photoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 6,
+  },
+  changePhotoButton: {
+    backgroundColor: '#F3F4F6',
+  },
+  savePhotoButton: {
+    backgroundColor: '#0CD964',
+  },
+  removePhotoButton: {
+    backgroundColor: '#FEE2E2',
+  },
+  photoButtonText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#213502',
+  },
   section: {
     backgroundColor: '#FFFFFF',
     marginHorizontal: 20,
@@ -286,11 +510,21 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: '#213502',
-    marginBottom: 16,
+  },
+  saveText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0CD964',
   },
   completionCard: {
     backgroundColor: '#F9FAFB',
@@ -346,6 +580,30 @@ const styles = StyleSheet.create({
   infoValue: {
     fontSize: 15,
     color: '#213502',
+    fontWeight: '500',
+  },
+  infoInput: {
+    fontSize: 15,
+    color: '#213502',
+    fontWeight: '500',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+    paddingVertical: 4,
+  },
+  editButton: {
+    flexDirection: 'row',
+    backgroundColor: '#0CD964',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 4,
+  },
+  editButtonText: {
+    color: '#213502',
+    fontSize: 14,
     fontWeight: '500',
   },
   saveButton: {

@@ -1,6 +1,8 @@
 import { Feather } from '@expo/vector-icons';
 import React from 'react';
 import {
+  Dimensions,
+  FlatList,
   Platform,
   SafeAreaView,
   ScrollView,
@@ -12,50 +14,121 @@ import {
   View
 } from 'react-native';
 
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const CARD_WIDTH = SCREEN_WIDTH - 40; 
+
+type BudgetItem = {
+  id: string;
+  category: string;
+  amount: string;
+  percent: number;
+  percentValue: number;
+  color: string;
+  indicatorColor: string;
+  fillColor: string;
+};
+
+const BUDGET_DATA: BudgetItem[] = [
+  {
+    id: '1',
+    category: 'Food & Dining',
+    amount: '$ 4,000.00',
+    percent: 37,
+    percentValue: 0.37,
+    color: '#1E538C', // Dark Blue
+    indicatorColor: '#4299E1',
+    fillColor: '#63B3ED'
+  },
+  {
+    id: '2',
+    category: 'Transportation',
+    amount: '$ 1,500.00',
+    percent: 55,
+    percentValue: 0.55,
+    color: '#1D8A8A', // Teal/Green-blue
+    indicatorColor: '#319795',
+    fillColor: '#4FD1C5'
+  },
+  {
+    id: '3',
+    category: 'Utilities Bills',
+    amount: '$ 2,200.00',
+    percent: 80,
+    percentValue: 0.80,
+    color: '#6B8E23', // Olive/Light Green
+    indicatorColor: '#9ACD32',
+    fillColor: '#ADFF2F'
+  },
+  {
+    id: '4',
+    category: 'Entertainment & Others',
+    amount: '$ 1,200.00',
+    percent: 20,
+    percentValue: 0.20,
+    color: '#718096', // Slate Gray
+    indicatorColor: '#A0AEC0',
+    fillColor: '#CBD5E0'
+  }
+];
+
 export default function BudgetScreen() {
+  
+  const renderBudgetCard = ({ item }: { item: BudgetItem }) => (
+    <View style={[styles.mainActiveCard, { backgroundColor: item.color }]}>
+      <View style={styles.cardHeader}>
+        <View style={[styles.cardIndicatorCircle, { backgroundColor: item.indicatorColor }]} />
+      </View>
+      
+      <View style={styles.cardInfoRow}>
+        <Text style={styles.cardCategoryText}>{item.category}</Text>
+        <Text style={styles.cardAmountText}>{item.amount}</Text>
+      </View>
+
+      <View style={styles.progressBarTrack}>
+        <View style={[styles.progressBarFill, { width: `${item.percent}%`, backgroundColor: item.fillColor }]} />
+        <Text style={styles.progressPercentText}>{item.percent}%</Text>
+      </View>
+
+      <TouchableOpacity style={styles.viewAllCardButton}>
+        <Text style={styles.viewAllCardText}>View all</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" />
       
+      {/* HEADER SECTION */}
       <View style={styles.headerRow}>
         <TouchableOpacity style={styles.backButton}>
           <Feather name="arrow-left" color="#000000" size={20} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Budget</Text>
-        <View style={{ width: 40 }} /> {/* Layout Spacer */}
+        <View style={{ width: 40 }} />
       </View>
 
+      {/* MAIN SCROLL CONTAINER */}
       <ScrollView 
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        <View style={styles.cardStackContainer}>
-
-          <View style={[styles.backgroundCardBase, styles.bgCard2]} />
-          
-          <View style={[styles.backgroundCardBase, styles.bgCard1]} />
-
-          <View style={styles.mainActiveCard}>
-            <View style={styles.cardHeader}>
-              <View style={styles.cardIndicatorCircle} />
-            </View>
-            
-            <View style={styles.cardInfoRow}>
-              <Text style={styles.cardCategoryText}>Food & Dining</Text>
-              <Text style={styles.cardAmountText}>$ 4,000.00</Text>
-            </View>
-
-            <View style={styles.progressBarTrack}>
-              <View style={[styles.progressBarFill, { width: '37%' }]} />
-              <Text style={styles.progressPercentText}>37%</Text>
-            </View>
-
-            <TouchableOpacity style={styles.viewAllCardButton}>
-              <Text style={styles.viewAllCardText}>View all</Text>
-            </TouchableOpacity>
-          </View>
+        
+        {/* CAROUSEL HORIZONTAL BUDGET CARDS */}
+        <View style={styles.carouselWrapper}>
+          <FlatList
+            data={BUDGET_DATA}
+            renderItem={renderBudgetCard}
+            keyExtractor={(item) => item.id}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            snapToInterval={CARD_WIDTH + 16} // Gi-add ang gap sa snap snapping alignment
+            decelerationRate="fast"
+            contentContainerStyle={styles.carouselContainer}
+          />
         </View>
 
+        {/* SEARCH BAR */}
         <View style={styles.searchBarWrapper}>
           <Feather name="search" color="#A0AEC0" size={18} style={styles.searchIcon} />
           <TextInput 
@@ -65,6 +138,7 @@ export default function BudgetScreen() {
           />
         </View>
 
+        {/* TRANSACTIONS SECTION */}
         <View style={styles.transactionsContainer}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Latest Transactions</Text>
@@ -133,50 +207,30 @@ const styles = StyleSheet.create({
     color: '#000000',
   },
   scrollContent: {
-    paddingHorizontal: 20,
     paddingTop: 16,
-    paddingBottom: 130,
+    paddingBottom: 130, // Nagbilin og space para sa floating navigation layout
   },
-  cardStackContainer: {
-    height: 230,
-    width: '100%',
-    position: 'relative',
-    marginBottom: 20,
+  carouselWrapper: {
+    marginBottom: 24,
+    height: 200,
   },
-  backgroundCardBase: {
-    position: 'absolute',
-    left: '4%',
-    right: '4%',
-    height: 180,
-    borderRadius: 28,
-  },
-  bgCard2: {
-    backgroundColor: '#6B8E23', 
-    top: 0,
-    transform: [{ scaleX: 0.92 }],
-  },
-  bgCard1: {
-    backgroundColor: '#1D8A8A', 
-    top: 12,
-    transform: [{ scaleX: 0.96 }],
+  carouselContainer: {
+    paddingHorizontal: 20, // Gi-pantay sa alignment sa search bar ug headers
+    gap: 16, // Gidako-on sa distansya tali sa matag bar card
   },
   mainActiveCard: {
-    position: 'absolute',
-    top: 24,
-    left: 0,
-    right: 0,
+    width: CARD_WIDTH,
     height: 190,
-    backgroundColor: '#1E538C', 
     borderRadius: 28,
     padding: 20,
     ...Platform.select({
       ios: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.15,
-        shadowRadius: 12,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.12,
+        shadowRadius: 10,
       },
-      android: { elevation: 6 },
+      android: { elevation: 5 },
     }),
   },
   cardHeader: {
@@ -186,7 +240,6 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#4299E1', 
   },
   cardInfoRow: {
     flexDirection: 'row',
@@ -207,7 +260,7 @@ const styles = StyleSheet.create({
   progressBarTrack: {
     width: '100%',
     height: 32,
-    backgroundColor: 'rgba(255, 255, 255, 0.35)', 
+    backgroundColor: 'rgba(255, 255, 255, 0.25)', 
     borderRadius: 16,
     overflow: 'hidden',
     position: 'relative',
@@ -215,7 +268,6 @@ const styles = StyleSheet.create({
   },
   progressBarFill: {
     height: '100%',
-    backgroundColor: '#63B3ED', 
     position: 'absolute',
     left: 0,
     top: 0,
@@ -245,6 +297,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     height: 48,
     marginBottom: 24,
+    marginHorizontal: 20,
   },
   searchIcon: {
     marginRight: 8,
@@ -260,6 +313,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderWidth: 1,
     borderColor: '#E2E8F0',
+    marginHorizontal: 20,
   },
   sectionHeader: {
     flexDirection: 'row',
