@@ -23,8 +23,8 @@ export default function HomeScreen() {
       >
         <View style={styles.headerRow}>
           <View style={styles.headerLeft}>
-            <Text style={styles.welcomeText}>Hello,</Text>
-            <Text style={styles.nameText}>Jema</Text>
+            <Text style={styles.welcomeText}>Hello, Jema👋</Text>
+            <Text style={styles.nameText}>Spender Overview</Text>
           </View>
           <View style={styles.searchRow}>
             <LinearGradient
@@ -40,7 +40,7 @@ export default function HomeScreen() {
         </View>
 
         <LinearGradient
-          colors={["#609c7e", "#c5dbd0"]}
+          colors={['#0A1A1A', '#1A3A3A', '#2D7A5E']}
           start={{ x: 0.0, y: 0.0 }}
           end={{ x: 1.0, y: 1.0 }}
           style={styles.gradient1}
@@ -155,12 +155,12 @@ const styles = StyleSheet.create({
   },
   welcomeText: {
     color: "#ffffff",
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: "400",
   },
   nameText: {
-    color: "#c9f5ea",
-    fontSize: 28,
+    fontSize: 14,
+    color: '#9CA3AF',
     fontWeight: "bold",
     marginTop: -4,
   },
@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
   },
   allowanceText: {
     fontSize: 26,
-    color: "#163a24",
+    color: "#ffffff",
     fontWeight: "bold",
   },
   addIconContainer: {
@@ -306,7 +306,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   paymentCardDays: {
-    color: "#dcd964",
+    color: "#faf9d2",
     fontSize: 12,
     fontWeight: "500",
   },

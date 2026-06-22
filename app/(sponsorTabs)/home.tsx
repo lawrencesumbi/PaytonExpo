@@ -1,7 +1,9 @@
  // app/(sponsorTabs)/home.tsx
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { router } from 'expo-router';
+import { useState } from 'react';
+import { Alert, FlatList, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 type BudgetItem = {
@@ -20,8 +22,20 @@ const budgetData: BudgetItem[] = [
 ];
 
 export default function SponsorHomeScreen() {
+  const [inviteModalVisible, setInviteModalVisible] = useState(false);
+  const [email, setEmail] = useState('');
+  const [membersModalVisible, setMembersModalVisible] = useState(false);
+
+  const members = [
+    { id: '1', name: 'King James', email: 'king@gmail.com' },
+    { id: '2', name: 'Lawrence Sumbi', email: 'lawrence@gmail.com' },
+  ];
+
   const renderBudgetItem = ({ item }: { item: BudgetItem }) => (
-    <View style={styles.budgetRow}>
+    <TouchableOpacity 
+      style={styles.budgetRow}
+      onPress={() => router.push('/(sponsorTabs)/monitoring')}
+    >
       <View style={styles.budgetInfo}>
         <Text style={styles.budgetName}>{item.name}</Text>
         <Text style={styles.budgetDate}>{item.endDate}</Text>
@@ -34,8 +48,23 @@ export default function SponsorHomeScreen() {
           </Text>
         </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
+
+  const handleSendInvite = () => {
+    if (email) {
+      Alert.alert('Success', `Invitation sent to ${email}`);
+      setEmail('');
+      setInviteModalVisible(false);
+    }
+  };
+
+  const handleRemoveMember = (name: string) => {
+    Alert.alert('Remove Member', `Are you sure you want to remove ${name}?`, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Remove', style: 'destructive' },
+    ]);
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -88,16 +117,16 @@ export default function SponsorHomeScreen() {
 
         {/* Quick Actions */}
         <View style={styles.quickActions}>
-          <TouchableOpacity style={styles.actionButton}>
+          <TouchableOpacity style={styles.actionButton} onPress={() => setMembersModalVisible(true)}>
             <LinearGradient
               colors={['#1A3A3A', '#2D7A5E']}
               style={styles.actionIcon}
             >
-              <Ionicons name="person-add-outline" size={22} color="#4ADE80" />
+              <Ionicons name="people-outline" size={22} color="#4ADE80" />
             </LinearGradient>
-            <Text style={styles.actionLabel}>Add Member</Text>
+            <Text style={styles.actionLabel}>Members</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton}>
+          <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/create-allowance')}>
             <LinearGradient
               colors={['#1A3A3A', '#2D7A5E']}
               style={styles.actionIcon}
@@ -106,23 +135,23 @@ export default function SponsorHomeScreen() {
             </LinearGradient>
             <Text style={styles.actionLabel}>New Allowance</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton}>
+          <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/(sponsorTabs)/archive')}>
             <LinearGradient
               colors={['#1A3A3A', '#2D7A5E']}
               style={styles.actionIcon}
             >
-              <Ionicons name="analytics-outline" size={22} color="#FBBF24" />
+              <Ionicons name="archive-outline" size={22} color="#FBBF24" />
             </LinearGradient>
-            <Text style={styles.actionLabel}>Reports</Text>
+            <Text style={styles.actionLabel}>Archive</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton}>
+          <TouchableOpacity style={styles.actionButton} onPress={() => setInviteModalVisible(true)}>
             <LinearGradient
               colors={['#1A3A3A', '#2D7A5E']}
               style={styles.actionIcon}
             >
-              <Ionicons name="settings-outline" size={22} color="#A78BFA" />
+              <Ionicons name="person-add-outline" size={22} color="#A78BFA" />
             </LinearGradient>
-            <Text style={styles.actionLabel}>Settings</Text>
+            <Text style={styles.actionLabel}>Invite</Text>
           </TouchableOpacity>
         </View>
 
@@ -130,7 +159,7 @@ export default function SponsorHomeScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Budget Distribution</Text>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push('/(sponsorTabs)/allowance')}>
               <Text style={styles.seeAll}>See all →</Text>
             </TouchableOpacity>
           </View>
@@ -152,6 +181,103 @@ export default function SponsorHomeScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {/* Members Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={membersModalVisible}
+        onRequestClose={() => setMembersModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Manage Members</Text>
+              <TouchableOpacity onPress={() => setMembersModalVisible(false)}>
+                <Ionicons name="close" size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.memberTableHeader}>
+              <Text style={[styles.memberHeaderText, styles.memberNameHeader]}>Member Details</Text>
+              <Text style={[styles.memberHeaderText, styles.memberEmailHeader]}>Email Address</Text>
+              <Text style={[styles.memberHeaderText, styles.memberActionHeader]}>Actions</Text>
+            </View>
+
+            {members.map((member) => (
+              <View key={member.id} style={styles.memberRow}>
+                <Text style={[styles.memberText, styles.memberName]}>{member.name}</Text>
+                <Text style={[styles.memberText, styles.memberEmail]}>{member.email}</Text>
+                <TouchableOpacity 
+                  style={styles.removeButton}
+                  onPress={() => handleRemoveMember(member.name)}
+                >
+                  <Text style={styles.removeButtonText}>Remove</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+
+            <TouchableOpacity 
+              style={styles.inviteButton}
+              onPress={() => {
+                setMembersModalVisible(false);
+                setInviteModalVisible(true);
+              }}
+            >
+              <Ionicons name="person-add" size={20} color="#FFFFFF" />
+              <Text style={styles.inviteButtonText}>Invite New Member</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Invite Member Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={inviteModalVisible}
+        onRequestClose={() => setInviteModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Invite Member</Text>
+              <TouchableOpacity onPress={() => setInviteModalVisible(false)}>
+                <Ionicons name="close" size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.modalSubtitle}>Enter an email address to send a workspace invitation.</Text>
+            
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Email Address</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g. name@company.com"
+                placeholderTextColor="#6B7280"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+            </View>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.cancelButton]} 
+                onPress={() => setInviteModalVisible(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.sendButton]} 
+                onPress={handleSendInvite}
+              >
+                <Text style={styles.sendButtonText}>Send Invite</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -379,5 +505,147 @@ const styles = StyleSheet.create({
   },
   inactiveText: {
     color: '#EF4444',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#1A2A2A',
+    borderRadius: 20,
+    padding: 24,
+    width: '90%',
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    marginBottom: 20,
+  },
+  inputContainer: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 13,
+    color: '#9CA3AF',
+    marginBottom: 6,
+  },
+  input: {
+    backgroundColor: '#0A0F0F',
+    borderWidth: 1,
+    borderColor: '#2A3A3A',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: '#FFFFFF',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
+  },
+  modalButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 10,
+    minWidth: 80,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: '#2A3A3A',
+  },
+  cancelButtonText: {
+    color: '#9CA3AF',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  sendButton: {
+    backgroundColor: '#2D7A5E',
+  },
+  sendButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  memberTableHeader: {
+    flexDirection: 'row',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#2A3A3A',
+    marginBottom: 8,
+  },
+  memberHeaderText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#9CA3AF',
+  },
+  memberNameHeader: {
+    flex: 2,
+  },
+  memberEmailHeader: {
+    flex: 2,
+  },
+  memberActionHeader: {
+    flex: 1,
+    textAlign: 'right',
+  },
+  memberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#2A3A3A',
+  },
+  memberText: {
+    fontSize: 14,
+    color: '#FFFFFF',
+  },
+  memberName: {
+    flex: 2,
+  },
+  memberEmail: {
+    flex: 2,
+  },
+  removeButton: {
+    flex: 1,
+    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  removeButtonText: {
+    color: '#EF4444',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  inviteButton: {
+    flexDirection: 'row',
+    backgroundColor: '#2D7A5E',
+    padding: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 16,
+  },
+  inviteButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '500',
   },
 });

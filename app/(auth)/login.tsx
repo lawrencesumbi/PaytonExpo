@@ -1,15 +1,16 @@
+import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, Image, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { supabase } from '../../lib/supabase';
 
 export default function LoginScreen() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = async () => {
-  // 1. Authenticate user credentials
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -20,7 +21,6 @@ export default function LoginScreen() {
       return;
     }
 
-    // 2. Fetch profile metadata matching the authenticated user ID
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('role')
@@ -32,7 +32,6 @@ export default function LoginScreen() {
       return;
     }
 
-    // 3. Dynamic pathing based on database role enum
     const userRole = profile.role;
     if (userRole === 'Personal') {
       router.replace('/(personalTabs)/home');
@@ -44,102 +43,193 @@ export default function LoginScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.innerContainer}>
-        <View style={styles.headerContainer}>
-          <Image source = {require("@/assets/images/logo-dark.jpg")} style ={styles.logo} />
-          <Text style={styles.title}>Welcome! Back to Payton</Text>
-          <Text style={styles.subtitle}>Log in to manage your finances seamlessly</Text>
+      <SafeAreaView style={{ flex: 1, backgroundColor: "black"}}>
+        <View style={styles.innerContainer}>
+          
+          <View style={styles.headerContainer}>
+            <Text style={styles.title}>
+              Hello!{'\n'}Welcome to <Text style={styles.brandText}>Payton</Text>
+            </Text>
+            <Text style={styles.subtitle}>
+              Access your account separately by using your email and password
+            </Text>
+          </View>
+
+          <View style={styles.form}>
+            
+            <View style={styles.inputWrapper}>
+              <Feather name="mail" color="#085334" size={20} style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Email Address"
+                placeholderTextColor="#A0AEC0"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+            </View>
+
+            <View style={styles.inputWrapper}>
+              <Feather name="lock" color="#085334" size={20} style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Password"
+                placeholderTextColor="#A0AEC0"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+              />
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
+                <Feather name={showPassword ? 'eye-off' : 'eye'} color="#718096" size={20} />
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity style={styles.primaryButton} onPress={handleLogin}>
+              <Text style={styles.buttonText}>Sign In</Text>
+            </TouchableOpacity>
+            </View>
+
+            <View style={styles.dividerContainer}>
+              <Text style={styles.dividerText}>Or continue with</Text>
+            </View>
+
+            <View style={styles.socialContainer}>
+              <TouchableOpacity style={styles.socialButton}>
+                <Text style={styles.socialButtonText}>Continue with Google</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={styles.socialButton}>
+                <Text style={styles.socialButtonText}>Continue with Apple</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>Don't have an account? </Text>
+              <TouchableOpacity onPress={() => router.push('/register')}>
+                <Text style={styles.linkText}>Sign Up</Text>
+              </TouchableOpacity>
+            </View>
+
         </View>
-
-        <View style={styles.form}>
-          <TextInput
-            style={styles.input}
-            placeholder="Email Address"
-            placeholderTextColor="#8A9A93"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Password"
-            placeholderTextColor="#8A9A93"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
-
-          <TouchableOpacity 
-            onPress={() => router.push('/forgot-password')} 
-            style={styles.forgotPasswordButton}
-          >
-            <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.primaryButton} onPress={handleLogin}>
-            <Text style={styles.buttonText}>Log In</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Don't have an account? </Text>
-          <TouchableOpacity onPress={() => router.push('/register')}>
-            <Text style={styles.linkText}>Sign Up</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </SafeAreaView>
+      </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000000' },
-  innerContainer: { flex: 1, padding: 24, justifyContent: 'center' },
-  headerContainer: { marginBottom: 32 },
+  container: { 
+    flex: 1,
+  },
+  innerContainer: { 
+    flex: 1, 
+    paddingHorizontal: 28, 
+    justifyContent: 'center' 
+  },
+  headerContainer: { 
+    marginBottom: 40 
+  },
   title: { 
-    fontSize: 28, 
+    fontSize: 34, 
     fontWeight: 'bold', 
     color: '#ffffff', 
-    marginBottom: 8, 
+    lineHeight: 42,
+    marginBottom: 12, 
+  },
+  brandText: {
+    color: '#3d9427', 
   },
   subtitle: { 
-    fontSize: 16, 
-    color: '#559266' },
-  form: { width: '100%', marginBottom: 24 },
-  input: {
+    fontSize: 13, 
+    color: '#53a9ac',
+    lineHeight: 18,
+  },
+  form: { 
+    width: '100%', 
+    marginBottom: 20 
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#FFFFFF',
+    borderRadius: 30, 
+    paddingHorizontal: 20,
+    height: 58,
+    marginBottom: 18,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  inputIcon: {
+    marginRight: 12,
+  },
+  input: {
+    flex: 1,
+    fontSize: 15,
+    color: '#1A202C',
+    height: '100%',
+  },
+  eyeIcon: {
+    padding: 4,
+  },
+  primaryButton: {
+    backgroundColor: '#204d3a',
+    borderRadius: 30,
+    height: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10,
+    shadowColor: '#63f1c2',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  buttonText: { 
+    color: '#FFFFFF', 
+    fontSize: 16, 
+    fontWeight: '600' 
+  },
+  dividerContainer: {
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  dividerText: {
+    color: '#2cce98',
+    fontSize: 14,
+  },
+  socialContainer: {
+    gap: 12,
+    marginBottom: 32,
+  },
+  socialButton: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 30,
+    height: 54,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    color: '#1B3623',
-    marginBottom: 16,
   },
-  forgotPasswordButton: { alignSelf: 'flex-end', marginBottom: 24 },
-  forgotPasswordText: { color: '#58B0A5', fontWeight: '600' },
-  primaryButton: {
-    backgroundColor: '#1B3623',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    shadowColor: '#1B3623',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 2,
+  socialButtonText: {
+    color: '#1A202C',
+    fontSize: 15,
+    fontWeight: '500',
   },
-  buttonText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' },
-  footer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
-  footerText: { color: '#586A61', fontSize: 14 },
-  linkText: { color: '#89B443', fontWeight: 'bold', fontSize: 14 },
-  logo:{
-    width: 100,
-    height: 100,
-    justifyContent: "center",
-    alignSelf: "center",
-    marginBottom: 20,
-  }
+  footer: { 
+    flexDirection: 'row', 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+  footerText: { 
+    color: '#3e973b', 
+    fontSize: 14 
+  },
+  linkText: { 
+    color: '#68b1ab' ,
+    fontWeight: 'bold', 
+    fontSize: 14 
+  },
 });
