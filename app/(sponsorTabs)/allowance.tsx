@@ -100,7 +100,7 @@ export default function AllowanceScreen() {
 
       <TouchableOpacity 
         style={styles.fab} 
-        onPress={() => router.push('/(sponsorTabs)/create-allowance')}
+        onPress={() => router.push('../(sponsorTabs)/create-allowance')}
         activeOpacity={0.8}
       >
         <Ionicons name="add" size={28} color="#213502" />
@@ -175,4 +175,99 @@ const styles = StyleSheet.create({
   statCardValue: {
     fontSize: 20,
     fontWeight: '700',
-    color
+    color: '#213502',
+  },
+  listContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 100,
+  },
+  allowanceCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  allowanceHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  referenceText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#213502',
+  },
+  periodText: {
+    fontSize: 13,
+    color: '#7DA08E',
+    marginTop: 2,
+  },
+  activeBadge: {
+    backgroundColor: '#0CD964',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  activeText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#FFFFFF',
+  },
+  allowanceFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+    paddingTop: 12,
+  },
+  spenderContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  avatarCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#7DA08E',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  spenderText: {
+    fontSize: 14,
+    color: '#213502',
+  },
+  amountText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#0CD964',
+  },
+  fab: {
+    position: 'absolute',
+    bottom: 30,
+    right: 20,
+    backgroundColor: '#0CD964',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+});

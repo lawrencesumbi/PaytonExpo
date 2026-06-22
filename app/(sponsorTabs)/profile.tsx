@@ -45,14 +45,14 @@ export default function SponsorProfileScreen() {
               <Text style={styles.greeting}>Profile</Text>
             </View>
             <TouchableOpacity style={styles.settingsIcon}>
-              <Ionicons name="settings-outline" size={22} color="#1F2937" />
+              <Ionicons name="settings-outline" size={22} color="#213502" />
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Profile Card - Sky Blue Gradient */}
+        {/* Profile Card - Green Gradient */}
         <LinearGradient
-          colors={['#4FC3F7', '#0288D1']}
+          colors={['#0CD964', '#213502']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.profileCard}
@@ -60,7 +60,7 @@ export default function SponsorProfileScreen() {
           <View style={styles.profileInfo}>
             <View style={styles.profileImageContainer}>
               <View style={styles.profileImagePlaceholder}>
-                <Ionicons name="person" size={50} color="#FFFFFF" />
+                <Ionicons name="person" size={50} color="#213502" />
               </View>
               <TouchableOpacity style={styles.editImageButton}>
                 <Ionicons name="camera" size={16} color="#FFFFFF" />
@@ -138,7 +138,7 @@ export default function SponsorProfileScreen() {
             <TextInput
               style={styles.securityInput}
               placeholder="Enter current password"
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor="#7DA08E"
               secureTextEntry
               value={currentPassword}
               onChangeText={setCurrentPassword}
@@ -149,7 +149,7 @@ export default function SponsorProfileScreen() {
             <TextInput
               style={styles.securityInput}
               placeholder="Enter new password"
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor="#7DA08E"
               secureTextEntry
               value={newPassword}
               onChangeText={setNewPassword}
@@ -167,10 +167,10 @@ export default function SponsorProfileScreen() {
           disabled={isLoggingOut}
         >
           {isLoggingOut ? (
-            <ActivityIndicator color="#DC2626" />
+            <ActivityIndicator color="#FFFFFF" />
           ) : (
             <View style={styles.logoutContent}>
-              <Ionicons name="log-out-outline" size={20} color="#DC2626" />
+              <Ionicons name="log-out-outline" size={20} color="#FFFFFF" />
               <Text style={styles.logoutButtonText}>Log Out</Text>
             </View>
           )}
@@ -200,7 +200,7 @@ const styles = StyleSheet.create({
   greeting: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#1F2937',
+    color: '#213502',
   },
   settingsIcon: {
     width: 40,
@@ -233,7 +233,7 @@ const styles = StyleSheet.create({
     width: 70,
     height: 70,
     borderRadius: 35,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -241,14 +241,14 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 0,
     right: 0,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#7DA08E',
     width: 28,
     height: 28,
     borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#0288D1',
+    borderColor: '#FFFFFF',
   },
   profileName: {
     fontSize: 18,
@@ -289,7 +289,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1F2937',
+    color: '#213502',
     marginBottom: 16,
   },
   completionCard: {
@@ -304,7 +304,7 @@ const styles = StyleSheet.create({
   completionPercentage: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#0288D1',
+    color: '#0CD964',
   },
   completionItem: {
     flexDirection: 'row',
@@ -314,7 +314,7 @@ const styles = StyleSheet.create({
   completionLabel: {
     flex: 0.4,
     fontSize: 13,
-    color: '#1F2937',
+    color: '#213502',
   },
   completionBar: {
     flex: 0.5,
@@ -326,13 +326,13 @@ const styles = StyleSheet.create({
   },
   completionFill: {
     height: '100%',
-    backgroundColor: '#0288D1',
+    backgroundColor: '#0CD964',
     borderRadius: 3,
   },
   completionPercent: {
     flex: 0.1,
     fontSize: 12,
-    color: '#6B7280',
+    color: '#7DA08E',
     textAlign: 'right',
   },
   infoRow: {
@@ -340,23 +340,23 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: 13,
-    color: '#6B7280',
+    color: '#7DA08E',
     marginBottom: 2,
   },
   infoValue: {
     fontSize: 15,
-    color: '#1F2937',
+    color: '#213502',
     fontWeight: '500',
   },
   saveButton: {
-    backgroundColor: '#0288D1',
+    backgroundColor: '#0CD964',
     paddingVertical: 10,
     borderRadius: 8,
     alignItems: 'center',
     marginTop: 8,
   },
   saveButtonText: {
-    color: '#FFFFFF',
+    color: '#213502',
     fontSize: 14,
     fontWeight: '500',
   },
@@ -368,7 +368,7 @@ const styles = StyleSheet.create({
   },
   securityLabel: {
     fontSize: 13,
-    color: '#6B7280',
+    color: '#7DA08E',
     marginBottom: 4,
   },
   securityInput: {
@@ -379,22 +379,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     fontSize: 14,
-    color: '#1F2937',
+    color: '#213502',
   },
   logoutButton: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#54090C',
     marginHorizontal: 20,
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#FEE2E2',
     marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
   },
   logoutContent: {
     flexDirection: 'row',
@@ -405,7 +398,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   logoutButtonText: {
-    color: '#DC2626',
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
   },

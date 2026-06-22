@@ -7,8 +7,7 @@ export default function SpenderLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarShowLabel: false, 
-        tabBarActiveTintColor: '#FFFFFF',
+        tabBarShowLabel: false,
         tabBarInactiveTintColor: '#A0AEC0',
         tabBarStyle: styles.floatingTabBar,
       }}
@@ -17,11 +16,10 @@ export default function SpenderLayout() {
       <Tabs.Screen 
         name="home" 
         options={{ 
-          title: 'Home', 
           tabBarIcon: ({ color, focused }) => 
             focused ? (
-              <View style={styles.activeTabBadgeCircle}>
-                <Ionicons name="home" size={20} color="#FFFFFF" />
+              <View style={styles.activePillBadge}>
+                <Ionicons name="home" size={16} color="#000000" />
               </View>
             ) : (
               <Ionicons name="home-outline" size={22} color={color} />
@@ -33,11 +31,10 @@ export default function SpenderLayout() {
       <Tabs.Screen 
         name="budget" 
         options={{ 
-          title: 'Budget', 
           tabBarIcon: ({ color, focused }) => 
             focused ? (
-              <View style={styles.activeTabBadgeCircle}>
-                <Ionicons name="wallet" size={20} color="#FFFFFF" />
+              <View style={styles.activePillBadge}>
+                <Ionicons name="wallet" size={16} color="#000000" />
               </View>
             ) : (
               <Ionicons name="wallet-outline" size={22} color={color} />
@@ -45,28 +42,30 @@ export default function SpenderLayout() {
         }} 
       />
 
-      {/* 3. SCAN RECEIPTS TAB (Pabilin nga dako sa tunga) */}
+      {/* 3. SCAN RECEIPTS (Ang Floating U-Dip Scanner sa tunga) */}
       <Tabs.Screen 
         name="scan" 
         options={{ 
-          title: 'Scan Receipt', 
           tabBarIcon: () => (
-            <View style={styles.centerScannerContainer}>
-              <Ionicons name="scan" size={24} color="#1A365D" />
+            <View style={styles.centerScannerWrapper}>
+              <View style={styles.uCurveBackground} />
+              
+              <View style={styles.actualScannerButton}>
+                <Ionicons name="scan" size={24} color="#000000" />
+              </View>
             </View>
           ) 
         }} 
       />
 
-      {/* 4. GROUP SPLIT TAB */}
+      {/* 4. SPLIT TAB */}
       <Tabs.Screen 
         name="split" 
         options={{ 
-          title: 'Group Split', 
           tabBarIcon: ({ color, focused }) => 
             focused ? (
-              <View style={styles.activeTabBadgeCircle}>
-                <Ionicons name="layers" size={20} color="#FFFFFF" />
+              <View style={styles.activePillBadge}>
+                <Ionicons name="layers" size={16} color="#000000" />
               </View>
             ) : (
               <Ionicons name="layers-outline" size={22} color={color} />
@@ -78,11 +77,10 @@ export default function SpenderLayout() {
       <Tabs.Screen 
         name="profile" 
         options={{ 
-          title: 'Profile', 
           tabBarIcon: ({ color, focused }) => 
             focused ? (
-              <View style={styles.activeTabBadgeCircle}>
-                <Ionicons name="person" size={20} color="#FFFFFF" />
+              <View style={styles.activePillBadge}>
+                <Ionicons name="person" size={16} color="#000000" />
               </View>
             ) : (
               <Ionicons name="person-outline" size={22} color={color} />
@@ -99,13 +97,11 @@ const styles = StyleSheet.create({
     bottom: Platform.OS === 'ios' ? 30 : 16, 
     left: 16,
     right: 16,
-    backgroundColor: '#03857e',
+    backgroundColor: '#0a666d', 
     borderRadius: 24,
-    width: '95%',
     height: 45,
     borderTopWidth: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
+    overflow: 'visible', 
     ...Platform.select({
       ios: {
         shadowColor: '#000000',
@@ -113,39 +109,51 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.15,
         shadowRadius: 10,
       },
-      android: {
-        elevation: 10,
-      },
+      android: { elevation: 8 },
     }),
   },
-  activeTabBadgeCircle: {
-    width: 40,
-    height: 30,
+  activePillBadge: {
+    flexDirection: 'row',
+    alignSelf: 'center',
+    backgroundColor: '#0ccec4c4', 
+    width: 35,
+    height: 35,
     borderRadius: 20,
-    backgroundColor: '#a5d4fc', 
-    justifyContent: 'center',
-    alignItems: 'center',
+    gap: 4,
   },
-  centerScannerContainer: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+  centerScannerWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 70,
+    height: 70,
+    bottom: 14, 
+    position: 'relative',
+  },
+  uCurveBackground: {
+    position: 'absolute',
+    width: 68,
+    height: 68,
+    borderRadius: 34,
     backgroundColor: '#FFFFFF', 
+    top: -6,
+  },
+  actualScannerButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 27,
+    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 3,
-    borderColor: '#ffffff', 
-    bottom: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
     ...Platform.select({
       ios: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
       },
-      android: {
-        elevation: 4,
-      },
+      android: { elevation: 3 },
     }),
   },
 });

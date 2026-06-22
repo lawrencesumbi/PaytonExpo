@@ -31,10 +31,10 @@ export default function MonitoringScreen() {
 
   const getCategoryColor = (category: string) => {
     switch(category) {
-      case 'Food & Dining': return { bg: '#E3F2FD', icon: '#0288D1', name: 'restaurant-outline' };
-      case 'Transportation': return { bg: '#E3F2FD', icon: '#0288D1', name: 'car-outline' };
-      case 'Bills & Utilities': return { bg: '#E3F2FD', icon: '#0288D1', name: 'flash-outline' };
-      default: return { bg: '#E3F2FD', icon: '#0288D1', name: 'grid-outline' };
+      case 'Food & Dining': return { bg: '#7DA08E', icon: '#FFFFFF', name: 'restaurant-outline' };
+      case 'Transportation': return { bg: '#7DA08E', icon: '#FFFFFF', name: 'car-outline' };
+      case 'Bills & Utilities': return { bg: '#7DA08E', icon: '#FFFFFF', name: 'flash-outline' };
+      default: return { bg: '#7DA08E', icon: '#FFFFFF', name: 'grid-outline' };
     }
   };
 
@@ -65,18 +65,17 @@ export default function MonitoringScreen() {
               <Text style={styles.greeting}>Monitoring</Text>
             </View>
             <TouchableOpacity style={styles.searchIcon}>
-              <Ionicons name="search-outline" size={22} color="#1F2937" />
+              <Ionicons name="search-outline" size={22} color="#213502" />
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Filters */}
         <View style={styles.filtersContainer}>
           <View style={styles.filterGroup}>
             <Text style={styles.filterLabel}>SELECT SPENDER</Text>
             <TouchableOpacity style={styles.filterSelect}>
               <Text style={styles.filterSelectText}>{selectedSpender}</Text>
-              <Ionicons name="chevron-down" size={18} color="#6B7280" />
+              <Ionicons name="chevron-down" size={18} color="#7DA08E" />
             </TouchableOpacity>
           </View>
 
@@ -84,15 +83,14 @@ export default function MonitoringScreen() {
             <Text style={styles.filterLabel}>SELECT ALLOWANCE</Text>
             <TouchableOpacity style={styles.filterSelect}>
               <Text style={styles.filterSelectText}>{selectedAllowance}</Text>
-              <Ionicons name="chevron-down" size={18} color="#6B7280" />
+              <Ionicons name="chevron-down" size={18} color="#7DA08E" />
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Stats Cards */}
         <View style={styles.statsContainer}>
           <LinearGradient
-            colors={['#4FC3F7', '#0288D1']}
+            colors={['#0CD964', '#213502']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={[styles.statCard, styles.statCardHighlight]}
@@ -102,10 +100,10 @@ export default function MonitoringScreen() {
           </LinearGradient>
           <View style={styles.statCard}>
             <Text style={styles.statLabel}>Total Spent</Text>
-            <Text style={[styles.statValue, { color: '#DC2626' }]}>₱854.00</Text>
+            <Text style={[styles.statValue, { color: '#54090C' }]}>₱854.00</Text>
           </View>
           <LinearGradient
-            colors={['#4FC3F7', '#0288D1']}
+            colors={['#0CD964', '#213502']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={[styles.statCard, styles.statCardHighlight]}
@@ -115,7 +113,6 @@ export default function MonitoringScreen() {
           </LinearGradient>
         </View>
 
-        {/* Transactions */}
         <View style={styles.transactionsSection}>
           <Text style={styles.sectionTitle}>Transactions</Text>
           
@@ -158,7 +155,7 @@ const styles = StyleSheet.create({
   greeting: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#1F2937',
+    color: '#213502',
   },
   searchIcon: {
     width: 40,
@@ -184,7 +181,7 @@ const styles = StyleSheet.create({
   filterLabel: {
     fontSize: 12,
     fontWeight: '500',
-    color: '#6B7280',
+    color: '#7DA08E',
     letterSpacing: 0.5,
   },
   filterSelect: {
@@ -200,7 +197,7 @@ const styles = StyleSheet.create({
   },
   filterSelectText: {
     fontSize: 14,
-    color: '#1F2937',
+    color: '#213502',
   },
   statsContainer: {
     flexDirection: 'row',
@@ -221,17 +218,17 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   statCardHighlight: {
-    backgroundColor: '#0288D1',
+    backgroundColor: '#0CD964',
   },
   statLabel: {
     fontSize: 10,
-    color: '#6B7280',
+    color: '#7DA08E',
     marginBottom: 4,
   },
   statValue: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1F2937',
+    color: '#213502',
   },
   transactionsSection: {
     paddingHorizontal: 16,
@@ -239,7 +236,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1F2937',
+    color: '#213502',
     marginBottom: 12,
   },
   transactionHeader: {
@@ -252,7 +249,7 @@ const styles = StyleSheet.create({
   headerText: {
     fontSize: 11,
     fontWeight: '500',
-    color: '#6B7280',
+    color: '#7DA08E',
   },
   dateCol: { flex: 1.2 },
   categoryCol: { flex: 1.5 },
@@ -290,16 +287,16 @@ const styles = StyleSheet.create({
   transactionDescription: {
     fontSize: 13,
     fontWeight: '500',
-    color: '#1F2937',
+    color: '#213502',
   },
   transactionMeta: {
     fontSize: 11,
-    color: '#6B7280',
+    color: '#7DA08E',
     marginTop: 1,
   },
   transactionAmount: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#1F2937',
+    color: '#213502',
   },
 });

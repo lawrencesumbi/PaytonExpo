@@ -32,12 +32,56 @@ const initialMembers: Member[] = [
   { id: '2', name: 'Lawrence Sumbi', email: 'lawrence@gmail.com' },
 ];
 
+type QuickAction = {
+  id: string;
+  title: string;
+  icon: string;
+  color: string;
+  bgColor: string;
+  onPress: () => void;
+};
+
 export default function SponsorHomeScreen() {
   const [inviteModalVisible, setInviteModalVisible] = useState(false);
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [membersModalVisible, setMembersModalVisible] = useState(false);
   const [members, setMembers] = useState<Member[]>(initialMembers);
+
+  const quickActions: QuickAction[] = [
+    {
+      id: '1',
+      title: 'Member',
+      icon: 'people',
+      color: '#213502',
+      bgColor: '#E8EDE5',
+      onPress: () => setMembersModalVisible(true),
+    },
+    {
+      id: '2',
+      title: 'Allowance',
+      icon: 'wallet',
+      color: '#213502',
+      bgColor: '#E8EDE5',
+      onPress: () => router.push('/(sponsorTabs)/allowance'),
+    },
+    {
+      id: '3',
+      title: 'Archive',
+      icon: 'archive',
+      color: '#213502',
+      bgColor: '#E8EDE5',
+      onPress: () => Alert.alert('Archive', 'Archive feature coming soon'),
+    },
+    {
+      id: '4',
+      title: 'Add Members',
+      icon: 'person-add',
+      color: '#213502',
+      bgColor: '#E8EDE5',
+      onPress: () => setInviteModalVisible(true),
+    },
+  ];
 
   const renderBudgetItem = ({ item }: { item: BudgetItem }) => (
     <TouchableOpacity 
@@ -112,6 +156,19 @@ export default function SponsorHomeScreen() {
     </View>
   );
 
+  const renderQuickAction = ({ item }: { item: QuickAction }) => (
+    <TouchableOpacity 
+      style={styles.quickActionCard}
+      onPress={item.onPress}
+      activeOpacity={0.7}
+    >
+      <View style={[styles.quickActionIcon, { backgroundColor: item.bgColor }]}>
+        <Ionicons name={item.icon as any} size={24} color={item.color} />
+      </View>
+      <Text style={styles.quickActionTitle}>{item.title}</Text>
+    </TouchableOpacity>
+  );
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -119,22 +176,22 @@ export default function SponsorHomeScreen() {
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <View>
-              <Text style={styles.greeting}>Hello, Jema 👋</Text>
-              <Text style={styles.headerSubtitle}>Spender Overview</Text>
+              <Text style={styles.greeting}>Hello, Patricia</Text>
+              <Text style={styles.headerSubtitle}>Sponsor Overview</Text>
             </View>
             <View style={styles.headerActions}>
+              <TouchableOpacity style={styles.iconButton} onPress={() => setMembersModalVisible(true)}>
+                <Ionicons name="people" size={22} color="#213502" />
+              </TouchableOpacity>
               <TouchableOpacity style={styles.iconButton}>
                 <Ionicons name="notifications-outline" size={22} color="#213502" />
                 <View style={styles.notificationDot} />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.iconButton}>
-                <Ionicons name="search-outline" size={22} color="#213502" />
               </TouchableOpacity>
             </View>
           </View>
         </View>
 
-        {/* Balance Card - Green Gradient */}
+        {/* Balance Card */}
         <LinearGradient
           colors={['#0CD964', '#213502']}
           start={{ x: 0, y: 0 }}
@@ -158,7 +215,19 @@ export default function SponsorHomeScreen() {
           </View>
         </LinearGradient>
 
-        {/* Upcoming Payment - List style */}
+        {/* Quick Actions Grid - Below Balance Card */}
+        <View style={styles.quickActionsContainer}>
+          <FlatList
+            data={quickActions}
+            renderItem={renderQuickAction}
+            keyExtractor={(item) => item.id}
+            numColumns={4}
+            scrollEnabled={false}
+            contentContainerStyle={styles.quickActionsGrid}
+          />
+        </View>
+
+        {/* Upcoming Payment */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Upcoming payment</Text>
 
@@ -183,7 +252,7 @@ export default function SponsorHomeScreen() {
           </View>
         </View>
 
-        {/* Recent Activities - List style */}
+        {/* Recent Activities */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Recent Activities</Text>
 
@@ -403,6 +472,43 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#FFFFFF',
   },
+  quickActionsContainer: {
+    paddingHorizontal: 16,
+    marginBottom: 20,
+  },
+  quickActionsGrid: {
+    justifyContent: 'space-between',
+  },
+  quickActionCard: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    marginHorizontal: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+    minHeight: 80,
+  },
+  quickActionIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  quickActionTitle: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#213502',
+    textAlign: 'center',
+  },
   balanceCard: {
     marginHorizontal: 20,
     padding: 20,
@@ -482,7 +588,6 @@ const styles = StyleSheet.create({
     color: '#0CD964',
     fontWeight: '500',
   },
-  // Payment Items - List style without card background
   paymentItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -515,7 +620,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#FFFFFF',
   },
-  // Activity Items - List style without card background
   activityItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
