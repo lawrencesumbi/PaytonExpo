@@ -1,6 +1,5 @@
  // app/(sponsorTabs)/allowance.tsx
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -35,7 +34,10 @@ const allowanceData: AllowanceItem[] = [
 
 export default function AllowanceScreen() {
   const renderAllowanceItem = ({ item }: { item: AllowanceItem }) => (
-    <TouchableOpacity style={styles.allowanceCard}>
+    <TouchableOpacity 
+      style={styles.allowanceCard}
+      onPress={() => router.push('/(sponsorTabs)/monitoring')}
+    >
       <View style={styles.allowanceHeader}>
         <View>
           <Text style={styles.referenceText}>{item.reference}</Text>
@@ -66,7 +68,7 @@ export default function AllowanceScreen() {
             <Text style={styles.headerSubtitle}>Tracking all active allowance.</Text>
           </View>
           <TouchableOpacity style={styles.filterIcon}>
-            <Ionicons name="options-outline" size={24} color="#FFFFFF" />
+            <Ionicons name="options-outline" size={24} color="#1F2937" />
           </TouchableOpacity>
         </View>
       </View>
@@ -77,15 +79,10 @@ export default function AllowanceScreen() {
           <Text style={styles.statCardLabel}>Current Allowance</Text>
           <Text style={styles.statCardValue}>₱11,000.00</Text>
         </View>
-        <LinearGradient
-          colors={['#0A1A1A', '#1A3A3A', '#2D7A5E']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={[styles.statCard, styles.statCardHighlight]}
-        >
+        <View style={[styles.statCard, styles.statCardHighlight]}>
           <Text style={[styles.statCardLabel, { color: 'rgba(255,255,255,0.7)' }]}>Total Spent</Text>
           <Text style={[styles.statCardValue, { color: '#FFFFFF' }]}>₱1,500.00</Text>
-        </LinearGradient>
+        </View>
       </View>
 
       <FlatList
@@ -96,7 +93,12 @@ export default function AllowanceScreen() {
         showsVerticalScrollIndicator={false}
       />
 
-      <TouchableOpacity style={styles.fab} onPress={() => router.push('/create-allowance')}>
+      {/* Floating Action Button - Navigates to Create Allowance */}
+      <TouchableOpacity 
+        style={styles.fab} 
+        onPress={() => router.push('/create-allowance')}
+        activeOpacity={0.8}
+      >
         <Ionicons name="add" size={28} color="#FFFFFF" />
       </TouchableOpacity>
     </SafeAreaView>
@@ -106,7 +108,7 @@ export default function AllowanceScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0F0F',
+    backgroundColor: '#F5F7F6',
   },
   header: {
     paddingHorizontal: 20,
@@ -121,20 +123,25 @@ const styles = StyleSheet.create({
   greeting: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#1F2937',
   },
   headerSubtitle: {
     fontSize: 14,
-    color: '#9CA3AF',
+    color: '#6B7280',
     marginTop: 2,
   },
   filterIcon: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#1A2A2A',
+    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   statsContainer: {
     flexDirection: 'row',
@@ -144,32 +151,42 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    backgroundColor: '#1A2A2A',
+    backgroundColor: '#FFFFFF',
     padding: 16,
     borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   statCardHighlight: {
     backgroundColor: '#2D7A5E',
   },
   statCardLabel: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: '#6B7280',
     marginBottom: 4,
   },
   statCardValue: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#1F2937',
   },
   listContent: {
     paddingHorizontal: 20,
     paddingBottom: 100,
   },
   allowanceCard: {
-    backgroundColor: '#1A2A2A',
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   allowanceHeader: {
     flexDirection: 'row',
@@ -180,15 +197,15 @@ const styles = StyleSheet.create({
   referenceText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#1F2937',
   },
   periodText: {
     fontSize: 13,
-    color: '#9CA3AF',
+    color: '#6B7280',
     marginTop: 2,
   },
   activeBadge: {
-    backgroundColor: 'rgba(74, 222, 128, 0.2)',
+    backgroundColor: '#D1FAE5',
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
@@ -196,14 +213,14 @@ const styles = StyleSheet.create({
   activeText: {
     fontSize: 12,
     fontWeight: '500',
-    color: '#4ADE80',
+    color: '#065F46',
   },
   allowanceFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     borderTopWidth: 1,
-    borderTopColor: '#2A3A3A',
+    borderTopColor: '#F3F4F6',
     paddingTop: 12,
   },
   spenderContainer: {
@@ -215,23 +232,23 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: 'rgba(74, 222, 128, 0.2)',
+    backgroundColor: '#E8F5E9',
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#4ADE80',
+    color: '#2D7A5E',
   },
   spenderText: {
     fontSize: 14,
-    color: '#FFFFFF',
+    color: '#1F2937',
   },
   amountText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#4ADE80',
+    color: '#2D7A5E',
   },
   fab: {
     position: 'absolute',

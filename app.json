@@ -4,7 +4,7 @@
     "slug": "PaytonExpo",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/logo-light.png",
     "scheme": "paytonexpo",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -14,9 +14,9 @@
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "foregroundImage": "./assets/images/logo-light.png",
+        "backgroundImage": "./assets/images/logo-light.png",
+        "monochromeImage": "./assets/images/logo-light.png"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false

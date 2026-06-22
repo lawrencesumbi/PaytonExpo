@@ -13,12 +13,12 @@ export default function WelcomeScreen() {
       {/* Top / Center Content */}
       <View style={styles.contentContainer}>
         <Image 
-          source={require('../assets/images/logo-dark.jpg')} 
+          source={require('../assets/images/logo-light.png')} 
           style={styles.logo}
           resizeMode="contain"
         />
         <Text style={styles.brandName}>Payton</Text>
-        <Text style={styles.tagline}>Smart expense tracking and collaborative payments.</Text>
+        <Text style={styles.tagline}>Your all-in-one financial companion.</Text>
       </View>
 
       {/* Bottom Action Area */}
@@ -37,7 +37,7 @@ export default function WelcomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: "white",
     justifyContent: 'space-between',
   },
   contentContainer: {
@@ -48,20 +48,20 @@ const styles = StyleSheet.create({
     marginTop: 60,
   },
   logo: {
-    width: 140,
-    height: 140,
+    width: 250,
+    height: 250,
     marginBottom: 24,
   },
   brandName: {
     fontSize: 36,
     fontWeight: 'bold',
-    color: '#ffffff',
+    color: '#050505',
     marginBottom: 12,
     letterSpacing: 0.5,
   },
   tagline: {
     fontSize: 16,
-    color: '#ffffff',
+    color: '#000000',
     textAlign: 'center',
     lineHeight: 24,
   },

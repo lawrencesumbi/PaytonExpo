@@ -33,7 +33,11 @@ export default function LoginScreen() {
     }
 
     const userRole = profile.role;
-    if (userRole === 'Personal') {
+
+    if (!userRole) {
+      // Intercept users who haven't picked a role yet
+      router.replace('/role-selection');
+    } else if (userRole === 'Personal') {
       router.replace('/(personalTabs)/home');
     } else if (userRole === 'Spender') {
       router.replace('/(spenderTabs)/home');
@@ -43,7 +47,7 @@ export default function LoginScreen() {
   };
 
   return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: "black"}}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: "white"}}>
         <View style={styles.innerContainer}>
           
           <View style={styles.headerContainer}>
@@ -51,7 +55,7 @@ export default function LoginScreen() {
               Hello!{'\n'}Welcome to <Text style={styles.brandText}>Payton</Text>
             </Text>
             <Text style={styles.subtitle}>
-              Access your account separately by using your email and password
+              Access your account separately by using your email and password.
             </Text>
           </View>
 
@@ -80,10 +84,13 @@ export default function LoginScreen() {
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
               />
+
               <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
                 <Feather name={showPassword ? 'eye-off' : 'eye'} color="#718096" size={20} />
               </TouchableOpacity>
             </View>
+
+            <Text style={styles.forgot} onPress={() => router.push('/forgot-password')}>Forgot Password?</Text>
 
             <TouchableOpacity style={styles.primaryButton} onPress={handleLogin}>
               <Text style={styles.buttonText}>Sign In</Text>
@@ -131,16 +138,16 @@ const styles = StyleSheet.create({
   title: { 
     fontSize: 34, 
     fontWeight: 'bold', 
-    color: '#ffffff', 
+    color: '#000000', 
     lineHeight: 42,
     marginBottom: 12, 
   },
   brandText: {
-    color: '#3d9427', 
+    color: '#276916', 
   },
   subtitle: { 
     fontSize: 13, 
-    color: '#53a9ac',
+    color: '#0e9b59',
     lineHeight: 18,
   },
   form: { 
@@ -150,7 +157,7 @@ const styles = StyleSheet.create({
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#e6f5ef',
     borderRadius: 30, 
     paddingHorizontal: 20,
     height: 58,
@@ -180,7 +187,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 10,
-    shadowColor: '#63f1c2',
+    shadowColor: '#15492f',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 6,
@@ -196,7 +203,7 @@ const styles = StyleSheet.create({
     marginVertical: 20,
   },
   dividerText: {
-    color: '#2cce98',
+    color: '#0c9c6c',
     fontSize: 14,
   },
   socialContainer: {
@@ -204,7 +211,7 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   socialButton: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#f3fdec',
     borderRadius: 30,
     height: 54,
     flexDirection: 'row',
@@ -228,8 +235,13 @@ const styles = StyleSheet.create({
     fontSize: 14 
   },
   linkText: { 
-    color: '#68b1ab' ,
+    color: '#07756c' ,
     fontWeight: 'bold', 
     fontSize: 14 
   },
+  forgot: {
+    color: "#3f7c77",
+    textAlign: "right",
+    marginBottom: 10,
+  }
 });

@@ -1,6 +1,5 @@
  // app/(sponsorTabs)/monitoring.tsx
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useState } from 'react';
 import { FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -31,10 +30,10 @@ export default function MonitoringScreen() {
 
   const getCategoryColor = (category: string) => {
     switch(category) {
-      case 'Food & Dining': return { bg: 'rgba(74, 222, 128, 0.2)', icon: '#4ADE80', name: 'restaurant-outline' };
-      case 'Transportation': return { bg: 'rgba(96, 165, 250, 0.2)', icon: '#60A5FA', name: 'car-outline' };
-      case 'Bills & Utilities': return { bg: 'rgba(251, 191, 36, 0.2)', icon: '#FBBF24', name: 'flash-outline' };
-      default: return { bg: 'rgba(167, 139, 250, 0.2)', icon: '#A78BFA', name: 'grid-outline' };
+      case 'Food & Dining': return { bg: '#E8F5E9', icon: '#2D7A5E', name: 'restaurant-outline' };
+      case 'Transportation': return { bg: '#E3F2FD', icon: '#1565C0', name: 'car-outline' };
+      case 'Bills & Utilities': return { bg: '#FFF3E0', icon: '#E65100', name: 'flash-outline' };
+      default: return { bg: '#F3E5F5', icon: '#7B1FA2', name: 'grid-outline' };
     }
   };
 
@@ -65,7 +64,7 @@ export default function MonitoringScreen() {
               <Text style={styles.greeting}>Monitoring</Text>
             </View>
             <TouchableOpacity style={styles.searchIcon}>
-              <Ionicons name="search-outline" size={22} color="#FFFFFF" />
+              <Ionicons name="search-outline" size={22} color="#1F2937" />
             </TouchableOpacity>
           </View>
         </View>
@@ -76,7 +75,7 @@ export default function MonitoringScreen() {
             <Text style={styles.filterLabel}>SELECT SPENDER</Text>
             <TouchableOpacity style={styles.filterSelect}>
               <Text style={styles.filterSelectText}>{selectedSpender}</Text>
-              <Ionicons name="chevron-down" size={18} color="#9CA3AF" />
+              <Ionicons name="chevron-down" size={18} color="#6B7280" />
             </TouchableOpacity>
           </View>
 
@@ -84,35 +83,25 @@ export default function MonitoringScreen() {
             <Text style={styles.filterLabel}>SELECT ALLOWANCE</Text>
             <TouchableOpacity style={styles.filterSelect}>
               <Text style={styles.filterSelectText}>{selectedAllowance}</Text>
-              <Ionicons name="chevron-down" size={18} color="#9CA3AF" />
+              <Ionicons name="chevron-down" size={18} color="#6B7280" />
             </TouchableOpacity>
           </View>
         </View>
 
         {/* Stats Cards */}
         <View style={styles.statsContainer}>
-          <LinearGradient
-            colors={['#0A1A1A', '#1A3A3A', '#2D7A5E']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.statCard}
-          >
-            <Text style={styles.statLabel}>Total Allowance</Text>
-            <Text style={styles.statValue}>₱1,000.00</Text>
-          </LinearGradient>
+          <View style={[styles.statCard, styles.statCardHighlight]}>
+            <Text style={[styles.statLabel, { color: 'rgba(255,255,255,0.7)' }]}>Total Allowance</Text>
+            <Text style={[styles.statValue, { color: '#FFFFFF' }]}>₱1,000.00</Text>
+          </View>
           <View style={styles.statCard}>
             <Text style={styles.statLabel}>Total Spent</Text>
-            <Text style={[styles.statValue, { color: '#EF4444' }]}>₱854.00</Text>
+            <Text style={[styles.statValue, { color: '#DC2626' }]}>₱854.00</Text>
           </View>
-          <LinearGradient
-            colors={['#0A1A1A', '#1A3A3A', '#2D7A5E']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.statCard}
-          >
-            <Text style={styles.statLabel}>Allowance Left</Text>
-            <Text style={styles.statValue}>₱146.00</Text>
-          </LinearGradient>
+          <View style={[styles.statCard, styles.statCardHighlight]}>
+            <Text style={[styles.statLabel, { color: 'rgba(255,255,255,0.7)' }]}>Allowance Left</Text>
+            <Text style={[styles.statValue, { color: '#FFFFFF' }]}>₱146.00</Text>
+          </View>
         </View>
 
         {/* Transactions */}
@@ -143,7 +132,7 @@ export default function MonitoringScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0F0F',
+    backgroundColor: '#F5F7F6',
   },
   header: {
     paddingHorizontal: 20,
@@ -158,15 +147,20 @@ const styles = StyleSheet.create({
   greeting: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#1F2937',
   },
   searchIcon: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#1A2A2A',
+    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   filtersContainer: {
     paddingHorizontal: 20,
@@ -179,23 +173,23 @@ const styles = StyleSheet.create({
   filterLabel: {
     fontSize: 12,
     fontWeight: '500',
-    color: '#9CA3AF',
+    color: '#6B7280',
     letterSpacing: 0.5,
   },
   filterSelect: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#1A2A2A',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#2A3A3A',
+    borderColor: '#E5E7EB',
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
   filterSelectText: {
     fontSize: 14,
-    color: '#FFFFFF',
+    color: '#1F2937',
   },
   statsContainer: {
     flexDirection: 'row',
@@ -205,20 +199,28 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    backgroundColor: '#1A2A2A',
+    backgroundColor: '#FFFFFF',
     padding: 14,
     borderRadius: 12,
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  statCardHighlight: {
+    backgroundColor: '#2D7A5E',
   },
   statLabel: {
     fontSize: 10,
-    color: '#9CA3AF',
+    color: '#6B7280',
     marginBottom: 4,
   },
   statValue: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#1F2937',
   },
   transactionsSection: {
     paddingHorizontal: 16,
@@ -226,20 +228,20 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#1F2937',
     marginBottom: 12,
   },
   transactionHeader: {
     flexDirection: 'row',
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#2A3A3A',
+    borderBottomColor: '#E5E7EB',
     marginBottom: 4,
   },
   headerText: {
     fontSize: 11,
     fontWeight: '500',
-    color: '#9CA3AF',
+    color: '#6B7280',
   },
   dateCol: { flex: 1.2 },
   categoryCol: { flex: 1.5 },
@@ -251,10 +253,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#1A2A2A',
+    backgroundColor: '#FFFFFF',
     padding: 12,
     borderRadius: 10,
     marginBottom: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   transactionLeft: {
     flexDirection: 'row',
@@ -272,16 +279,16 @@ const styles = StyleSheet.create({
   transactionDescription: {
     fontSize: 13,
     fontWeight: '500',
-    color: '#FFFFFF',
+    color: '#1F2937',
   },
   transactionMeta: {
     fontSize: 11,
-    color: '#9CA3AF',
+    color: '#6B7280',
     marginTop: 1,
   },
   transactionAmount: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#1F2937',
   },
 });

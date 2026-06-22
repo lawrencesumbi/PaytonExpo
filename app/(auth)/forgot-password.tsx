@@ -7,7 +7,6 @@ export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState('');
 
   const handleResetRequest = () => {
-    // Navigate over to validation or inform user check code/link
     router.push('/reset-password');
   };
 
@@ -42,12 +41,12 @@ export default function ForgotPasswordScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F7F9F8' },
+  container: { flex: 1, },
   innerContainer: { flex: 1, padding: 24, justifyContent: 'center' },
   backButton: { position: 'absolute', top: 60, left: 24 },
-  backButtonText: { color: '#1B3623', fontSize: 16, fontWeight: '600' },
-  title: { fontSize: 26, fontWeight: 'bold', color: '#1B3623', marginBottom: 12 },
-  subtitle: { fontSize: 16, color: '#586A61', marginBottom: 24, lineHeight: 24 },
+  backButtonText: { color: '#2a6b4c', fontSize: 16, fontWeight: '600' },
+  title: { fontSize: 26, fontWeight: 'bold', color: 'black', marginBottom: 12 },
+  subtitle: { fontSize: 16, color: 'black', marginBottom: 24, lineHeight: 24 },
   input: {
     backgroundColor: '#FFFFFF',
     borderWidth: 1,

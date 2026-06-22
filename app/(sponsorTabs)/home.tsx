@@ -1,6 +1,5 @@
- // app/(sponsorTabs)/home.tsx
+ // app/(sponsorTabs)/home.tsx - Removed Archive from quick actions since it's not a tab
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Alert, FlatList, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -78,23 +77,18 @@ export default function SponsorHomeScreen() {
             </View>
             <View style={styles.headerActions}>
               <TouchableOpacity style={styles.iconButton}>
-                <Ionicons name="notifications-outline" size={24} color="#FFFFFF" />
+                <Ionicons name="notifications-outline" size={22} color="#1F2937" />
                 <View style={styles.notificationDot} />
               </TouchableOpacity>
               <TouchableOpacity style={styles.iconButton}>
-                <Ionicons name="search-outline" size={24} color="#FFFFFF" />
+                <Ionicons name="search-outline" size={22} color="#1F2937" />
               </TouchableOpacity>
             </View>
           </View>
         </View>
 
         {/* Balance Card */}
-        <LinearGradient
-          colors={['#0A1A1A', '#1A3A3A', '#2D7A5E']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.balanceCard}
-        >
+        <View style={styles.balanceCard}>
           <Text style={styles.balanceLabel}>Total Capital Allocated</Text>
           <Text style={styles.balanceAmount}>₱11,900.00</Text>
           <View style={styles.balanceFooter}>
@@ -113,44 +107,32 @@ export default function SponsorHomeScreen() {
               <Text style={styles.statValue}>₱9,500.00</Text>
             </View>
           </View>
-        </LinearGradient>
+        </View>
 
         {/* Quick Actions */}
         <View style={styles.quickActions}>
           <TouchableOpacity style={styles.actionButton} onPress={() => setMembersModalVisible(true)}>
-            <LinearGradient
-              colors={['#1A3A3A', '#2D7A5E']}
-              style={styles.actionIcon}
-            >
-              <Ionicons name="people-outline" size={22} color="#4ADE80" />
-            </LinearGradient>
+            <View style={[styles.actionIcon, { backgroundColor: '#E8F5E9' }]}>
+              <Ionicons name="people" size={22} color="#2D7A5E" />
+            </View>
             <Text style={styles.actionLabel}>Members</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/create-allowance')}>
-            <LinearGradient
-              colors={['#1A3A3A', '#2D7A5E']}
-              style={styles.actionIcon}
-            >
-              <Ionicons name="wallet-outline" size={22} color="#60A5FA" />
-            </LinearGradient>
-            <Text style={styles.actionLabel}>New Allowance</Text>
+          <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/(sponsorTabs)/allowance')}>
+            <View style={[styles.actionIcon, { backgroundColor: '#E3F2FD' }]}>
+              <Ionicons name="wallet" size={22} color="#1565C0" />
+            </View>
+            <Text style={styles.actionLabel}>Allowance</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/(sponsorTabs)/archive')}>
-            <LinearGradient
-              colors={['#1A3A3A', '#2D7A5E']}
-              style={styles.actionIcon}
-            >
-              <Ionicons name="archive-outline" size={22} color="#FBBF24" />
-            </LinearGradient>
+          <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/archive')}>
+            <View style={[styles.actionIcon, { backgroundColor: '#FFF3E0' }]}>
+              <Ionicons name="archive" size={22} color="#E65100" />
+            </View>
             <Text style={styles.actionLabel}>Archive</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.actionButton} onPress={() => setInviteModalVisible(true)}>
-            <LinearGradient
-              colors={['#1A3A3A', '#2D7A5E']}
-              style={styles.actionIcon}
-            >
-              <Ionicons name="person-add-outline" size={22} color="#A78BFA" />
-            </LinearGradient>
+            <View style={[styles.actionIcon, { backgroundColor: '#F3E5F5' }]}>
+              <Ionicons name="person-add" size={22} color="#7B1FA2" />
+            </View>
             <Text style={styles.actionLabel}>Invite</Text>
           </TouchableOpacity>
         </View>
@@ -190,11 +172,11 @@ export default function SponsorHomeScreen() {
         onRequestClose={() => setMembersModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, { backgroundColor: '#FFFFFF' }]}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Manage Members</Text>
+              <Text style={[styles.modalTitle, { color: '#1F2937' }]}>Manage Members</Text>
               <TouchableOpacity onPress={() => setMembersModalVisible(false)}>
-                <Ionicons name="close" size={24} color="#FFFFFF" />
+                <Ionicons name="close" size={24} color="#1F2937" />
               </TouchableOpacity>
             </View>
 
@@ -205,9 +187,9 @@ export default function SponsorHomeScreen() {
             </View>
 
             {members.map((member) => (
-              <View key={member.id} style={styles.memberRow}>
-                <Text style={[styles.memberText, styles.memberName]}>{member.name}</Text>
-                <Text style={[styles.memberText, styles.memberEmail]}>{member.email}</Text>
+              <View key={member.id} style={[styles.memberRow, { borderBottomColor: '#E5E7EB' }]}>
+                <Text style={[styles.memberText, styles.memberName, { color: '#1F2937' }]}>{member.name}</Text>
+                <Text style={[styles.memberText, styles.memberEmail, { color: '#6B7280' }]}>{member.email}</Text>
                 <TouchableOpacity 
                   style={styles.removeButton}
                   onPress={() => handleRemoveMember(member.name)}
@@ -239,21 +221,21 @@ export default function SponsorHomeScreen() {
         onRequestClose={() => setInviteModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, { backgroundColor: '#FFFFFF' }]}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Invite Member</Text>
+              <Text style={[styles.modalTitle, { color: '#1F2937' }]}>Invite Member</Text>
               <TouchableOpacity onPress={() => setInviteModalVisible(false)}>
-                <Ionicons name="close" size={24} color="#FFFFFF" />
+                <Ionicons name="close" size={24} color="#1F2937" />
               </TouchableOpacity>
             </View>
-            <Text style={styles.modalSubtitle}>Enter an email address to send a workspace invitation.</Text>
+            <Text style={[styles.modalSubtitle, { color: '#6B7280' }]}>Enter an email address to send a workspace invitation.</Text>
             
             <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Email Address</Text>
+              <Text style={[styles.inputLabel, { color: '#6B7280' }]}>Email Address</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { backgroundColor: '#F9FAFB', borderColor: '#E5E7EB', color: '#1F2937' }]}
                 placeholder="e.g. name@company.com"
-                placeholderTextColor="#6B7280"
+                placeholderTextColor="#9CA3AF"
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
@@ -285,7 +267,7 @@ export default function SponsorHomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0F0F',
+    backgroundColor: '#F5F7F6',
   },
   header: {
     paddingHorizontal: 20,
@@ -300,12 +282,12 @@ const styles = StyleSheet.create({
   greeting: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#1F2937',
     marginBottom: 2,
   },
   headerSubtitle: {
     fontSize: 14,
-    color: '#9CA3AF',
+    color: '#6B7280',
   },
   headerActions: {
     flexDirection: 'row',
@@ -315,9 +297,14 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#1A2A2A',
+    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
     position: 'relative',
   },
   notificationDot: {
@@ -329,21 +316,27 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: '#EF4444',
     borderWidth: 2,
-    borderColor: '#0A0F0F',
+    borderColor: '#FFFFFF',
   },
   balanceCard: {
+    backgroundColor: '#E8F5E9',
     marginHorizontal: 20,
     padding: 20,
     borderRadius: 20,
     marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 4,
   },
   balanceLabel: {
-    color: 'rgba(255,255,255,0.7)',
+    color: 'rgba(0,0,0,0.6)',
     fontSize: 14,
     marginBottom: 4,
   },
   balanceAmount: {
-    color: '#FFFFFF',
+    color: '#1F2937',
     fontSize: 34,
     fontWeight: '700',
     marginBottom: 16,
@@ -353,7 +346,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.15)',
+    borderTopColor: 'rgba(0,0,0,0.08)',
     paddingTop: 16,
   },
   balanceStat: {
@@ -363,15 +356,15 @@ const styles = StyleSheet.create({
   balanceDivider: {
     width: 1,
     height: 30,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: 'rgba(0,0,0,0.08)',
   },
   statLabel: {
-    color: 'rgba(255,255,255,0.6)',
+    color: 'rgba(0,0,0,0.5)',
     fontSize: 11,
     marginBottom: 2,
   },
   statValue: {
-    color: '#FFFFFF',
+    color: '#1F2937',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -394,7 +387,7 @@ const styles = StyleSheet.create({
   },
   actionLabel: {
     fontSize: 11,
-    color: '#9CA3AF',
+    color: '#4B5563',
     fontWeight: '500',
   },
   section: {
@@ -410,29 +403,34 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#1F2937',
   },
   seeAll: {
     fontSize: 14,
-    color: '#4ADE80',
+    color: '#2D7A5E',
     fontWeight: '500',
   },
   budgetList: {
-    backgroundColor: '#1A2A2A',
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     paddingHorizontal: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   budgetHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#2A3A3A',
+    borderBottomColor: '#E5E7EB',
   },
   headerText: {
     fontSize: 12,
     fontWeight: '500',
-    color: '#9CA3AF',
+    color: '#6B7280',
   },
   budgetNameHeader: {
     flex: 1,
@@ -456,7 +454,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#2A3A3A',
+    borderBottomColor: '#F3F4F6',
   },
   budgetInfo: {
     flex: 1,
@@ -464,11 +462,11 @@ const styles = StyleSheet.create({
   budgetName: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#FFFFFF',
+    color: '#1F2937',
   },
   budgetDate: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: '#6B7280',
     marginTop: 1,
   },
   budgetRight: {
@@ -479,7 +477,7 @@ const styles = StyleSheet.create({
   budgetAmount: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#1F2937',
     minWidth: 70,
     textAlign: 'right',
   },
@@ -491,29 +489,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   activeBadge: {
-    backgroundColor: 'rgba(74, 222, 128, 0.2)',
+    backgroundColor: '#D1FAE5',
   },
   inactiveBadge: {
-    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+    backgroundColor: '#FEE2E2',
   },
   statusText: {
     fontSize: 11,
     fontWeight: '500',
   },
   activeText: {
-    color: '#4ADE80',
+    color: '#065F46',
   },
   inactiveText: {
-    color: '#EF4444',
+    color: '#991B1B',
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.8)',
+    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: '#1A2A2A',
     borderRadius: 20,
     padding: 24,
     width: '90%',
@@ -528,11 +525,11 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#1F2937',
   },
   modalSubtitle: {
     fontSize: 14,
-    color: '#9CA3AF',
+    color: '#6B7280',
     marginBottom: 20,
   },
   inputContainer: {
@@ -540,18 +537,18 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: 13,
-    color: '#9CA3AF',
+    color: '#6B7280',
     marginBottom: 6,
   },
   input: {
-    backgroundColor: '#0A0F0F',
+    backgroundColor: '#F9FAFB',
     borderWidth: 1,
-    borderColor: '#2A3A3A',
+    borderColor: '#E5E7EB',
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
-    color: '#FFFFFF',
+    color: '#1F2937',
   },
   modalActions: {
     flexDirection: 'row',
@@ -566,10 +563,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cancelButton: {
-    backgroundColor: '#2A3A3A',
+    backgroundColor: '#F3F4F6',
   },
   cancelButtonText: {
-    color: '#9CA3AF',
+    color: '#6B7280',
     fontSize: 14,
     fontWeight: '500',
   },
@@ -585,13 +582,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#2A3A3A',
+    borderBottomColor: '#E5E7EB',
     marginBottom: 8,
   },
   memberHeaderText: {
     fontSize: 12,
     fontWeight: '500',
-    color: '#9CA3AF',
+    color: '#6B7280',
   },
   memberNameHeader: {
     flex: 2,
@@ -608,11 +605,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#2A3A3A',
+    borderBottomColor: '#E5E7EB',
   },
   memberText: {
     fontSize: 14,
-    color: '#FFFFFF',
+    color: '#1F2937',
   },
   memberName: {
     flex: 2,
@@ -622,14 +619,14 @@ const styles = StyleSheet.create({
   },
   removeButton: {
     flex: 1,
-    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+    backgroundColor: '#FEE2E2',
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 8,
     alignItems: 'center',
   },
   removeButtonText: {
-    color: '#EF4444',
+    color: '#DC2626',
     fontSize: 12,
     fontWeight: '500',
   },

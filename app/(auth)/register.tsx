@@ -1,9 +1,8 @@
+import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { supabase } from '../../lib/supabase';
-
-type Role = 'Personal' | 'Spender' | 'Sponsor';
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -11,8 +10,8 @@ export default function RegisterScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [role, setRole] = useState<Role>('Personal'); // 1. Added role state here
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleRegister = async () => {
     if (!fullName || !email || !password || !confirmPassword) {
@@ -27,14 +26,12 @@ export default function RegisterScreen() {
 
     setIsLoading(true);
 
-    // 2. Initial sign up with Supabase, passing meta data straight to the DB trigger
     const { data, error } = await supabase.auth.signUp({
       email: email,
       password: password,
       options: {
         data: {
-          full_name: fullName,
-          role: role, // Pass it right here!
+          full_name: fullName, // Saved securely in user metadata
         }
       }
     });
@@ -44,159 +41,236 @@ export default function RegisterScreen() {
     if (error) {
       Alert.alert("Signup Failed", error.message);
     } else {
-      // Since role is already saved, skip role-selection and head to verification notice!
+      // Send them to the verification notice screen
       router.push('/verify-email');
     }
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.innerContainer} showsVerticalScrollIndicator={false}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "white"}}>
+      <View style={styles.innerContainer}>
+        
         <View style={styles.headerContainer}>
-          <Text style={styles.title}>Create Account</Text>
-          <Text style={styles.subtitle}>Start tracking your shared expenses today</Text>
+          <Text style={styles.title}>
+            Hello!{'\n'}Create an <Text style={styles.brandText}>Account</Text>
+          </Text>
+          <Text style={styles.subtitle}>
+            Sign up with your email and password to continue.
+          </Text>
         </View>
 
         <View style={styles.form}>
-          <TextInput
-            style={styles.input}
-            placeholder="Full Name"
-            placeholderTextColor="#8A9A93"
-            value={fullName}
-            onChangeText={setFullName}
-            autoCapitalize="words"
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Email Address"
-            placeholderTextColor="#8A9A93"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Password"
-            placeholderTextColor="#8A9A93"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Confirm Password"
-            placeholderTextColor="#8A9A93"
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            secureTextEntry
-          />
-
-          {/* 3. Role Selector Interface Elements */}
-          <Text style={styles.sectionLabel}>Select Your Account Type:</Text>
-          <View style={styles.roleSelectorContainer}>
-            {(['Personal', 'Spender', 'Sponsor'] as Role[]).map((type) => (
-              <TouchableOpacity
-                key={type}
-                style={[
-                  styles.roleButton,
-                  role === type && styles.selectedRoleButton
-                ]}
-                onPress={() => setRole(type)}
-              >
-                <Text style={[
-                  styles.roleButtonText,
-                  role === type && styles.selectedRoleButtonText
-                ]}>
-                  {type}
-                </Text>
-              </TouchableOpacity>
-            ))}
+          
+          {/* 1. FIXED: Full Name Field */}
+          <View style={styles.inputWrapper}>
+            <Feather name="user" color="#085334" size={20} style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              placeholder="Full Name"
+              placeholderTextColor="#A0AEC0"
+              value={fullName}
+              onChangeText={setFullName}
+              autoCapitalize="words"
+            />
           </View>
 
+          {/* 2. FIXED: Cleaned Email Field */}
+          <View style={styles.inputWrapper}>
+            <Feather name="mail" color="#085334" size={20} style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              placeholder="Email Address"
+              placeholderTextColor="#A0AEC0"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+          </View>
+
+          {/* 3. FIXED: Main Password Field */}
+          <View style={styles.inputWrapper}>
+            <Feather name="lock" color="#085334" size={20} style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              placeholder="Password"
+              placeholderTextColor="#A0AEC0"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+            />
+            <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
+              <Feather name={showPassword ? 'eye-off' : 'eye'} color="#718096" size={20} />
+            </TouchableOpacity>
+          </View>
+
+          {/* 4. FIXED: Confirm Password Field */}
+          <View style={styles.inputWrapper}>
+            <Feather name="lock" color="#085334" size={20} style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              placeholder="Confirm Password"
+              placeholderTextColor="#A0AEC0"
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              secureTextEntry={!showPassword}
+            />
+            <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
+              <Feather name={showPassword ? 'eye-off' : 'eye'} color="#718096" size={20} />
+            </TouchableOpacity>
+          </View>
+
+          {/* 5. FIXED: Points to handleRegister & handles Loading states */}
           <TouchableOpacity 
-            style={[styles.primaryButton, isLoading && styles.disabledButton]} 
+            style={[styles.primaryButton, isLoading && { opacity: 0.7 }]} 
             onPress={handleRegister}
             disabled={isLoading}
           >
-            <Text style={styles.buttonText}>{isLoading ? "Creating Account..." : "Sign Up"}</Text>
+            {isLoading ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.buttonText}>Sign Up</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.dividerContainer}>
+          <Text style={styles.dividerText}>Or continue with</Text>
+        </View>
+
+        <View style={styles.socialContainer}>
+          <TouchableOpacity style={styles.socialButton}>
+            <Text style={styles.socialButtonText}>Continue with Google</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={styles.socialButton}>
+            <Text style={styles.socialButtonText}>Continue with Apple</Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>Already have an account? </Text>
           <TouchableOpacity onPress={() => router.push('/login')}>
-            <Text style={styles.linkText}>Log In</Text>
+            <Text style={styles.linkText}>Sign In</Text>
           </TouchableOpacity>
         </View>
-      </ScrollView>
+
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F7F9F8' },
-  innerContainer: { padding: 24, justifyContent: 'center' },
-  headerContainer: { marginBottom: 24, marginTop: 40 },
-  title: { fontSize: 28, fontWeight: 'bold', color: '#1B3623', marginBottom: 8 },
-  subtitle: { fontSize: 16, color: '#586A61' },
-  form: { width: '100%', marginBottom: 24 },
-  input: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    color: '#1B3623',
-    marginBottom: 16,
+  innerContainer: { 
+    flex: 1, 
+    paddingHorizontal: 28, 
+    justifyContent: 'center' 
   },
-  sectionLabel: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#1B3623',
-    marginBottom: 10,
-    marginTop: 8
+  headerContainer: { 
+    marginBottom: 40 
   },
-  roleSelectorContainer: {
+  title: { 
+    fontSize: 34, 
+    fontWeight: 'bold', 
+    color: '#000000', 
+    lineHeight: 42,
+    marginBottom: 12, 
+  },
+  brandText: {
+    color: '#276916', 
+  },
+  subtitle: { 
+    fontSize: 13, 
+    color: '#0e9b59',
+    lineHeight: 18,
+  },
+  form: { 
+    width: '100%', 
+    marginBottom: 20 
+  },
+  inputWrapper: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 28,
-  },
-  roleButton: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 10,
-    paddingVertical: 12,
     alignItems: 'center',
-    marginHorizontal: 4,
+    backgroundColor: '#e6f5ef',
+    borderRadius: 30, 
+    paddingHorizontal: 20,
+    height: 58,
+    marginBottom: 18,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
   },
-  selectedRoleButton: {
-    borderColor: '#58B0A5',
-    backgroundColor: '#F0F9F8',
+  inputIcon: {
+    marginRight: 12,
   },
-  roleButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#586A61',
+  input: {
+    flex: 1,
+    fontSize: 15,
+    color: '#1A202C',
+    height: '100%',
   },
-  selectedRoleButtonText: {
-    color: '#58B0A5',
+  eyeIcon: {
+    padding: 4,
   },
   primaryButton: {
-    backgroundColor: '#1B3623',
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: '#204d3a',
+    borderRadius: 30,
+    height: 56,
     alignItems: 'center',
-    marginTop: 8,
+    justifyContent: 'center',
+    marginTop: 10,
+    shadowColor: '#15492f',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 3,
   },
-  disabledButton: {
-    backgroundColor: '#A3B4AB',
+  buttonText: { 
+    color: '#FFFFFF', 
+    fontSize: 16, 
+    fontWeight: '600' 
   },
-  buttonText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' },
-  footer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginBottom: 40 },
-  footerText: { color: '#586A61', fontSize: 14 },
-  linkText: { color: '#58B0A5', fontWeight: 'bold', fontSize: 14 },
+  dividerContainer: {
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  dividerText: {
+    color: '#0c9c6c',
+    fontSize: 14,
+  },
+  socialContainer: {
+    gap: 12,
+    marginBottom: 32,
+  },
+  socialButton: {
+    backgroundColor: '#f3fdec',
+    borderRadius: 30,
+    height: 54,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  socialButtonText: {
+    color: '#1A202C',
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  footer: { 
+    flexDirection: 'row', 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+  footerText: { 
+    color: '#3e973b', 
+    fontSize: 14 
+  },
+  linkText: { 
+    color: '#07756c' ,
+    fontWeight: 'bold', 
+    fontSize: 14 
+  }
 });

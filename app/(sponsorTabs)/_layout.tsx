@@ -1,25 +1,35 @@
- // app/(sponsorTabs)/_layout.tsx
+ // app/(sponsorTabs)/_layout.tsx - Only 4 tabs (Home, Allowance, Monitoring, Profile)
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
-import { StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 
 export default function SponsorTabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: '#4ADE80',
-        tabBarInactiveTintColor: '#6B7280',
+        tabBarActiveTintColor: '#2D7A5E',
+        tabBarInactiveTintColor: '#9CA3AF',
         tabBarStyle: {
-          backgroundColor: '#0A0F0F',
+          backgroundColor: '#FFFFFF',
           borderTopWidth: 1,
-          borderTopColor: '#1A2A2A',
-          height: 70,
-          paddingBottom: 8,
-          paddingTop: 8,
+          borderTopColor: '#E5E7EB',
+          height: Platform.OS === 'ios' ? 85 : 65,
+          paddingBottom: Platform.OS === 'ios' ? 20 : 6,
+          paddingTop: 6,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.05,
+          shadowRadius: 4,
+          elevation: 4,
         },
         tabBarLabelStyle: {
-          fontSize: 11,
+          fontSize: 10,
           fontWeight: '500',
+          marginTop: 2,
+          marginBottom: Platform.OS === 'ios' ? 2 : 0,
+        },
+        tabBarIconStyle: {
+          marginTop: Platform.OS === 'ios' ? 4 : 0,
         },
         headerShown: false,
       }}
@@ -28,11 +38,11 @@ export default function SponsorTabsLayout() {
         name="home"
         options={{
           title: 'Home',
-          tabBarIcon: ({ color, size, focused }) => (
+          tabBarIcon: ({ color, focused }) => (
             <View style={[styles.tabIcon, focused && styles.tabIconActive]}>
               <Ionicons 
                 name={focused ? "home" : "home-outline"} 
-                size={size} 
+                size={24} 
                 color={color} 
               />
             </View>
@@ -43,11 +53,11 @@ export default function SponsorTabsLayout() {
         name="allowance"
         options={{
           title: 'Allowance',
-          tabBarIcon: ({ color, size, focused }) => (
+          tabBarIcon: ({ color, focused }) => (
             <View style={[styles.tabIcon, focused && styles.tabIconActive]}>
               <Ionicons 
                 name={focused ? "wallet" : "wallet-outline"} 
-                size={size} 
+                size={24} 
                 color={color} 
               />
             </View>
@@ -58,26 +68,11 @@ export default function SponsorTabsLayout() {
         name="monitoring"
         options={{
           title: 'Monitoring',
-          tabBarIcon: ({ color, size, focused }) => (
+          tabBarIcon: ({ color, focused }) => (
             <View style={[styles.tabIcon, focused && styles.tabIconActive]}>
               <Ionicons 
                 name={focused ? "list" : "list-outline"} 
-                size={size} 
-                color={color} 
-              />
-            </View>
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="archive"
-        options={{
-          title: 'Archive',
-          tabBarIcon: ({ color, size, focused }) => (
-            <View style={[styles.tabIcon, focused && styles.tabIconActive]}>
-              <Ionicons 
-                name={focused ? "archive" : "archive-outline"} 
-                size={size} 
+                size={24} 
                 color={color} 
               />
             </View>
@@ -88,11 +83,11 @@ export default function SponsorTabsLayout() {
         name="profile"
         options={{
           title: 'Profile',
-          tabBarIcon: ({ color, size, focused }) => (
+          tabBarIcon: ({ color, focused }) => (
             <View style={[styles.tabIcon, focused && styles.tabIconActive]}>
               <Ionicons 
                 name={focused ? "person" : "person-outline"} 
-                size={size} 
+                size={24} 
                 color={color} 
               />
             </View>
@@ -108,8 +103,12 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     paddingHorizontal: 12,
     borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 30,
+    minHeight: 30,
   },
   tabIconActive: {
-    backgroundColor: 'rgba(74, 222, 128, 0.15)',
+    backgroundColor: 'rgba(45, 122, 94, 0.12)',
   },
 });

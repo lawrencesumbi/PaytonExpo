@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { decode } from 'base64-arraybuffer'; // Built into newer react-native environments or handled via array buffers
+import { decode } from 'base64-arraybuffer';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -8,6 +8,7 @@ import { supabase } from '../../lib/supabase';
 
 export default function SpenderProfileScreen() {
   const router = useRouter();
+  const [isEditing, setIsEditing] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
@@ -53,19 +54,17 @@ export default function SpenderProfileScreen() {
 
   const pickAndUploadImage = async () => {
     try {
-      // 1. Request library permissions
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert('Permission Denied', 'Payton needs gallery access to upload a profile photo.');
         return;
       }
 
-      // 2. Launch picker UI
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.6, // Compresses image to save storage space and bandwidth
+        quality: 0.6,
         base64: true,
       });
 
@@ -81,25 +80,21 @@ export default function SpenderProfileScreen() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // 3. Define file naming protocol (uses userId so files overwrite cleanly instead of piling up)
       const filePath = `${user.id}/avatar.jpg`;
       
-      // 4. Upload base64 encoded file directly to Supabase Storage Bucket
       const { error: uploadError } = await supabase.storage
         .from('avatars')
         .upload(filePath, decode(asset.base64), {
           contentType: 'image/jpeg',
-          upsert: true, // Overwrites old profile picture file automatically
+          upsert: true,
         });
 
       if (uploadError) throw uploadError;
 
-      // 5. Build public storage location link
       const { data: { publicUrl } } = supabase.storage
         .from('avatars')
         .getPublicUrl(filePath);
 
-      // 6. Save publicUrl string directly into user profile database column row
       const { error: dbError } = await supabase
         .from('profiles')
         .update({ avatar_url: publicUrl })
@@ -136,6 +131,7 @@ export default function SpenderProfileScreen() {
       if (error) throw error;
 
       Alert.alert("Success", "Account information updated successfully!");
+      setIsEditing(false);
     } catch (error: any) {
       Alert.alert("Update Failed", error.message);
     } finally {
@@ -170,91 +166,137 @@ export default function SpenderProfileScreen() {
 
   if (isLoadingProfile) {
     return (
-      <SafeAreaView style={[styles.container, styles.center]}>
+      <SafeAreaView style={[styles.container, styles.centerLoading]}>
         <ActivityIndicator size="large" color="#58B0A5" />
       </SafeAreaView>
     );
   }
 
+  // --- RENDERING SCREEN 2: EDIT PROFILE ---
+  if (isEditing) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.navButton} onPress={() => setIsEditing(false)}>
+            <Ionicons name="chevron-back" size={22} color="#58B0A5" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Edit Profile</Text>
+          <View style={{ width: 40 }} />
+        </View>
+
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+          <View style={styles.avatarEditContainer}>
+            <TouchableOpacity onPress={pickAndUploadImage} style={styles.avatarWrapper} disabled={isUploadingImage}>
+              {isUploadingImage ? (
+                <ActivityIndicator color="#58B0A5" />
+              ) : avatarUrl ? (
+                <Image source={{ uri: avatarUrl }} style={styles.editAvatarImage} />
+              ) : (
+                <Ionicons name="person" size={50} color="#8A9A93" />
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.editCameraBadge} onPress={pickAndUploadImage} disabled={isUploadingImage}>
+              <Ionicons name="camera" size={14} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.editProfileName}>{fullName || "User Name"}</Text>
+          <Text style={styles.editProfileRole}>{role.toUpperCase()}</Text>
+
+          <View style={styles.formContainer}>
+            <Text style={styles.inputLabel}>Full Name</Text>
+            <View style={styles.inputWrapper}>
+              <Ionicons name="person-outline" size={18} color="#8A9A93" style={styles.inputIcon} />
+              <TextInput 
+                style={styles.input} 
+                value={fullName} 
+                onChangeText={setFullName} 
+                placeholder="Your Full Name"
+                placeholderTextColor="#8A9A93"
+                autoCapitalize="words"
+              />
+            </View>
+
+            <Text style={styles.inputLabel}>Email Address</Text>
+            <View style={[styles.inputWrapper, styles.disabledInputWrapper]}>
+              <Ionicons name="mail-outline" size={18} color="#A3B4AB" style={styles.inputIcon} />
+              <TextInput style={[styles.input, styles.disabledInput]} value={email} editable={false} />
+            </View>
+
+            <TouchableOpacity style={[styles.saveChangesBtn, isUpdating && styles.disabledButton]} onPress={handleUpdateProfile} disabled={isUpdating}>
+              {isUpdating ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.saveChangesBtnText}>Save Changes</Text>}
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  // --- RENDERING SCREEN 1: PROFILE LIST MENU ---
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.content}>
-          
-          {/* Avatar Profile Photo Circle Component containing conditional rendering */}
-          <View style={styles.avatarContainer}>
-            <TouchableOpacity style={styles.avatarWrapper} onPress={pickAndUploadImage} disabled={isUploadingImage}>
-              {isUploadingImage ? (
-                <View style={[styles.avatarPlaceholder, styles.center]}>
-                  <ActivityIndicator color="#58B0A5" />
-                </View>
-              ) : avatarUrl ? (
-                <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
-              ) : (
-                <View style={styles.avatarPlaceholder}>
-                  <Ionicons name="person" size={54} color="#8A9A93" />
-                </View>
-              )}
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.avatarBadge} onPress={pickAndUploadImage} disabled={isUploadingImage}>
-              <Ionicons name="camera" size={16} color="#FFFFFF" />
-            </TouchableOpacity>
+      <View style={styles.header}>
+        <View style={{ width: 40 }} />
+        <Text style={styles.headerTitle}>Profile</Text>
+        <TouchableOpacity style={styles.navButton} onPress={() => setIsEditing(true)}>
+          <Ionicons name="create-outline" size={20} color="#58B0A5" />
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        {/* User Hero Row */}
+        <View style={styles.heroRow}>
+          {avatarUrl ? (
+            <Image source={{ uri: avatarUrl }} style={styles.heroAvatar} />
+          ) : (
+            <View style={styles.heroAvatarPlaceholder}>
+              <Ionicons name="person" size={32} color="#8A9A93" />
+            </View>
+          )}
+          <View>
+            <Text style={styles.heroName}>{fullName || "User Profile"}</Text>
+            <Text style={styles.heroRole}>{role || "Spender"}</Text>
           </View>
-
-          <Text style={styles.title}>{fullName || "User Profile"}</Text>
-          
-          <View style={styles.roleBadge}>
-            <Text style={styles.roleBadgeText}>{role.toUpperCase()}</Text>
-          </View>
-
-          {/* Account Modification Form Fields */}
-          <View style={styles.form}>
-            <Text style={styles.inputLabel}>Full Name</Text>
-            <TextInput
-              style={styles.input}
-              value={fullName}
-              onChangeText={setFullName}
-              placeholder="Your Full Name"
-              placeholderTextColor="#8A9A93"
-              autoCapitalize="words"
-            />
-
-            <Text style={styles.inputLabel}>Registered Email Address</Text>
-            <TextInput
-              style={[styles.input, styles.disabledInput]}
-              value={email}
-              editable={false}
-              selectTextOnFocus={false}
-            />
-
-            <TouchableOpacity 
-              style={[styles.saveButton, isUpdating && styles.disabledButton]} 
-              onPress={handleUpdateProfile}
-              disabled={isUpdating}
-            >
-              {isUpdating ? (
-                <ActivityIndicator color="#FFFFFF" />
-              ) : (
-                <Text style={styles.saveButtonText}>Save Changes</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.divider} />
-
-          <TouchableOpacity 
-            style={[styles.logoutButton, isLoggingOut && styles.disabledButton]} 
-            onPress={handleLogout}
-            disabled={isLoggingOut}
-          >
-            {isLoggingOut ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <Text style={styles.logoutButtonText}>Log Out</Text>
-            )}
-          </TouchableOpacity>
         </View>
+
+        {/* Menu Navigation Items matching image reference structure */}
+        <View style={styles.menuContainer}>
+          {[
+            { id: 'personal', label: 'Personal Information', icon: 'person-outline', action: () => setIsEditing(true) },
+            { id: 'payments', label: 'Payment Preferences', icon: 'wallet-outline' },
+            { id: 'cards', label: 'Banks and Cards', icon: 'card-outline' },
+            { id: 'notifications', label: 'Notifications', icon: 'notifications-outline', badge: '2' },
+            { id: 'messages', label: 'Message Center', icon: 'chatbubble-outline' },
+            { id: 'settings', label: 'Settings', icon: 'settings-outline' },
+          ].map((item) => (
+            <TouchableOpacity key={item.id} style={styles.menuItem} onPress={item.action}>
+              <View style={styles.menuItemLeft}>
+                <Ionicons name={item.icon as any} size={20} color="#58B0A5" />
+                <Text style={styles.menuItemLabel}>{item.label}</Text>
+              </View>
+              <View style={styles.menuItemRight}>
+                {item.badge && (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>{item.badge}</Text>
+                  </View>
+                )}
+                <Ionicons name="chevron-forward" size={16} color="#A3B4AB" />
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Action Logout Block */}
+        <TouchableOpacity style={[styles.logoutBtn, isLoggingOut && styles.disabledButton]} onPress={handleLogout} disabled={isLoggingOut}>
+          {isLoggingOut ? (
+            <ActivityIndicator color="#EF4444" />
+          ) : (
+            <>
+              <Ionicons name="log-out-outline" size={18} color="#EF4444" />
+              <Text style={styles.logoutBtnText}>Log Out</Text>
+            </>
+          )}
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -262,90 +304,49 @@ export default function SpenderProfileScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F7F9F8' },
-  center: { justifyContent: 'center', alignItems: 'center' },
-  scrollContent: { flexGrow: 1 },
-  content: { flex: 1, padding: 24, alignItems: 'center', paddingTop: 40 },
+  centerLoading: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  scrollContent: { paddingBottom: 40 },
   
-  // Avatar Styles
-  avatarContainer: { position: 'relative', marginBottom: 16 },
-  avatarWrapper: { overflow: 'hidden', borderRadius: 53 },
-  avatarPlaceholder: {
-    width: 106,
-    height: 106,
-    borderRadius: 53,
-    backgroundColor: '#E2E8F0',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 3,
-    borderColor: '#FFFFFF',
-  },
-  avatarImage: {
-    width: 106,
-    height: 106,
-    borderRadius: 53,
-    borderWidth: 3,
-    borderColor: '#FFFFFF',
-  },
-  avatarBadge: {
-    position: 'absolute',
-    bottom: 0,
-    right: 4,
-    backgroundColor: '#58B0A5', 
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-  },
+  // Custom Top Appbar Navigation Layout
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 12, paddingBottom: 20 },
+  navButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0' },
+  headerTitle: { fontSize: 18, fontWeight: '700', color: '#1B3623' },
 
-  title: { fontSize: 24, fontWeight: 'bold', color: '#1B3623', marginBottom: 6 },
-  roleBadge: {
-    backgroundColor: '#E0F2FE', 
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 20,
-    marginBottom: 32,
-  },
-  roleBadgeText: { color: '#0369A1', fontSize: 12, fontWeight: 'bold', letterSpacing: 1 },
+  // Screen 1: Profile View List styles
+  heroRow: { flexDirection: 'row', alignItems: 'center', gap: 16, paddingHorizontal: 24, marginVertical: 16 },
+  heroAvatar: { width: 64, height: 64, borderRadius: 32, borderWidth: 2, borderColor: '#FFFFFF' },
+  heroAvatarPlaceholder: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#E2E8F0', justifyContent: 'center', alignItems: 'center' },
+  heroName: { fontSize: 20, fontWeight: '700', color: '#1B3623' },
+  heroRole: { fontSize: 13, color: '#586A61', marginTop: 2 },
+  
+  menuContainer: { marginTop: 20, borderTopWidth: 1, borderColor: '#E2E8F0' },
+  menuItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 18, paddingHorizontal: 24, borderBottomWidth: 1, borderColor: '#E2E8F0', backgroundColor: '#FFFFFF' },
+  menuItemLeft: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  menuItemLabel: { fontSize: 15, color: '#1B3623', fontWeight: '500' },
+  menuItemRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  badge: { backgroundColor: '#EF4444', minWidth: 18, height: 18, borderRadius: 9, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 4 },
+  badgeText: { color: '#FFFFFF', fontSize: 10, fontWeight: '700' },
 
-  form: { width: '100%' },
-  inputLabel: { fontSize: 13, fontWeight: '700', color: '#1B3623', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 },
-  input: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    color: '#1B3623',
-    marginBottom: 20,
-  },
-  disabledInput: { backgroundColor: '#EDF2F7', color: '#718096' },
-  saveButton: {
-    backgroundColor: '#1B3623',
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  saveButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' },
-
-  divider: { height: 1, backgroundColor: '#E2E8F0', width: '100%', marginVertical: 32 },
-
-  logoutButton: {
-    backgroundColor: '#58B0A5',
-    borderRadius: 12,
-    paddingVertical: 16,
-    width: '100%',
-    alignItems: 'center',
-    shadowColor: '#58B0A5',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 2,
-  },
+  // Screen 2: Edit Profile specific UI items
+  avatarEditContainer: { alignSelf: 'center', position: 'relative', marginTop: 20 },
+  avatarWrapper: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#E2E8F0', justifyContent: 'center', alignItems: 'center', overflow: 'hidden', borderWidth: 3, borderColor: '#FFFFFF' },
+  editAvatarImage: { width: '100%', height: '100%' },
+  editCameraBadge: { position: 'absolute', bottom: 0, right: 0, backgroundColor: '#58B0A5', width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#F7F9F8' },
+  editProfileName: { color: '#1B3623', fontSize: 18, fontWeight: '700', textAlign: 'center', marginTop: 16 },
+  editProfileRole: { color: '#586A61', fontSize: 12, textAlign: 'center', marginTop: 4, letterSpacing: 0.5 },
+  
+  formContainer: { paddingHorizontal: 24, marginTop: 32 },
+  inputLabel: { color: '#1B3623', fontSize: 13, fontWeight: '700', marginBottom: 8, paddingLeft: 2, textTransform: 'uppercase', letterSpacing: 0.5 },
+  inputWrapper: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', marginBottom: 20, paddingHorizontal: 16, height: 56 },
+  inputIcon: { marginRight: 12 },
+  input: { flex: 1, color: '#1B3623', fontSize: 15, height: '100%' },
+  disabledInputWrapper: { backgroundColor: '#EDF2F7', borderColor: '#E2E8F0' },
+  disabledInput: { color: '#718096' },
   disabledButton: { backgroundColor: '#A3B4AB' },
-  logoutButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' },
+  
+  saveChangesBtn: { backgroundColor: '#58B0A5', height: 56, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginTop: 10 },
+  saveChangesBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
+  
+  logoutBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginHorizontal: 24, marginTop: 32, height: 54, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8F0' },
+  logoutBtnText: { color: '#EF4444', fontSize: 15, fontWeight: '600' }
 });
