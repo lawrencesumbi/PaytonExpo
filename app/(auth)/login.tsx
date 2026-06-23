@@ -52,7 +52,7 @@ export default function LoginScreen() {
           
           <View style={styles.headerContainer}>
             <Text style={styles.title}>
-              Hello!{'\n'}Welcome to <Text style={styles.brandText}>Payton</Text>
+              Welcome to <Text style={styles.brandText}>Payton</Text>
             </Text>
             <Text style={styles.subtitle}>
               Access your account using your email and password.
@@ -107,7 +107,7 @@ export default function LoginScreen() {
               </TouchableOpacity>
               
               <TouchableOpacity style={styles.socialButton}>
-                <Text style={styles.socialButtonText}>Continue with Apple</Text>
+                <Text style={styles.socialButtonText}>Continue with Facebook</Text>
               </TouchableOpacity>
             </View>
 

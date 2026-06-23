@@ -52,7 +52,7 @@ export default function RegisterScreen() {
         
         <View style={styles.headerContainer}>
           <Text style={styles.title}>
-            Hello!{'\n'}Create an <Text style={styles.brandText}>Account</Text>
+            Create an <Text style={styles.brandText}>Account</Text>
           </Text>
           <Text style={styles.subtitle}>
             Sign up with your email and password to continue.
@@ -144,7 +144,7 @@ export default function RegisterScreen() {
           </TouchableOpacity>
           
           <TouchableOpacity style={styles.socialButton}>
-            <Text style={styles.socialButtonText}>Continue with Apple</Text>
+            <Text style={styles.socialButtonText}>Continue with Facebook</Text>
           </TouchableOpacity>
         </View>
 
