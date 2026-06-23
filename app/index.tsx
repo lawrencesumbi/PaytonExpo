@@ -8,7 +8,7 @@ export default function WelcomeScreen() {
   
   // 1. Create animated values for both opacity and scale
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.5)).current; // Start at half size
+  const scaleAnim = useRef(new Animated.Value(0.7)).current; // Start at half size
 
   useEffect(() => {
     // 2. Run both animations at the same time
@@ -20,7 +20,7 @@ export default function WelcomeScreen() {
       }),
       Animated.timing(scaleAnim, {
         toValue: 1, // Grow to full size (100%)
-        duration: 1000,
+        duration: 500,
         useNativeDriver: true,
       })
     ]).start();

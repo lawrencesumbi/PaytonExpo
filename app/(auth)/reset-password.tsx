@@ -1,15 +1,98 @@
+import * as Linking from 'expo-linking'; // Import Linking to parse the URL
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
-import { SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { supabase } from '../../lib/supabase';
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
+  const url = Linking.useURL(); // Hook to capture the deep link URL that opened the app
+
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [isSessionReady, setIsSessionReady] = useState(false);
 
-  const handleUpdatePassword = () => {
-    // Save updated configurations safely via backend execution
-    router.replace('/login');
+  // Parse the URL when the component mounts or when a deep link is received
+  useEffect(() => {
+    if (url) {
+      handleDeepLink(url);
+    }
+  }, [url]);
+
+  const handleDeepLink = async (urlStr: string) => {
+    try {
+      const parsed = Linking.parse(urlStr);
+      // Supabase passes parameters in the hash fragment (indicated by '#')
+      // Extract access_token and refresh_token from the hash string
+      const hash = parsed.queryParams?.['#'] || parsed.hash;
+      
+      if (hash) {
+        // Simple manual parsing of the hash string into key-value pairs
+        const params = Object.fromEntries(new URLSearchParams(hash));
+        const accessToken = params.access_token;
+        const refreshToken = params.refresh_token;
+
+        if (accessToken && refreshToken) {
+          // Explicitly set the active Supabase session
+          const { error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
+
+          if (error) throw error;
+          setIsSessionReady(true);
+          return;
+        }
+      }
+    } catch (e: any) {
+      Alert.alert('Link Error', 'The recovery link is invalid or expired.');
+    }
+  };
+
+  const handleUpdatePassword = async () => {
+    if (!password || !confirmPassword) {
+      Alert.alert('Error', 'Please fill in all fields.');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      Alert.alert('Error', 'Passwords do not match.');
+      return;
+    }
+
+    if (password.length < 6) {
+      Alert.alert('Error', 'Password should be at least 6 characters long.');
+      return;
+    }
+
+    // Safety check ensuring we have established the user's session context
+    if (!isSessionReady) {
+      Alert.alert('Session Error', 'Please open this page using the link provided in your email.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: password
+      });
+
+      if (error) throw error;
+
+      // Signing out after password update is highly recommended so they must re-log in
+      await supabase.auth.signOut();
+
+      Alert.alert(
+        'Success', 
+        'Your password has been securely updated.',
+        [{ text: 'Login', onPress: () => router.replace('/login') }]
+      );
+    } catch (error: any) {
+      Alert.alert('Update Failed', error.message || 'An error occurred while updating your password.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -25,6 +108,7 @@ export default function ResetPasswordScreen() {
           value={password}
           onChangeText={setPassword}
           secureTextEntry
+          editable={!loading}
         />
         <TextInput
           style={styles.input}
@@ -33,10 +117,19 @@ export default function ResetPasswordScreen() {
           value={confirmPassword}
           onChangeText={setConfirmPassword}
           secureTextEntry
+          editable={!loading}
         />
 
-        <TouchableOpacity style={styles.primaryButton} onPress={handleUpdatePassword}>
-          <Text style={styles.buttonText}>Update Password</Text>
+        <TouchableOpacity 
+          style={[styles.primaryButton, (loading || !isSessionReady) && { opacity: 0.7 }]} 
+          onPress={handleUpdatePassword}
+          disabled={loading || !isSessionReady}
+        >
+          {loading ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.buttonText}>Update Password</Text>
+          )}
         </TouchableOpacity>
       </View>
     </SafeAreaView>
