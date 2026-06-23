@@ -1,54 +1,14 @@
-import * as Linking from 'expo-linking'; // Import Linking to parse the URL
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { ActivityIndicator, Alert, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+// TODO: Adjust the import path below to point to your initialized Supabase client
 import { supabase } from '../../lib/supabase';
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
-  const url = Linking.useURL(); // Hook to capture the deep link URL that opened the app
-
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [isSessionReady, setIsSessionReady] = useState(false);
-
-  // Parse the URL when the component mounts or when a deep link is received
-  useEffect(() => {
-    if (url) {
-      handleDeepLink(url);
-    }
-  }, [url]);
-
-  const handleDeepLink = async (urlStr: string) => {
-    try {
-      const parsed = Linking.parse(urlStr);
-      // Supabase passes parameters in the hash fragment (indicated by '#')
-      // Extract access_token and refresh_token from the hash string
-      const hash = parsed.queryParams?.['#'] || parsed.hash;
-      
-      if (hash) {
-        // Simple manual parsing of the hash string into key-value pairs
-        const params = Object.fromEntries(new URLSearchParams(hash));
-        const accessToken = params.access_token;
-        const refreshToken = params.refresh_token;
-
-        if (accessToken && refreshToken) {
-          // Explicitly set the active Supabase session
-          const { error } = await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken,
-          });
-
-          if (error) throw error;
-          setIsSessionReady(true);
-          return;
-        }
-      }
-    } catch (e: any) {
-      Alert.alert('Link Error', 'The recovery link is invalid or expired.');
-    }
-  };
 
   const handleUpdatePassword = async () => {
     if (!password || !confirmPassword) {
@@ -66,12 +26,6 @@ export default function ResetPasswordScreen() {
       return;
     }
 
-    // Safety check ensuring we have established the user's session context
-    if (!isSessionReady) {
-      Alert.alert('Session Error', 'Please open this page using the link provided in your email.');
-      return;
-    }
-
     setLoading(true);
     try {
       const { error } = await supabase.auth.updateUser({
@@ -79,9 +33,6 @@ export default function ResetPasswordScreen() {
       });
 
       if (error) throw error;
-
-      // Signing out after password update is highly recommended so they must re-log in
-      await supabase.auth.signOut();
 
       Alert.alert(
         'Success', 
@@ -121,9 +72,9 @@ export default function ResetPasswordScreen() {
         />
 
         <TouchableOpacity 
-          style={[styles.primaryButton, (loading || !isSessionReady) && { opacity: 0.7 }]} 
+          style={[styles.primaryButton, loading && { opacity: 0.7 }]} 
           onPress={handleUpdatePassword}
-          disabled={loading || !isSessionReady}
+          disabled={loading}
         >
           {loading ? (
             <ActivityIndicator color="#FFFFFF" />
