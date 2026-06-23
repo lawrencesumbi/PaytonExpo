@@ -5,8 +5,8 @@ export default function Screen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
-        <Text style={styles.title}>Personal Dashboard Component</Text>
-        <Text style={styles.subtitle}>Customize features for individual financial tracking.</Text>
+        <Text style={styles.title}>Spender Operations Console</Text>
+        <Text style={styles.subtitle}>Track collaborative split payment workflows and active groups.</Text>
       </View>
     </SafeAreaView>
   );

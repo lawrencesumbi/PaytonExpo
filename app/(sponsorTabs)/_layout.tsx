@@ -1,4 +1,4 @@
- // app/(sponsorTabs)/_layout.tsx
+// app/(sponsorTabs)/_layout.tsx
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import { Platform, StyleSheet, View } from 'react-native';
@@ -10,7 +10,7 @@ export default function SponsorTabsLayout() {
         tabBarActiveTintColor: '#0CD964',
         tabBarInactiveTintColor: '#7DA08E',
         tabBarStyle: {
-          backgroundColor: '#213502',
+          backgroundColor: "white",
           borderTopWidth: 0,
           height: Platform.OS === 'ios' ? 85 : 65,
           paddingBottom: Platform.OS === 'ios' ? 20 : 6,
@@ -78,6 +78,22 @@ export default function SponsorTabsLayout() {
           ),
         }}
       />
+      {/* KINI ANG BAG-ONG GIDUGANG NGA MEMBERS TAB */}
+      <Tabs.Screen
+        name="members"
+        options={{
+          title: 'Members',
+          tabBarIcon: ({ color, focused }) => (
+            <View style={[styles.tabIcon, focused && styles.tabIconActive]}>
+              <Ionicons 
+                name={focused ? "people" : "people-outline"} 
+                size={24} 
+                color={color} 
+              />
+            </View>
+          ),
+        }}
+      />
       <Tabs.Screen
         name="profile"
         options={{
@@ -104,7 +120,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: 30,
+    minWidth: 50,
     minHeight: 30,
   },
   tabIconActive: {

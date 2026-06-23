@@ -267,7 +267,6 @@ export default function SpenderProfileScreen() {
             { id: 'personal', label: 'Personal Information', icon: 'person-outline', action: () => setIsEditing(true) },
             { id: 'password', label: 'Change Password', icon: 'lock-closed-outline', action: () => router.push('/profile/change-password' as any) },
             { id: 'appearance', label: 'Appearance', icon: 'color-palette-outline', action: () => router.push('/profile/appearance' as any) },
-            { id: 'notifications', label: 'Notification', icon: 'notifications-outline', action: () => router.push('/profile/notifications' as any) },
             { id: 'archive', label: 'Archive', icon: 'archive-outline', action: () => router.push('/profile/archive' as any) },
             { id: 'export', label: 'Export Data', icon: 'download-outline', action: () => router.push('/profile/export' as any) },
             { id: 'help', label: 'Help Center', icon: 'help-circle-outline', action: () => router.push('/profile/help' as any) },
