@@ -1,11 +1,14 @@
 // app/(spenderTabs)/expenses.tsx
 import { Ionicons } from '@expo/vector-icons';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   FlatList,
   KeyboardAvoidingView,
+  StatusBar as NativeStatusBar,
   Platform,
   SafeAreaView,
   StyleSheet,
@@ -29,23 +32,37 @@ interface BudgetOption {
 }
 
 export default function SpenderExpensesScreen() {
+  const router = useRouter();
+  
+  // Dynamic Route parameters passed down globally from OCR receipt scanning screen hooks
+  const { scannedName, scannedAmount } = useLocalSearchParams<{ scannedName?: string; scannedAmount?: string }>();
+
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   
-  // Form States
+  // Structured State Collections
   const [budgets, setBudgets] = useState<BudgetOption[]>([]);
   const [selectedBudget, setSelectedBudget] = useState<BudgetOption | null>(null);
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
 
-  // Fetch only active budgets that this user has allocated money to
+  // 1. EVALUATE SCAN PARAMETERS PASSED FROM OCR VIEWS
+  useEffect(() => {
+    if (scannedAmount) {
+      setAmount(scannedAmount);
+    }
+    if (scannedName) {
+      setDescription(`Scanned: ${scannedName}`);
+    }
+  }, [scannedAmount, scannedName]);
+
+  // 2. FETCH ACTIVE BUDGET RECORDS ASSOCIATED TO CURRENT USER ID
   const fetchActiveBudgets = async () => {
     try {
       setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Gi-join nato ang budgets ug categories para makuha ang ngalan ug icon sa kategorya
       const { data, error } = await supabase
         .from('budgets')
         .select(`
@@ -63,12 +80,11 @@ export default function SpenderExpensesScreen() {
 
       if (error) throw error;
       
-      // I-filter lang kadtong mga kategorya nga naay tarong nga join data
       const validBudgets = (data || []).filter((b: any) => b.categories) as unknown as BudgetOption[];
       setBudgets(validBudgets);
       
       if (validBudgets.length > 0 && !selectedBudget) {
-        setSelectedBudget(validBudgets[0]); // Default selection
+        setSelectedBudget(validBudgets[0]); // Fallback validation default choice selection
       }
     } catch (error: any) {
       console.error("Fetch Budgets Error:", error.message);
@@ -77,22 +93,23 @@ export default function SpenderExpensesScreen() {
     }
   };
 
+  // 3. PERSIST TRANSACTION AND UPDATE REMAINING BUDGET BALANCES
   const handleLogExpense = async () => {
     if (!selectedBudget) {
-      Alert.alert("Sipyat", "Palihog pagpili og kategorya sa budget.");
+      Alert.alert("Missing Category", "Please select an active budget category target.");
       return;
     }
 
     const expenseAmount = parseFloat(amount);
     if (isNaN(expenseAmount) || expenseAmount <= 0) {
-      Alert.alert("Sipyat", "Palihog pagbutang og saktong kantidad sa gasto.");
+      Alert.alert("Invalid Amount", "Please input a positive numeric transaction value.");
       return;
     }
 
     if (expenseAmount > selectedBudget.remaining_amount) {
       Alert.alert(
-        "Kulang ang Budget", 
-        `Dili ka ka-gasto og ₱${expenseAmount.toFixed(2)} kay ₱${selectedBudget.remaining_amount.toFixed(2)} nalang ang nabilin nga budget niini nga kategorya.`
+        "Insufficient Budget ❌", 
+        `You cannot spend ₱${expenseAmount.toFixed(2)} because you only have ₱${selectedBudget.remaining_amount.toFixed(2)} remaining inside this specific folder.`
       );
       return;
     }
@@ -100,19 +117,19 @@ export default function SpenderExpensesScreen() {
     try {
       setSubmitting(true);
       
-      // 1. I-insert ang record sa expenses table
+      // 1. Create entry within primary operational expenses table
       const { error: insertError } = await supabase
         .from('expenses')
         .insert({
           budget_id: selectedBudget.id,
           amount: expenseAmount,
-          description: description.trim() || 'No Description',
+          description: description.trim() || 'Uncategorized Expense',
           spent_at: new Date().toISOString()
         });
 
       if (insertError) throw insertError;
 
-      // 2. I-update/I-deduct ang remaining_amount sa budgets table
+      // 2. Reduce numerical ledger balance states from targets table
       const newRemaining = selectedBudget.remaining_amount - expenseAmount;
       const { error: updateError } = await supabase
         .from('budgets')
@@ -121,17 +138,17 @@ export default function SpenderExpensesScreen() {
 
       if (updateError) throw updateError;
 
-      Alert.alert("Success", `Na-record na ang imong gasto nga ₱${expenseAmount.toFixed(2)}!`);
+      Alert.alert("Success 🎉", `Your transaction of ₱${expenseAmount.toFixed(2)} was securely captured.`);
       
-      // I-clear ang form fields
+      // Clear transactional field contexts safely
       setAmount('');
       setDescription('');
       
-      // I-refresh ang listahan para updated ang remaining amounts
+      // Re-trigger global account lookup loops
       await fetchActiveBudgets();
 
     } catch (error: any) {
-      Alert.alert("Error", error.message);
+      Alert.alert("Transaction Aborted", error.message);
     } finally {
       setSubmitting(false);
     }
@@ -143,33 +160,38 @@ export default function SpenderExpensesScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, { justifyContent: 'center' }]}>
-        <ActivityIndicator size="large" color="#54C6CC" />
+      <SafeAreaView style={[styles.container, styles.centeredContent]}>
+        <StatusBar style="dark" />
+        <ActivityIndicator size="small" color="#10B981" />
       </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView style={styles.container}>
+      <StatusBar style="dark" />
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
         style={{ flex: 1 }}
       >
+        {/* Modern Clean Header Stack */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Log New Expense</Text>
-          <Text style={styles.headerSubtitle}>I-rekord ang imong mga nagasto gikan sa imong gi-allocate nga budget</Text>
+          <Text style={styles.headerSubtitle}>Manually record or audit transaction items parsed from your structured balance categories.</Text>
         </View>
 
         {budgets.length === 0 ? (
           <View style={styles.emptyState}>
-            <Ionicons name="wallet-outline" size={64} color="#8A9A91" />
+            <View style={styles.emptyIconContainer}>
+              <Ionicons name="wallet-outline" size={32} color="#64748B" />
+            </View>
             <Text style={styles.emptyText}>No Active Budgets Allocated</Text>
-            <Text style={styles.emptySub}>Pang-allocate una og kwarta sa imong mga kategorya didto sa Home Screen aron ka makasugod og log og expenses.</Text>
+            <Text style={styles.emptySub}>To populate transactional items, configure and allocate capital tokens to individual category slots via your Home layout first.</Text>
           </View>
         ) : (
           <View style={styles.formContainer}>
             
-            {/* INPUT SA KANTIDAD */}
+            {/* LARGE FINTECH AMOUNT INPUT FIELD */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Amount Spent</Text>
               <View style={styles.amountInputRow}>
@@ -177,6 +199,7 @@ export default function SpenderExpensesScreen() {
                 <TextInput
                   style={styles.amountInput}
                   placeholder="0.00"
+                  placeholderTextColor="#94A3B8"
                   keyboardType="numeric"
                   value={amount}
                   onChangeText={setAmount}
@@ -185,20 +208,21 @@ export default function SpenderExpensesScreen() {
               </View>
             </View>
 
-            {/* DESCRIPTION INPUT */}
+            {/* DESCRIPTION FIELD INPUT ROW */}
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Description / Remarks</Text>
+              <Text style={styles.label}>Description / Reference Remarks</Text>
               <TextInput
                 style={styles.textInput}
-                placeholder="E.g., Gi-paniudto sa canteen, plete sa jeep"
+                placeholder="e.g., Dinner at canteen, taxi fare commute"
+                placeholderTextColor="#94A3B8"
                 value={description}
                 onChangeText={setDescription}
                 editable={!submitting}
               />
             </View>
 
-            {/* SELECT BUDGET CATEGORY */}
-            <Text style={styles.label}>Select Budget Category</Text>
+            {/* HORIZONTAL STREAM PICKER COMPONENT FOR BUDGET CARDS */}
+            <Text style={styles.label}>Select Budget Allocation Folder</Text>
             <FlatList
               data={budgets}
               keyExtractor={(item) => item.id}
@@ -209,38 +233,41 @@ export default function SpenderExpensesScreen() {
                 const isSelected = selectedBudget?.id === item.id;
                 return (
                   <TouchableOpacity
-                    activeOpacity={0.8}
+                    activeOpacity={0.85}
                     onPress={() => setSelectedBudget(item)}
                     style={[
                       styles.categoryCard,
-                      { backgroundColor: item.categories.color },
+                      { backgroundColor: item.categories.color || '#1E293B' },
                       isSelected && styles.selectedCard
                     ]}
                   >
                     <View style={styles.cardHeader}>
                       {/* @ts-ignore */}
-                      <Ionicons name={item.categories.icon} size={20} color="#FFFFFF" />
-                      {isSelected && <Ionicons name="checkmark-circle" size={18} color="#0CD964" />}
+                      <Ionicons name={item.categories.icon || 'card-outline'} size={18} color="#FFFFFF" />
+                      {isSelected && <Ionicons name="checkmark-circle" size={16} color="#FFFFFF" />}
                     </View>
-                    <Text style={styles.categoryName} numberOfLines={1}>{item.categories.name}</Text>
-                    <Text style={styles.categoryRemaining}>Bal: ₱{item.remaining_amount.toFixed(0)}</Text>
+                    <View>
+                      <Text style={styles.categoryName} numberOfLines={1}>{item.categories.name}</Text>
+                      <Text style={styles.categoryRemaining}>Bal: ₱{item.remaining_amount.toFixed(0)}</Text>
+                    </View>
                   </TouchableOpacity>
                 );
               }}
             />
 
-            {/* SUBMIT BUTTON */}
+            {/* SAVE ACTION TRIGGER CONTROL BUTTON */}
             <TouchableOpacity
               style={[styles.submitButton, submitting && styles.disabledButton]}
               onPress={handleLogExpense}
               disabled={submitting}
+              activeOpacity={0.8}
             >
               {submitting ? (
                 <ActivityIndicator color="#FFFFFF" size="small" />
               ) : (
                 <>
-                  <Ionicons name="receipt-outline" size={20} color="#FFFFFF" />
-                  <Text style={styles.submitButtonText}>Save Expense</Text>
+                  <Ionicons name="receipt-outline" size={18} color="#FFFFFF" />
+                  <Text style={styles.submitButtonText}>Commit Expense Record</Text>
                 </>
               )}
             </TouchableOpacity>
@@ -253,27 +280,100 @@ export default function SpenderExpensesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FAF9' },
-  header: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 15 },
-  headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#0E2417' },
-  headerSubtitle: { fontSize: 13, color: '#557261', marginTop: 4, lineHeight: 18 },
-  formContainer: { flex: 1, paddingHorizontal: 20, paddingTop: 10 },
-  inputGroup: { marginBottom: 20 },
-  label: { fontSize: 14, fontWeight: '600', color: '#0E2417', marginBottom: 8 },
-  amountInputRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderBottomWidth: 2, borderBottomColor: '#0E2417', paddingVertical: 5 },
-  currencySymbol: { fontSize: 28, fontWeight: 'bold', color: '#0E2417', marginRight: 5 },
-  amountInput: { flex: 1, fontSize: 32, fontWeight: 'bold', color: '#0E2417' },
-  textInput: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#EBEFEF', borderRadius: 10, padding: 14, fontSize: 15, color: '#0E2417' },
-  categoryList: { gap: 12, paddingBottom: 15, paddingTop: 5 },
-  categoryCard: { width: 115, padding: 12, borderRadius: 12, height: 95, justifyContent: 'space-between', opacity: 0.7, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3, elevation: 2 },
-  selectedCard: { opacity: 1, borderWidth: 2, borderColor: '#0E2417' },
+  container: { flex: 1, backgroundColor: '#FAFBFD' },
+  centeredContent: { justifyContent: 'center', alignItems: 'center' },
+  
+  // Clean Adaptive Top Section Padding bounds
+  header: { 
+    paddingHorizontal: 22, 
+    paddingTop: Platform.OS === 'android' ? (NativeStatusBar.currentHeight ? NativeStatusBar.currentHeight + 12 : 30) : 12, 
+    paddingBottom: 20 
+  },
+  headerTitle: { fontSize: 24, fontWeight: '700', color: '#1E293B', letterSpacing: -0.5 },
+  headerSubtitle: { fontSize: 13, color: '#64748B', marginTop: 4, lineHeight: 18 },
+  
+  formContainer: { flex: 1, paddingHorizontal: 22, paddingTop: 10 },
+  inputGroup: { marginBottom: 24 },
+  label: { fontSize: 13, fontWeight: '600', color: '#475569', marginBottom: 10 },
+  
+  // Immersive Input Configurations
+  amountInputRow: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    backgroundColor: '#FFFFFF', 
+    borderBottomWidth: 2, 
+    borderBottomColor: '#1E293B', 
+    paddingVertical: 4 
+  },
+  currencySymbol: { fontSize: 32, fontWeight: '700', color: '#1E293B', marginRight: 8 },
+  amountInput: { flex: 1, fontSize: 36, fontWeight: '700', color: '#1E293B', letterSpacing: -0.5 },
+  textInput: { 
+    backgroundColor: '#FFFFFF', 
+    borderWidth: 1, 
+    borderColor: '#E2E8F0', 
+    borderRadius: 14, 
+    padding: 14, 
+    fontSize: 14, 
+    color: '#1E293B' 
+  },
+  
+  // Compact Horizontal Selector Deck Cards
+  categoryList: { gap: 10, paddingBottom: 16, paddingTop: 4 },
+  categoryCard: { 
+    width: 120, 
+    padding: 14, 
+    borderRadius: 16, 
+    height: 105, 
+    justifyContent: 'space-between', 
+    opacity: 0.65,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2
+  },
+  selectedCard: { 
+    opacity: 1, 
+    borderWidth: 2, 
+    borderColor: '#1E293B',
+    transform: [{ scale: 1.02 }]
+  },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  categoryName: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 13, marginTop: 8 },
-  categoryRemaining: { color: 'rgba(255,255,255,0.8)', fontSize: 11 },
-  submitButton: { backgroundColor: '#0E2417', paddingVertical: 15, borderRadius: 12, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 'auto', marginBottom: Platform.OS === 'ios' ? 20 : 35, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 4, elevation: 3 },
+  categoryName: { color: '#FFFFFF', fontWeight: '600', fontSize: 13, marginTop: 12, letterSpacing: -0.2 },
+  categoryRemaining: { color: 'rgba(255,255,255,0.85)', fontSize: 11, fontWeight: '500', marginTop: 2 },
+  
+  // Main Submission Anchor Node
+  submitButton: { 
+    backgroundColor: '#1E293B', 
+    paddingVertical: 16, 
+    borderRadius: 16, 
+    flexDirection: 'row', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    gap: 8, 
+    marginTop: 'auto', 
+    marginBottom: Platform.OS === 'ios' ? 24 : 36, 
+    shadowColor: '#1E293B', 
+    shadowOffset: { width: 0, height: 6 }, 
+    shadowOpacity: 0.1, 
+    shadowRadius: 8, 
+    elevation: 4 
+  },
   disabledButton: { opacity: 0.6 },
-  submitButtonText: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 16 },
-  emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40, gap: 12 },
-  emptyText: { fontSize: 18, fontWeight: 'bold', color: '#0E2417' },
-  emptySub: { fontSize: 13, color: '#557261', textAlign: 'center', lineHeight: 20 }
+  submitButtonText: { color: '#FFFFFF', fontWeight: '600', fontSize: 15 },
+  
+  // Structural Presentation Boundaries
+  emptyState: { flex: 0.8, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 36, gap: 14 },
+  emptyIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    backgroundColor: '#F1F5F9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0'
+  },
+  emptyText: { fontSize: 18, fontWeight: '700', color: '#1E293B', letterSpacing: -0.4 },
+  emptySub: { fontSize: 13, color: '#64748B', textAlign: 'center', lineHeight: 22, fontWeight: '400' }
 });

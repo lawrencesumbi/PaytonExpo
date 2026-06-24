@@ -1,10 +1,12 @@
 // app/(spenderTabs)/invitations.tsx
 import { Ionicons } from '@expo/vector-icons';
+import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   FlatList,
+  StatusBar as NativeStatusBar,
   Platform,
   SafeAreaView,
   StyleSheet,
@@ -12,11 +14,10 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
-// I-import ang imong gihimo nga supabase client file (i-adjust ang path sumala sa imong folder)
 import { supabase } from '../../lib/supabase';
 
 interface Invitation {
-  id: string; // ID sa row gikan sa 'sponsor_spenders' table
+  id: string; // Row ID from 'sponsor_spenders' table
   sponsor_name: string;
   sponsor_email: string;
 }
@@ -26,17 +27,15 @@ export default function InvitationsScreen() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
 
-  // 1. I-FETCH ANG MGA PENDING INVITATIONS ALANG NIINING SPENDER
+  // 1. FETCH PENDING INVITATIONS FOR CURRENT SPENDER
   const fetchInvitations = async () => {
     try {
       setLoading(true);
       
-      // Kuhaon ang kasamtangang naka-login nga Spender
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // I-query ang 'sponsor_spenders' diin ang status kay 'pending' ug iyaha ang spender_id
-      // Gigamitan og 'profiles!sponsor_id' aron makuha ang mga detalye sa Sponsor nga nag-invite
+      // Query 'sponsor_spenders' where status is 'pending' and matches user id
       const { data, error } = await supabase
         .from('sponsor_spenders')
         .select(`
@@ -53,16 +52,16 @@ export default function InvitationsScreen() {
 
       if (error) throw error;
 
-      // I-format para sa FlatList state
+      // Format data array for FlatList state management
       const formattedInvites = (data || []).map((item: any) => ({
         id: item.id,
         sponsor_name: item.profiles?.full_name || 'Unknown Sponsor',
-        sponsor_email: item.profiles?.email || 'No Email'
+        sponsor_email: item.profiles?.email || 'No Email Address'
       }));
 
       setInvitations(formattedInvites);
     } catch (error: any) {
-      Alert.alert("Error", error.message || "Wala na-fetch ang mga invitations.");
+      Alert.alert("Error", error.message || "Failed to fetch incoming invitations.");
     } finally {
       setLoading(false);
     }
@@ -72,12 +71,12 @@ export default function InvitationsScreen() {
     fetchInvitations();
   }, []);
 
-  // 2. FUNCTION PARA MO-ACCEPT OG INVITATION
+  // 2. CONTROLLER TO ACCEPT AN INVITATION
   const handleAccept = async (id: string, sponsorName: string) => {
     try {
       setActionLoading(true);
 
-      // I-update ang status ngadto sa 'accepted' sa database
+      // Update structural status to 'accepted' in the database ledger
       const { error } = await supabase
         .from('sponsor_spenders')
         .update({ status: 'accepted' })
@@ -85,22 +84,22 @@ export default function InvitationsScreen() {
 
       if (error) throw error;
       
-      Alert.alert("Success 🎉", `Gi-accept nimo ang invitation ni ${sponsorName}. Naka-link na mo karon!`);
-      // Kuhaon sa listahan sa UI
+      Alert.alert("Success 🎉", `You have successfully accepted the invitation from ${sponsorName}. Your accounts are now linked!`);
+      // Evict item from local state cache array
       setInvitations(prev => prev.filter(item => item.id !== id));
     } catch (error: any) {
-      Alert.alert("Error ❌", error.message || "Napakyas ang pag-accept.");
+      Alert.alert("Error ❌", error.message || "An error occurred while accepting the invitation.");
     } finally {
       setActionLoading(false);
     }
   };
 
-  // 3. FUNCTION PARA MO-DECLINE OG INVITATION
+  // 3. CONTROLLER TO DECLINE AN INVITATION
   const handleDecline = async (id: string) => {
     try {
       setActionLoading(true);
 
-      // I-delete ang row gikan sa table kung gibalibaran
+      // Remove linkage entity completely upon rejection profile choices
       const { error } = await supabase
         .from('sponsor_spenders')
         .delete()
@@ -108,11 +107,10 @@ export default function InvitationsScreen() {
 
       if (error) throw error;
       
-      Alert.alert("Declined", "Imong gibalibaran ang invitation.");
-      // Kuhaon sa listahan sa UI
+      Alert.alert("Declined", "You have turned down the connection invitation.");
       setInvitations(prev => prev.filter(item => item.id !== id));
     } catch (error: any) {
-      Alert.alert("Error ❌", error.message || "Napakyas ang pag-decline.");
+      Alert.alert("Error ❌", error.message || "An error occurred while declining the invitation.");
     } finally {
       setActionLoading(false);
     }
@@ -120,24 +118,27 @@ export default function InvitationsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
+      <StatusBar style="dark" />
+      <View style={styles.contentContainer}>
         
-        {/* Header Section */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Mga Invitation</Text>
-          <Text style={styles.headerSubtitle}>Kini ang mga Sponsor nga gusto mo-link kanimo ingon ilang Spender.</Text>
+        {/* Modern Clean Header Section */}
+        <View style={styles.headerSection}>
+          <Text style={styles.headerTitle}>Invitations</Text>
+          <Text style={styles.headerSubtitle}>Review and manage incoming linkage requests from active Sponsors looking to fund your account.</Text>
         </View>
 
-        {/* Listahan o Empty/Loading States */}
+        {/* Dynamic List Rendering & Conditional Loader Contexts */}
         {loading ? (
-          <ActivityIndicator color="#0CD964" size="large" style={{ marginTop: 40 }} />
+          <View style={styles.centerLoadingState}>
+            <ActivityIndicator color="#0E2417" size="small" />
+          </View>
         ) : invitations.length === 0 ? (
-          <View style={styles.emptyState}>
-            <View style={styles.emptyIconContainer}>
-              <Ionicons name="mail-open-outline" size={50} color="#7DA08E" />
+          <View style={styles.emptyStateContainer}>
+            <View style={styles.emptyIconCircle}>
+              <Ionicons name="mail-open-outline" size={32} color="#64748B" />
             </View>
-            <Text style={styles.emptyText}>Walay pending nga invitation</Text>
-            <Text style={styles.emptySubtext}>Kon naay mag-invite nimo nga Sponsor, makita nimo kini diri dayon.</Text>
+            <Text style={styles.emptyStateTitle}>All Caught Up</Text>
+            <Text style={styles.emptyStateSubtext}>You don't have any pending link requests. New invitations from incoming sponsors will appear here instantly.</Text>
           </View>
         ) : (
           <FlatList
@@ -145,39 +146,40 @@ export default function InvitationsScreen() {
             keyExtractor={(item) => item.id}
             refreshing={loading}
             onRefresh={fetchInvitations}
+            showsVerticalScrollIndicator={false}
             renderItem={({ item }) => (
-              <View style={styles.inviteCard}>
-                <View style={styles.cardHeader}>
-                  <View style={styles.avatar}>
-                    <Ionicons name="business" size={20} color="#213502" />
+              <View style={styles.invitationCard}>
+                <View style={styles.cardHeaderRow}>
+                  <View style={styles.avatarIconBox}>
+                    <Ionicons name="business-outline" size={20} color="#0E2417" />
                   </View>
-                  <View style={styles.infoContainer}>
-                    <Text style={styles.sponsorName}>{item.sponsor_name}</Text>
-                    <Text style={styles.sponsorEmail}>{item.sponsor_email}</Text>
+                  <View style={styles.sponsorMetadata}>
+                    <Text style={styles.sponsorNameText}>{item.sponsor_name}</Text>
+                    <Text style={styles.sponsorEmailText}>{item.sponsor_email}</Text>
                   </View>
                 </View>
 
-                {/* Mga Action Buttons */}
-                <View style={styles.actionsContainer}>
+                {/* Elegant Action Trigger Utilities */}
+                <View style={styles.actionButtonsRow}>
                   <TouchableOpacity 
-                    style={[styles.button, styles.declineButton]} 
+                    style={[styles.baseActionBtn, styles.declineActionBtn]} 
                     onPress={() => handleDecline(item.id)}
                     disabled={actionLoading}
                   >
-                    <Text style={styles.declineText}>Decline</Text>
+                    <Text style={styles.declineBtnText}>Decline</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity 
-                    style={[styles.button, styles.acceptButton]} 
+                    style={[styles.baseActionBtn, styles.acceptActionBtn]} 
                     onPress={() => handleAccept(item.id, item.sponsor_name)}
                     disabled={actionLoading}
                   >
-                    <Text style={styles.acceptText}>Accept</Text>
+                    <Text style={styles.acceptBtnText}>Accept</Text>
                   </TouchableOpacity>
                 </View>
               </View>
             )}
-            contentContainerStyle={styles.listContent}
+            contentContainerStyle={styles.flatListBottomPadding}
           />
         )}
       </View>
@@ -186,26 +188,82 @@ export default function InvitationsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFFFFF' },
-  content: { flex: 1, padding: 20 },
-  header: { marginBottom: 25, marginTop: Platform.OS === 'android' ? 20 : 10 },
-  headerTitle: { fontSize: 26, fontWeight: 'bold', color: '#213502' },
-  headerSubtitle: { fontSize: 14, color: '#557261', marginTop: 4, lineHeight: 18 },
-  listContent: { paddingBottom: 20 },
-  inviteCard: { backgroundColor: '#F4F7F5', padding: 16, borderRadius: 12, marginBottom: 14, borderWidth: 1, borderColor: '#E2E8E4' },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
-  avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(33, 53, 2, 0.08)', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-  infoContainer: { flex: 1 },
-  sponsorName: { fontSize: 16, fontWeight: '600', color: '#213502' },
-  sponsorEmail: { fontSize: 13, color: '#557261', marginTop: 2 },
-  actionsContainer: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10 },
-  button: { paddingVertical: 10, paddingHorizontal: 18, borderRadius: 8, alignItems: 'center', justifyContent: 'center', minWidth: 90 },
-  acceptButton: { backgroundColor: '#0CD964' },
-  acceptText: { color: '#FFF', fontWeight: 'bold', fontSize: 14 },
-  declineButton: { backgroundColor: 'transparent', borderWidth: 1, borderColor: '#7DA08E' },
-  declineText: { color: '#557261', fontWeight: '600', fontSize: 14 },
-  emptyState: { flex: 0.8, justifyContent: 'center', alignItems: 'center' },
-  emptyIconContainer: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#F4F7F5', justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
-  emptyText: { fontSize: 16, fontWeight: '600', color: '#213502', textAlign: 'center' },
-  emptySubtext: { fontSize: 13, color: '#557261', textAlign: 'center', marginTop: 6, paddingHorizontal: 30, lineHeight: 18 }
+  container: { 
+    flex: 1, 
+    backgroundColor: '#FAFBFD', // Modern light slate soft background look
+    paddingTop: Platform.OS === 'android' ? NativeStatusBar.currentHeight : 0 
+  },
+  contentContainer: { flex: 1, paddingHorizontal: 20 },
+  
+  // Header Formatting
+  headerSection: { marginTop: 20, marginBottom: 24 },
+  headerTitle: { fontSize: 28, fontWeight: '700', color: '#1E293B', letterSpacing: -0.6 },
+  headerSubtitle: { fontSize: 14, color: '#64748B', marginTop: 6, lineHeight: 20, fontWeight: '400' },
+  
+  // Loading & Dynamic States
+  centerLoadingState: { flex: 0.6, justifyContent: 'center', alignItems: 'center' },
+  flatListBottomPadding: { paddingBottom: 110 },
+  
+  // Card List Architecture
+  invitationCard: { 
+    backgroundColor: '#FFFFFF', 
+    padding: 18, 
+    borderRadius: 20, 
+    marginBottom: 12, 
+    borderWidth: 1, 
+    borderColor: '#F1F5F9',
+    
+    // Smooth Micro Shadow Effects
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.03,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  cardHeaderRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 18 },
+  avatarIconBox: { 
+    width: 44, 
+    height: 44, 
+    borderRadius: 14, 
+    backgroundColor: '#F1F5F9', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    marginRight: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0'
+  },
+  sponsorMetadata: { flex: 1 },
+  sponsorNameText: { fontSize: 15, fontWeight: '600', color: '#1E293B' },
+  sponsorEmailText: { fontSize: 13, color: '#64748B', marginTop: 2, fontWeight: '400' },
+  
+  // Interactive Action Blocks
+  actionButtonsRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10 },
+  baseActionBtn: { 
+    height: 40, 
+    borderRadius: 12, 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    minWidth: 95,
+    paddingHorizontal: 16
+  },
+  acceptActionBtn: { backgroundColor: '#10B981' }, // Clean Emerald/Mint modern success accent
+  acceptBtnText: { color: '#FFFFFF', fontWeight: '600', fontSize: 13 },
+  declineActionBtn: { backgroundColor: '#F1F5F9' }, // Subtle light neutral styling
+  declineBtnText: { color: '#64748B', fontWeight: '600', fontSize: 13 },
+  
+  // Empty UI States
+  emptyStateContainer: { flex: 0.7, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 },
+  emptyIconCircle: { 
+    width: 72, 
+    height: 72, 
+    borderRadius: 24, 
+    backgroundColor: '#FFFFFF', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#F1F5F9'
+  },
+  emptyStateTitle: { fontSize: 16, fontWeight: '600', color: '#1E293B', textAlign: 'center' },
+  emptyStateSubtext: { fontSize: 13, color: '#64748B', textAlign: 'center', marginTop: 6, paddingHorizontal: 20, lineHeight: 18, fontWeight: '400' }
 });

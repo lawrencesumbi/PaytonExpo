@@ -2,11 +2,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import React, { useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Dimensions,
+  StatusBar as NativeStatusBar,
+  Platform,
   SafeAreaView,
   StyleSheet,
   Text,
@@ -22,44 +25,49 @@ export default function ScanReceiptScreen() {
   const [scanning, setScanning] = useState(false);
   const cameraRef = useRef<any>(null);
 
-  // Check ug pangayo og permiso sa camera
+  // 1. EVALUATE & REQUEST ACTIVE DEVICE CAMERA PERMISSIONS
   if (!permission) {
     return (
-      <SafeAreaView style={[styles.container, styles.center]}>
-        <ActivityIndicator size="large" color="#0CD964" />
+      <SafeAreaView style={[styles.fallbackContainer, styles.centerAlign]}>
+        <StatusBar style="dark" />
+        <ActivityIndicator size="small" color="#0E2417" />
       </SafeAreaView>
     );
   }
 
   if (!permission.granted) {
     return (
-      <SafeAreaView style={[styles.container, styles.center, { padding: 20 }]}>
-        <Ionicons name="camera-outline" size={64} color="#7DA08E" />
-        <Text style={styles.permissionText}>Gikinahanglan ang Camera Permission</Text>
-        <Text style={styles.permissionSub}>Aron maka-scan og resibo para sa Payton, palihog og tugot sa paggamit sa camera.</Text>
-        <TouchableOpacity style={styles.permissionButton} onPress={requestPermission}>
-          <Text style={styles.permissionButtonText}>Tuguti ang Camera</Text>
+      <SafeAreaView style={[styles.fallbackContainer, styles.centerAlign, { paddingHorizontal: 32 }]}>
+        <StatusBar style="dark" />
+        <View style={styles.permissionIconCircle}>
+          <Ionicons name="camera-outline" size={32} color="#475569" />
+        </View>
+        <Text style={styles.permissionTitle}>Camera Access Required</Text>
+        <Text style={styles.permissionDescription}>
+          To automatically scan and process transaction receipts with Payton, please grant camera permissions in your system choices.
+        </Text>
+        <TouchableOpacity style={styles.grantPermissionBtn} onPress={requestPermission}>
+          <Text style={styles.grantPermissionBtnText}>Allow Camera Access</Text>
         </TouchableOpacity>
       </SafeAreaView>
     );
   }
 
-  // FUNCTION INIG PISLIT SA SCAN BUTTON
+  // 2. CONTROLLER TO HANDLE SNAPSHOT AND TRIGGER OCR ENGINE
   const handleTakePicture = async () => {
     if (cameraRef.current && !scanning) {
       try {
         setScanning(true);
         
-        // 1. Pagkuha sa hulagway gikan sa camera view
+        // Target high compression ratio to optimize base64 transmission network load
         const options = { quality: 0.5, base64: true, skipProcessing: false };
         const photo = await cameraRef.current.takePictureAsync(options);
 
         if (!photo.base64) {
-          throw new Error("Wala makuha ang base64 data sa hulagway.");
+          throw new Error("Unable to read valid image binary base64 data stream.");
         }
 
-        // 2. I-send ang hulagway ngadto sa usa ka Libre nga OCR Engine (OCR.space API)
-        // Note: Pwede ka mokuha og kaugalingong libre nga API Key sa ocr.space, default karon kay 'helloworld'
+        // Prepare multi-part structural form parameters for OCR Space Engine API
         const formData = new FormData();
         formData.append('base64Image', `data:image/jpg;base64,${photo.base64}`);
         formData.append('language', 'eng');
@@ -69,7 +77,7 @@ export default function ScanReceiptScreen() {
         const response = await fetch('https://api.ocr.space/parse/image', {
           method: 'POST',
           headers: {
-            'apikey': 'helloworld', // Pwede ra ni nimo ilisan sa imong kaugalingong libre nga key puhon
+            'apikey': 'helloworld', // Replace with a dedicated premium token key in production loops
           },
           body: formData,
         });
@@ -79,17 +87,16 @@ export default function ScanReceiptScreen() {
         if (jsonResult.OCRExitCode === 1) {
           const parsedText = jsonResult.ParsedResults[0].ParsedText;
           
-          // 3. Simple Regex Analysis para pangitaon ang TOTAL ug kantidad sa resibo
+          // Execute regex filter matching to parse merchant titles and high decimal balances
           const extractedInfo = parseReceiptText(parsedText);
 
           Alert.alert(
-            "Scan Success 🎉",
-            `Ngalan: ${extractedInfo.name}\nKantidad: ₱${extractedInfo.amount}`,
+            "Scan Complete 🎉",
+            `Merchant: ${extractedInfo.name}\nAmount: ₱${extractedInfo.amount.toFixed(2)}`,
             [
               {
-                text: "I-sulod sa Form",
+                text: "Populate Form",
                 onPress: () => {
-                  // I-pasa nato ang nakuha nga data ngadto sa imong expenses screen pinaagi sa URL parameters
                   router.push({
                     pathname: '/expenses',
                     params: { 
@@ -99,29 +106,28 @@ export default function ScanReceiptScreen() {
                   });
                 }
               },
-              { text: "Sulayan Pag-usab", style: "cancel" }
+              { text: "Try Again", style: "cancel" }
             ]
           );
         } else {
-          Alert.alert("Scan Failed ❌", "Dili klaro ang teksto sa resibo. Palihog og sulay pag-usab sa mas hayag nga dapit.");
+          Alert.alert("Scan Failed ❌", "Text clarity is insufficient. Please position the invoice in a well-lit area and retry.");
         }
 
       } catch (error: any) {
-        Alert.alert("OCR Error", "Naay problema sa pag-proseso sa resibo: " + error.message);
+        Alert.alert("OCR Engine Error", "An error occurred while parsing the text structures: " + error.message);
       } finally {
         setScanning(false);
       }
     }
   };
 
-  // HELPER FUNCTION PARA MO-PARS UG MO-EXTRACT OG NUMERO GIKAN SA TEKSTO
+  // 3. REGEX PATTERN MATCHING ALGORITHM FOR RECEIPT VALUATION
   const parseReceiptText = (text: string): { name: string; amount: number } => {
-    // I-split kada linya para masusi
     const lines = text.split('\n');
     let detectedAmount = 0.00;
     let detectedName = "Scanned Receipt";
 
-    // Regex para mangita og kwarta/decimals (e.g., 150.00, 45.50)
+    // Standardized expression capturing balance tokens and trailing float decimals
     const amountRegex = /(?:total|amount|due|cash|php|p|₱)\s*[:=]?\s*([\d,]+\.\d{2})/i;
 
     for (let line of lines) {
@@ -130,71 +136,147 @@ export default function ScanReceiptScreen() {
         const cleanAmount = match[1].replace(/,/g, '');
         const val = parseFloat(cleanAmount);
         if (val > detectedAmount) {
-          detectedAmount = val; // Kuhaon ang pinakadakong total sa resibo
+          detectedAmount = val; // Always prioritize the largest parsed transactional total
         }
       }
     }
 
-    // Kon naay nakit-an nga unang linya nga naay ngalan sa tindahan, himoon natong name
+    // Capture fallback descriptive tags from initial row if clear
     if (lines.length > 0 && lines[0].trim().length > 3) {
-      detectedName = lines[0].trim().substring(0, 20); // Limit sa 20 characters
+      detectedName = lines[0].trim().substring(0, 20); 
     }
 
     return { name: detectedName, amount: detectedAmount || 0 };
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Camera Core Component */}
+    <View style={styles.container}>
+      <StatusBar style="light" />
+      
+      {/* Immersive Camera Interface Canvas */}
       <CameraView style={styles.camera} ref={cameraRef}>
         
-        {/* Transparent Mask / Frame Effect para sa Resibo */}
+        {/* Modern Clean Scanning Target Reticle Overlay */}
         <View style={styles.overlayContainer}>
-          <Text style={styles.instructionText}>I-sentro ang Resibo sulod sa kahon</Text>
+          <View style={styles.safeTopHeaderSpacer}>
+            <Text style={styles.instructionText}>Align receipt within the frame</Text>
+          </View>
+
           <View style={styles.scanTargetBox} />
-          <Text style={styles.subInstructionText}>Siguroha nga hayag ug klaro ang mga numero</Text>
+
+          <View style={styles.safeBottomHeaderSpacer}>
+            <Text style={styles.subInstructionText}>Ensure text is bright, legible, and clear</Text>
+          </View>
         </View>
 
-        {/* Action Bottom Layout */}
-        <View style={styles.buttonContainer}>
+        {/* Dynamic Context Control Trigger Pod */}
+        <View style={styles.actionControlContainer}>
           {scanning ? (
             <View style={styles.loadingBlock}>
-              <ActivityIndicator size="large" color="#FFFFFF" />
-              <Text style={styles.loadingText}>Gi-analisar ang Resibo...</Text>
+              <ActivityIndicator size="small" color="#FFFFFF" />
+              <Text style={styles.loadingText}>Analyzing receipt nodes...</Text>
             </View>
           ) : (
-            <TouchableOpacity style={styles.captureButton} onPress={handleTakePicture}>
-              <View style={styles.innerCaptureButton} />
+            <TouchableOpacity 
+              style={styles.outerCaptureRing} 
+              onPress={handleTakePicture}
+              activeOpacity={0.8}
+            >
+              <View style={styles.innerCaptureSolid} />
             </TouchableOpacity>
           )}
         </View>
       </CameraView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000000' },
-  center: { justifyContent: 'center', alignItems: 'center' },
-  camera: { flex: 1, justifyContent: 'space-between' },
+  fallbackContainer: { flex: 1, backgroundColor: '#FAFBFD' },
+  centerAlign: { justifyContent: 'center', alignItems: 'center' },
+  camera: { flex: 1 },
   
-  // Custom Scanner Overlay Mask
-  overlayContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.3)', padding: 20 },
-  instructionText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold', marginBottom: 20, textAlign: 'center', textShadowColor: 'rgba(0, 0, 0, 0.75)', textShadowOffset: {width: -1, height: 1}, textShadowRadius: 10 },
-  scanTargetBox: { width: width * 0.75, height: width * 1.1, borderWidth: 2, borderColor: '#0CD964', borderRadius: 12, backgroundColor: 'transparent' },
-  subInstructionText: { color: '#7DA08E', fontSize: 12, marginTop: 20, textAlign: 'center', fontWeight: '500' },
+  // Immersive Finder Mask
+  overlayContainer: { 
+    flex: 1, 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    backgroundColor: 'rgba(15, 23, 42, 0.45)', // Rich slate cinematic shading tint
+    paddingHorizontal: 24 
+  },
+  safeTopHeaderSpacer: { 
+    marginTop: Platform.OS === 'android' ? NativeStatusBar.currentHeight ? NativeStatusBar.currentHeight + 30 : 50 : 64, 
+    alignItems: 'center' 
+  },
+  instructionText: { 
+    color: '#FFFFFF', 
+    fontSize: 16, 
+    fontWeight: '600', 
+    textAlign: 'center',
+    letterSpacing: -0.3
+  },
+  scanTargetBox: { 
+    width: width * 0.78, 
+    height: width * 1.15, 
+    borderWidth: 2, 
+    borderColor: '#10B981', // Clean modern Emerald green frame
+    borderRadius: 24, 
+    backgroundColor: 'transparent' 
+  },
+  safeBottomHeaderSpacer: { marginBottom: 175 },
+  subInstructionText: { 
+    color: '#94A3B8', 
+    fontSize: 13, 
+    textAlign: 'center', 
+    fontWeight: '500' 
+  },
   
-  // Trigger Action Bar Styles
-  buttonContainer: { backgroundColor: 'rgba(0,0,0,0.7)', paddingVertical: 30, alignItems: 'center', justifyContent: 'center' },
-  captureButton: { width: 74, height: 74, borderRadius: 37, borderWidth: 4, borderColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center' },
-  innerCaptureButton: { width: 56, height: 56, borderRadius: 28, backgroundColor: '#0CD964' },
+  // Tactical Bottom Controls Bar
+  actionControlContainer: { 
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(15, 23, 42, 0.85)', // Sleek blurred-dock appearance style
+    paddingTop: 24,
+    paddingBottom: Platform.OS === 'ios' ? 44 : 32, 
+    alignItems: 'center', 
+    justifyContent: 'center' 
+  },
+  outerCaptureRing: { 
+    width: 76, 
+    height: 76, 
+    borderRadius: 38, 
+    borderWidth: 4, 
+    borderColor: '#FFFFFF', 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+  innerCaptureSolid: { 
+    width: 56, 
+    height: 56, 
+    borderRadius: 28, 
+    backgroundColor: '#10B981' 
+  },
   
-  loadingBlock: { alignItems: 'center', gap: 8 },
-  loadingText: { color: '#FFFFFF', fontSize: 14, fontWeight: '600' },
+  loadingBlock: { alignItems: 'center', flexDirection: 'row', gap: 10 },
+  loadingText: { color: '#FFFFFF', fontSize: 14, fontWeight: '500', letterSpacing: -0.1 },
   
-  // Permission Layout Styles
-  permissionText: { fontSize: 18, fontWeight: 'bold', color: '#213502', marginTop: 15, textAlign: 'center' },
-  permissionSub: { fontSize: 13, color: '#557261', textAlign: 'center', marginTop: 6, paddingHorizontal: 20, lineHeight: 18 },
-  permissionButton: { backgroundColor: '#213502', paddingVertical: 12, paddingHorizontal: 24, borderRadius: 8, marginTop: 20 },
-  permissionButtonText: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 15 }
+  // Permission Core Layout System
+  permissionIconCircle: { 
+    width: 64, 
+    height: 64, 
+    borderRadius: 20, 
+    backgroundColor: '#F1F5F9', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    marginBottom: 5,
+    borderWidth: 1,
+    borderColor: '#E2E8F0'
+  },
+  permissionTitle: { fontSize: 20, fontWeight: '700', color: '#1E293B', textAlign: 'center', letterSpacing: -0.4 },
+  permissionDescription: { fontSize: 14, color: '#64748B', textAlign: 'center', marginTop: 8, lineHeight: 22, fontWeight: '400' },
+  grantPermissionBtn: { backgroundColor: '#1E293B', paddingVertical: 14, paddingHorizontal: 28, borderRadius: 16, marginTop: 28 },
+  grantPermissionBtnText: { color: '#FFFFFF', fontWeight: '600', fontSize: 14 }
 });
