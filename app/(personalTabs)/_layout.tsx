@@ -38,11 +38,11 @@ export default function PersonalLayout() {
 
       {/* CENTER SCANNER BUTTON WITH SMOOTH BORDER COUNTER-CUT */}
       <Tabs.Screen 
-        name="scan" 
+        name="reminders" 
         options={{ 
           tabBarIcon: () => (
             <View style={styles.centerScannerContainer}>
-              <Ionicons name="scan" size={24} color="#005B60" />
+              <Ionicons name="calendar" size={24} color="#005B60" />
             </View>
           ) 
         }} 

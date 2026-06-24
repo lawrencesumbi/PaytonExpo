@@ -1,14 +1,47 @@
+import * as Linking from 'expo-linking';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-// TODO: Adjust the import path below to point to your initialized Supabase client
 import { supabase } from '../../lib/supabase';
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
+  
+  // 1. Listen to the raw incoming deep link URL directly
+  const incomingUrl = Linking.useURL();
+  
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // 2. Parse the hash fragment manually whenever the URL changes
+  useEffect(() => {
+    const establishSessionFromUrl = async () => {
+      if (!incomingUrl) return;
+
+      // Look for the '#' fragment in the URL string
+      const hashSplit = incomingUrl.split('#')[1];
+      if (!hashSplit) return;
+
+      // Convert the hash string variables into a usable object
+      const params = Object.fromEntries(new URLSearchParams(hashSplit));
+
+      if (params.access_token && params.refresh_token) {
+        const { error } = await supabase.auth.setSession({
+          access_token: params.access_token,
+          refresh_token: params.refresh_token,
+        });
+
+        if (error) {
+          Alert.alert('Session Error', 'The reset link may have expired. Please request a new one.');
+        } else {
+          console.log("Supabase session successfully established from deep link!");
+        }
+      }
+    };
+
+    establishSessionFromUrl();
+  }, [incomingUrl]);
 
   const handleUpdatePassword = async () => {
     if (!password || !confirmPassword) {

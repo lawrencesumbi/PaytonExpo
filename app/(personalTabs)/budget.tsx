@@ -12,7 +12,7 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
-import BudgetCard from '../../app/(personalTabs)/budgetCard';
+
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = SCREEN_WIDTH - 40; 
@@ -114,21 +114,7 @@ export default function BudgetScreen() {
         contentContainerStyle={styles.scrollContent}
       >
         
-        {/* CAROUSEL HORIZONTAL BUDGET CARDS */}
-        <View style={{ paddingHorizontal: 20, gap: 16 }}>
-          {BUDGET_DATA.map((item) => (
-            <BudgetCard
-              key={item.id}
-              category={item.category}
-              amount={item.amount}
-              percent={item.percent}
-              color={item.color}
-              indicatorColor={item.indicatorColor}
-              fillColor={item.fillColor}
-              onPressViewAll={() => console.log(`${item.category} clicked`)}
-            />
-          ))}
-        </View>
+        
 
         {/* SEARCH BAR */}
         <View style={styles.searchBarWrapper}>
