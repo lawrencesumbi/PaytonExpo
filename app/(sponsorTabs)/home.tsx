@@ -2,13 +2,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  FlatList,
-  Platform,
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  View
+    ActivityIndicator,
+    FlatList,
+    Platform,
+    SafeAreaView,
+    StyleSheet,
+    Text,
+    View
 } from 'react-native';
 import { supabase } from '../../lib/supabase'; // I-adjust ang path sumala sa folder structure
 

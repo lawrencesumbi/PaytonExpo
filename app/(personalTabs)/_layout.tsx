@@ -40,9 +40,9 @@ export default function PersonalLayout() {
       <Tabs.Screen 
         name="reminders" 
         options={{ 
-          tabBarIcon: () => (
-            <View style={styles.centerScannerContainer}>
-              <Ionicons name="calendar" size={24} color="#005B60" />
+          tabBarIcon: ({ color, focused }) => (
+            <View style={focused ? styles.activeTabCircle : styles.inactiveIconWrapper}>
+              <Ionicons name={focused ? "calendar" : "calendar-outline"} size={22} color={focused ? "#005B60" : color} />
             </View>
           ) 
         }} 
