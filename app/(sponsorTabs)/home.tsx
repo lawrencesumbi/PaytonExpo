@@ -2,13 +2,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    FlatList,
-    Platform,
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    View
+  ActivityIndicator,
+  FlatList,
+  Platform,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  View
 } from 'react-native';
 import { supabase } from '../../lib/supabase'; // I-adjust ang path sumala sa folder structure
 
@@ -34,7 +34,7 @@ export default function HomeScreen() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // I-query ang allowances ug i-join ang profile sa spender aron makuha ang iyang ngalan
+      // I-query ang allowances ug i-join ang profile sa spender gamit ang 'full_name'
       const { data, error } = await supabase
         .from('allowances')
         .select(`
@@ -43,26 +43,31 @@ export default function HomeScreen() {
           amount,
           start_date,
           end_date,
-          profiles!spender_id (
+          profiles!allowances_spender_id_fkey (
             full_name,
             email
           )
         `)
         .eq('sponsor_id', user.id)
-        .order('created_at', { ascending: false });
+        .order('received_at', { ascending: false });
 
       if (error) throw error;
 
       // I-map ang nakuha nga relasyon gikan sa database ngadto sa state array
-      const formatted = (data || []).map((item: any) => ({
-        id: item.id,
-        allowance_name: item.allowance_name,
-        amount: item.amount,
-        start_date: item.start_date,
-        end_date: item.end_date,
-        spender_name: item.profiles?.full_name || 'Unknown Spender',
-        spender_email: item.profiles?.email || 'No Email'
-      }));
+      const formatted = (data || []).map((item: any) => {
+        // Siguraduhon nga ma-extract ang profile bisan pa og array o single object ang i-return sa Supabase
+        const profileData = Array.isArray(item.profiles) ? item.profiles[0] : item.profiles;
+
+        return {
+          id: item.id,
+          allowance_name: item.allowance_name || 'Allowance',
+          amount: Number(item.amount),
+          start_date: item.start_date || 'N/A',
+          end_date: item.end_date || 'N/A',
+          spender_name: profileData?.full_name || 'Unknown Spender',
+          spender_email: profileData?.email || 'No Email'
+        };
+      });
 
       setAllowances(formatted);
 
@@ -112,7 +117,7 @@ export default function HomeScreen() {
             data={allowances}
             keyExtractor={(item) => item.id}
             refreshing={loading}
-            onRefresh={fetchDashboardData} // Swipe to refresh down
+            onRefresh={fetchDashboardData} // Swipe down to refresh
             renderItem={({ item }) => (
               <View style={styles.allowanceCard}>
                 <View style={styles.cardLeft}>

@@ -3,27 +3,39 @@ import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
+  Dimensions,
+  Modal,
   Platform,
   RefreshControl,
   SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
+  TouchableOpacity,
   View
 } from 'react-native';
-import { supabase } from '../../lib/supabase'; // I-adjust ang path sumala sa folder structure
+import { supabase } from '../../lib/supabase';
+
+const { width } = Dimensions.get('window');
+const CARD_WIDTH = width * 0.75; 
 
 interface DashboardSummary {
+  allowanceId: string;
   allowanceName: string;
   totalAllowance: number;
   totalSpent: number;
   remaining: number;
 }
 
-interface CategoryTotal {
-  food: number;
-  travel: number;
-  school: number;
+interface DynamicCategory {
+  id: string;
+  name: string;
+  icon: string;
+  color: string;
+  totalSpent: number;
+  allocatedAmount: number; // Nadugang para ma-monitor ang allocation sa budget
 }
 
 interface RecentExpense {
@@ -31,78 +43,233 @@ interface RecentExpense {
   expense_name: string;
   amount: number;
   category: string;
+  category_icon: string;
 }
 
 export default function SpenderHomeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [spenderName, setSpenderName] = useState('Spender');
   
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
-  const [categories, setCategories] = useState<CategoryTotal>({ food: 0, travel: 0, school: 0 });
+  const [categories, setCategories] = useState<DynamicCategory[]>([]);
   const [recentExpenses, setRecentExpenses] = useState<RecentExpense[]>([]);
+
+  // Modal States
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<DynamicCategory | null>(null);
+  const [allocateAmount, setAllocateAmount] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const fetchDashboardData = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // 1. Fetch the latest active allowance
+      // 1. Fetch Profile Name
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .single();
+      
+      if (profileData?.full_name) setSpenderName(profileData.full_name);
+
+      // 2. Fetch ALL system/default categories
+      const { data: allCategoriesData, error: catError } = await supabase
+        .from('categories')
+        .select('id, name, icon, color')
+        .or(`user_id.is.null,user_id.eq.${user.id}`);
+
+      if (catError) throw catError;
+
+      const categoryMap: { [key: string]: DynamicCategory } = {};
+      (allCategoriesData || []).forEach((cat) => {
+        categoryMap[cat.id] = {
+          id: cat.id,
+          name: cat.name,
+          icon: cat.icon || 'options',
+          color: cat.color || '#1F4F59',
+          totalSpent: 0,
+          allocatedAmount: 0
+        };
+      });
+
+      // 3. Fetch active allowance
       const { data: allowanceData, error: allowanceError } = await supabase
         .from('allowances')
         .select('id, allowance_name, amount')
         .eq('spender_id', user.id)
-        .order('created_at', { ascending: false })
+        .order('received_at', { ascending: false })
         .limit(1);
 
       if (allowanceError) throw allowanceError;
 
+      let totalSpentCounter = 0;
+      let totalAllocatedCounter = 0;
+      const allExpenses: RecentExpense[] = [];
+
       if (allowanceData && allowanceData.length > 0) {
         const activeAllowance = allowanceData[0];
 
-        // 2. Fetch all expenses under this allowance
-        const { data: expensesData, error: expensesError } = await supabase
-          .from('expenses')
-          .select('id, expense_name, amount, category')
-          .eq('allowance_id', activeAllowance.id)
-          .order('created_at', { ascending: false });
+        // 4. Fetch Budgets for this user along with expenses
+        const { data: budgetsData, error: budgetsError } = await supabase
+          .from('budgets')
+          .select(`
+            id,
+            category_id,
+            allocated_amount,
+            expenses (
+              id,
+              description,
+              amount,
+              spent_at
+            )
+          `)
+          .eq('user_id', user.id);
 
-        if (expensesError) throw expensesError;
+        if (budgetsError) throw budgetsError;
 
-        const list = expensesData || [];
-        
-        // Kwentahon ang totals ug breakdown sa categories
-        let totalSpent = 0;
-        let foodSum = 0;
-        let travelSum = 0;
-        let schoolSum = 0;
+        (budgetsData || []).forEach((budget: any) => {
+          const catId = budget.category_id;
+          const currentAllocation = Number(budget.allocated_amount || 0);
+          totalAllocatedCounter += currentAllocation;
 
-        list.forEach((item) => {
-          totalSpent += item.amount;
-          if (item.category.toLowerCase() === 'food') foodSum += item.amount;
-          else if (item.category.toLowerCase() === 'travel') travelSum += item.amount;
-          else if (item.category.toLowerCase() === 'school') schoolSum += item.amount;
+          const expensesList = budget.expenses || [];
+          const categoryTotalSpent = expensesList.reduce((sum: number, exp: any) => sum + Number(exp.amount), 0);
+          
+          totalSpentCounter += categoryTotalSpent;
+
+          if (categoryMap[catId]) {
+            categoryMap[catId].totalSpent = categoryTotalSpent;
+            categoryMap[catId].allocatedAmount = currentAllocation;
+          }
+
+          expensesList.forEach((exp: any) => {
+            if (categoryMap[catId]) {
+              allExpenses.push({
+                id: exp.id,
+                expense_name: exp.description || 'No Description',
+                amount: Number(exp.amount),
+                category: categoryMap[catId].name,
+                category_icon: categoryMap[catId].icon
+              });
+            }
+          });
         });
+
+        // ... sa sulod sa fetchDashboardData loop human ma-compute ang totalAllocatedCounter ug totalSpentCounter ...
+
+        // I-sort ang expenses para sa pinakabag-o nga transaction
+        allExpenses.sort((a, b) => b.id.localeCompare(a.id));
 
         setSummary({
+          allowanceId: activeAllowance.id,
           allowanceName: activeAllowance.allowance_name,
-          totalAllowance: activeAllowance.amount,
-          totalSpent: totalSpent,
-          remaining: activeAllowance.amount - totalSpent
+          totalAllowance: Number(activeAllowance.amount),
+          totalSpent: totalSpentCounter,
+          // BAG-O: I-deduct ang tibuok gi-allocate nga budget gikan sa allowance
+          remaining: Number(activeAllowance.amount) - totalAllocatedCounter 
         });
 
-        setCategories({ food: foodSum, travel: travelSum, school: schoolSum });
-        
-        // I-set ang top 3 recent expenses ra para sa home preview
-        setRecentExpenses(list.slice(0, 3));
+        setRecentExpenses(allExpenses.slice(0, 5));
       } else {
         setSummary(null);
+        setRecentExpenses([]);
       }
+
+      setCategories(Object.values(categoryMap));
+
     } catch (error: any) {
       console.error("Spender Dashboard Error:", error.message);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
+  };
+
+  // FUNCTION PARA SA PAG-ALLOCATE OG BUDGET
+  // FUNCTION PARA SA PAG-ALLOCATE OG BUDGET
+const handleAllocateBudget = async () => {
+  if (!selectedCategory || !summary) return;
+  const amountToAllocate = parseFloat(allocateAmount);
+
+  if (isNaN(amountToAllocate) || amountToAllocate <= 0) {
+    Alert.alert("Sipyat", "Palihog pagbutang og saktong kantidad.");
+    return;
+  }
+
+  // Kwentahon nato pila pay nabilin nga Pwede Ma-allocate gikan sa Kinatibuk-ang Allowance
+  const totalCurrentAllocated = categories.reduce((sum, cat) => sum + cat.allocatedAmount, 0);
+  const unallocatedPool = summary.totalAllowance - totalCurrentAllocated;
+
+  if (amountToAllocate > unallocatedPool) {
+    Alert.alert("Kulang ang Kwarta", `Dili ka ka-allocate og ₱${amountToAllocate.toFixed(2)}. Ang nabilin nga unallocated pool sa imong allowance kay ₱${unallocatedPool.toFixed(2)} nalang.`);
+    return;
+  }
+
+  try {
+    setSubmitting(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // Susiha kung duna na ba silay existing row sa budgets para ani nga category
+    const { data: existingBudget, error: checkError } = await supabase
+        .from('budgets')
+        .select('id, allocated_amount, remaining_amount')
+        .eq('user_id', user.id)
+        .eq('category_id', selectedCategory.id)
+        .maybeSingle();
+
+    if (checkError) throw checkError;
+
+    if (existingBudget) {
+      // Kung magpuno ka og allocation, isagol ang karaan ug bag-ong kantidad sa allocated ug remaining
+      const newTotalAllocation = Number(existingBudget.allocated_amount) + amountToAllocate;
+      const newRemainingAmount = Number(existingBudget.remaining_amount || 0) + amountToAllocate;
+      
+      const { error: updateError } = await supabase
+        .from('budgets')
+        .update({ 
+          allocated_amount: newTotalAllocation,
+          remaining_amount: newRemainingAmount // Gi-update para dili mo-error
+        })
+        .eq('id', existingBudget.id);
+
+      if (updateError) throw updateError;
+    } else {
+      // Mag-insert og bag-ong budget record lakip ang remaining_amount para mosunod sa database constraint
+      const { error: insertError } = await supabase
+        .from('budgets')
+        .insert({
+          user_id: user.id,
+          category_id: selectedCategory.id,
+          allocated_amount: amountToAllocate,
+          remaining_amount: amountToAllocate // KAKULANG NAKO GAHANINA: Karon duna na'y sulod!
+        });
+
+      if (insertError) throw insertError;
+    }
+
+    Alert.alert("Success", `Ang ₱${amountToAllocate.toFixed(2)} malampusong na-allocate sa ${selectedCategory.name}!`);
+    setModalVisible(false);
+    setAllocateAmount('');
+    fetchDashboardData(); // I-refresh ang UI data
+
+  } catch (error: any) {
+    Alert.alert("Error", error.message);
+  } finally {
+    setSubmitting(false);
+  }
+};
+
+  const openAllocateModal = (category: DynamicCategory) => {
+    if (!summary) {
+      Alert.alert("Wala ka'y Allowance", "Dili ka ka-allocate og budget kay wala pa man ka'y active allowance gikan sa imong Sponsor.");
+      return;
+    }
+    setSelectedCategory(category);
+    setModalVisible(true);
   };
 
   useEffect(() => {
@@ -117,7 +284,7 @@ export default function SpenderHomeScreen() {
   if (loading) {
     return (
       <SafeAreaView style={[styles.container, { justifyContent: 'center' }]}>
-        <ActivityIndicator size="large" color="#0CD964" />
+        <ActivityIndicator size="large" color="#54C6CC" />
       </SafeAreaView>
     );
   }
@@ -126,33 +293,91 @@ export default function SpenderHomeScreen() {
     <SafeAreaView style={styles.container}>
       <ScrollView 
         contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#0CD964']} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#54C6CC']} />}
       >
-        {/* Welcome Section */}
-        <View style={styles.welcomeRow}>
-          <View>
-            <Text style={styles.welcomeText}>Kumusta, Spender! 👋</Text>
-            <Text style={styles.subWelcome}>Ania ang dagan sa imong pitaka karon.</Text>
+        {/* Header Block */}
+        <View style={styles.headerBackground}>
+          <View style={styles.welcomeRow}>
+            <View style={styles.avatarRow}>
+              <View style={styles.avatarPlaceholder}>
+                <Ionicons name="person" size={20} color="#FFFFFF" />
+              </View>
+              <View>
+                <Text style={styles.welcomeSubtext}>Welcome Back</Text>
+                <Text style={styles.welcomeText}>Hello, {spenderName}! 👋</Text>
+              </View>
+            </View>
+            <View style={styles.notificationIcon}>
+              <Ionicons name="notifications-outline" size={22} color="#FFFFFF" />
+            </View>
+          </View>
+
+          {/* Total Balance Block */}
+          <View style={styles.balanceContainer}>
+            <Text style={styles.balanceLabel}>Total Remaining Balance</Text>
+            <Text style={styles.mainBalance}>
+              ₱{summary ? summary.remaining.toLocaleString('en-US', { minimumFractionDigits: 2 }) : "0.00"}
+            </Text>
           </View>
         </View>
 
+        {/* Categories Section */}
+        <View style={[styles.contentBody, { marginTop: 25 }]}>
+          <View style={styles.sliderHeader}>
+            <Text style={styles.sectionTitle}>Expense Categories</Text>
+            {categories.length > 1 && <Text style={styles.swipeHint}>Tap to Allocate ➔</Text>}
+          </View>
+          
+          <ScrollView 
+            horizontal 
+            pagingEnabled={false}
+            snapToInterval={CARD_WIDTH + 15}
+            decelerationRate="fast"
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.swipeableCardsContainer}
+          >
+            {categories.map((cat) => (
+              <TouchableOpacity 
+                key={cat.id} 
+                activeOpacity={0.85}
+                onPress={() => openAllocateModal(cat)}
+                style={[styles.catCard, { backgroundColor: cat.color, width: CARD_WIDTH }]}
+              >
+                <View style={styles.cardTop}>
+                  {/* @ts-ignore */}
+                  <Ionicons name={cat.icon} size={26} color="#FFFFFF" />
+                  <Text style={styles.cardNetwork}>{cat.name}</Text>
+                </View>
+
+                <View style={styles.cardMiddle}>
+                  <Text style={styles.cardBalanceAmount}>₱{cat.totalSpent.toFixed(2)}</Text>
+                  <Text style={styles.cardLabel}>Total Spent</Text>
+                </View>
+
+                <View style={styles.cardBottomRow}>
+                  <Text style={styles.allocationLimitText}>
+                    Budget Limit: ₱{cat.allocatedAmount.toFixed(0)}
+                  </Text>
+                  <View style={styles.plusBadge}>
+                    <Ionicons name="add" size={14} color="#FFFFFF" />
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* Allowance Info Card Details */}
         {!summary ? (
-          /* Empty State kung wala pay gi-set nga allowance */
           <View style={styles.emptyState}>
             <Ionicons name="alert-circle-outline" size={54} color="#7DA08E" />
-            <Text style={styles.emptyText}>Wala pa kay Active Allowance</Text>
-            <Text style={styles.emptySub}>Inig hatag og allowance sa imong Sponsor, makita nimo ang imong dashboard diri dayon.</Text>
+            <Text style={styles.emptyText}>No Active Allowance Found</Text>
+            <Text style={styles.emptySub}>Once your Sponsor assigns an allowance, your dynamic dashboard will load up automatically.</Text>
           </View>
         ) : (
-          <View style={{ gap: 20 }}>
-            
-            {/* Big Wallet Progress Card */}
-            <View style={styles.walletCard}>
-              <Text style={styles.allowanceLabel}>{summary.allowanceName}</Text>
-              <Text style={styles.remainingAmount}>Public ₱{summary.remaining.toFixed(2)}</Text>
-              <Text style={styles.walletSubtext}>Nabilin nga Kwarta</Text>
-              
-              {/* Progress Bar Component */}
+          <View style={styles.contentBody}>
+            <View style={styles.budgetOverviewCard}>
+              <Text style={styles.overviewTitle}>{summary.allowanceName}</Text>
               <View style={styles.progressBarBg}>
                 <View 
                   style={[
@@ -161,43 +386,21 @@ export default function SpenderHomeScreen() {
                   ]} 
                 />
               </View>
-
               <View style={styles.walletMetrics}>
-                <Text style={styles.metricText}>Gihatag: ₱{summary.totalAllowance.toFixed(0)}</Text>
-                <Text style={styles.metricText}>Nagasto: ₱{summary.totalSpent.toFixed(0)}</Text>
+                <Text style={styles.metricText}>Total Allowance: ₱{summary.totalAllowance.toFixed(0)}</Text>
+                <Text style={styles.metricText}>Spent: ₱{summary.totalSpent.toFixed(0)}</Text>
               </View>
             </View>
 
-            {/* Category Breakdown Widgets */}
-            <Text style={styles.sectionTitle}>Breakdown sa Gasto</Text>
-            <View style={styles.categoryGrid}>
-              <View style={[styles.catCard, { borderLeftColor: '#F1C40F' }]}>
-                <Ionicons name="fast-food" size={20} color="#F1C40F" />
-                <Text style={styles.catCardLabel}>Food</Text>
-                <Text style={styles.catCardAmount}>₱{categories.food.toFixed(2)}</Text>
-              </View>
-
-              <View style={[styles.catCard, { borderLeftColor: '#3498DB' }]}>
-                <Ionicons name="car" size={20} color="#3498DB" />
-                <Text style={styles.catCardLabel}>Travel</Text>
-                <Text style={styles.catCardAmount}>₱{categories.travel.toFixed(2)}</Text>
-              </View>
-
-              <View style={[styles.catCard, { borderLeftColor: '#9B59B6' }]}>
-                <Ionicons name="book" size={20} color="#9B59B6" />
-                <Text style={styles.catCardLabel}>School</Text>
-                <Text style={styles.catCardAmount}>₱{categories.school.toFixed(2)}</Text>
-              </View>
-            </View>
-
-            {/* Recent Expenses Preview List */}
+            {/* Recent Transactions List */}
             <View style={styles.recentSectionHeader}>
-              <Text style={styles.sectionTitle}>Bag-ong Gasto</Text>
+              <Text style={styles.sectionTitle}>Recent Transactions</Text>
+              <Text style={styles.seeAllText}>See all</Text>
             </View>
 
             {recentExpenses.length === 0 ? (
               <View style={styles.noRecentBox}>
-                <Text style={styles.noRecentText}>Wala pa kay narekord nga gasto.</Text>
+                <Text style={styles.noRecentText}>No recorded expenses yet.</Text>
               </View>
             ) : (
               <View style={styles.recentListContainer}>
@@ -205,64 +408,140 @@ export default function SpenderHomeScreen() {
                   <View key={item.id} style={styles.recentItem}>
                     <View style={styles.recentLeft}>
                       <View style={styles.iconBox}>
-                        <Ionicons 
-                          name={item.category.toLowerCase() === 'food' ? "fast-food" : item.category.toLowerCase() === 'travel' ? "car" : "book"} 
-                          size={16} 
-                          color="#213502" 
-                        />
+                        {/* @ts-ignore */}
+                        <Ionicons name={item.category_icon} size={18} color="#213502" />
                       </View>
-                      <Text style={styles.recentName}>{item.expense_name}</Text>
+                      <View>
+                        <Text style={styles.recentName}>{item.expense_name}</Text>
+                        <Text style={styles.recentCategory}>{item.category}</Text>
+                      </View>
                     </View>
                     <Text style={styles.recentAmount}>-₱{item.amount.toFixed(2)}</Text>
                   </View>
                 ))}
               </View>
             )}
-
           </View>
         )}
       </ScrollView>
+
+      {/* POP-UP ALLOCATE BUDGET MODAL */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>Allocate Budget</Text>
+            <Text style={styles.modalSubtitle}>
+              Pila ang imong i-gahin para sa kategoryang: <Text style={{fontWeight: 'bold', color: '#1F4F59'}}>{selectedCategory?.name}</Text>?
+            </Text>
+
+            <TextInput
+              style={styles.modalInput}
+              placeholder="₱0.00"
+              keyboardType="numeric"
+              value={allocateAmount}
+              onChangeText={setAllocateAmount}
+              editable={!submitting}
+            />
+
+            <View style={styles.modalButtonsRow}>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.cancelBtn]} 
+                onPress={() => { setModalVisible(false); setAllocateAmount(''); }}
+                disabled={submitting}
+              >
+                <Text style={styles.cancelBtnText}>I-cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.confirmBtn]} 
+                onPress={handleAllocateBudget}
+                disabled={submitting}
+              >
+                {submitting ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <Text style={styles.confirmBtnText}>I-allocate</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFFFFF' },
-  scrollContent: { padding: 20, paddingBottom: 40 },
-  welcomeRow: { marginBottom: 20, marginTop: Platform.OS === 'android' ? 15 : 5 },
-  welcomeText: { fontSize: 22, fontWeight: 'bold', color: '#213502' },
-  subWelcome: { fontSize: 13, color: '#557261', marginTop: 2 },
-  
-  // Wallet Card Styles
-  walletCard: { backgroundColor: '#213502', padding: 20, borderRadius: 16, elevation: 2 },
-  allowanceLabel: { color: '#7DA08E', fontSize: 11, fontWeight: 'bold', textTransform: 'uppercase' },
-  remainingAmount: { color: '#FFFFFF', fontSize: 32, fontWeight: 'bold', marginTop: 4 },
-  walletSubtext: { color: '#7DA08E', fontSize: 12, marginTop: 2 },
-  progressBarBg: { height: 6, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 3, marginTop: 16, marginBottom: 10, overflow: 'hidden' },
+  container: { flex: 1, backgroundColor: '#F8FAF9' },
+  scrollContent: { paddingBottom: 40 },
+  headerBackground: { 
+    backgroundColor: '#0E2417', 
+    paddingHorizontal: 20, 
+    paddingTop: Platform.OS === 'android' ? 45 : 20, 
+    paddingBottom: 35,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  welcomeRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 25 },
+  avatarRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  avatarPlaceholder: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' },
+  welcomeSubtext: { fontSize: 12, color: '#A3B8AD' },
+  welcomeText: { fontSize: 18, fontWeight: 'bold', color: '#FFFFFF' },
+  notificationIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.1)', justifyContent: 'center', alignItems: 'center' },
+  balanceContainer: { alignItems: 'center', marginVertical: 10 },
+  balanceLabel: { fontSize: 13, color: '#A3B8AD', marginBottom: 5 },
+  mainBalance: { fontSize: 36, fontWeight: 'bold', color: '#FFFFFF' },
+  contentBody: { paddingHorizontal: 20, marginTop: 15 },
+  sliderHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  swipeHint: { fontSize: 11, color: '#8A9A91', fontWeight: '600' },
+  swipeableCardsContainer: { gap: 15, paddingRight: 20, paddingBottom: 10 },
+  catCard: { padding: 18, borderRadius: 18, height: 165, justifyContent: 'space-between', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 6, elevation: 4 },
+  cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  cardNetwork: { color: 'rgba(255,255,255,0.9)', fontSize: 15, fontWeight: 'bold' },
+  cardMiddle: { marginTop: 8 },
+  cardBalanceAmount: { color: '#FFFFFF', fontSize: 26, fontWeight: 'bold' },
+  cardLabel: { color: 'rgba(255,255,255,0.6)', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5 },
+  cardBottomRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 0.5, borderTopColor: 'rgba(255,255,255,0.2)', paddingTop: 8, marginTop: 4 },
+  allocationLimitText: { color: '#FFFFFF', fontSize: 12, fontWeight: '500' },
+  plusBadge: { width: 22, height: 22, borderRadius: 11, backgroundColor: 'rgba(255,255,255,0.25)', justifyContent: 'center', alignItems: 'center' },
+  budgetOverviewCard: { backgroundColor: '#FFFFFF', padding: 16, borderRadius: 14, borderWidth: 1, borderColor: '#EBEFEF', marginVertical: 15 },
+  overviewTitle: { fontSize: 14, fontWeight: 'bold', color: '#0E2417', textTransform: 'uppercase' },
+  progressBarBg: { height: 6, backgroundColor: '#EBEFEF', borderRadius: 3, marginTop: 12, marginBottom: 8, overflow: 'hidden' },
   progressBarFill: { height: '100%', backgroundColor: '#0CD964', borderRadius: 3 },
   walletMetrics: { flexDirection: 'row', justifyContent: 'space-between' },
-  metricText: { color: '#FFFFFF', fontSize: 11, opacity: 0.8 },
-
-  // Grid Categories Styles
-  sectionTitle: { fontSize: 16, fontWeight: 'bold', color: '#213502', marginTop: 6 },
-  categoryGrid: { flexDirection: 'row', gap: 10, justifyContent: 'space-between' },
-  catCard: { flex: 1, backgroundColor: '#F4F7F5', padding: 12, borderRadius: 10, borderWidth: 1, borderColor: '#E2E8E4', borderLeftWidth: 4, gap: 4 },
-  catCardLabel: { fontSize: 12, color: '#557261', fontWeight: '500' },
-  catCardAmount: { fontSize: 14, fontWeight: 'bold', color: '#213502' },
-
-  // Recent Expenses Section
-  recentSectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  recentListContainer: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8E4', borderRadius: 12, overflow: 'hidden' },
-  recentItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 14, borderBottomWidth: 1, borderBottomColor: '#F4F7F5' },
-  recentLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  iconBox: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#F4F7F5', justifyContent: 'center', alignItems: 'center' },
-  recentName: { fontSize: 14, fontWeight: '600', color: '#213502' },
+  metricText: { color: '#557261', fontSize: 12 },
+  sectionTitle: { fontSize: 17, fontWeight: 'bold', color: '#0E2417' },
+  recentSectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, marginBottom: 12 },
+  seeAllText: { fontSize: 13, color: '#0CD964', fontWeight: '600' },
+  recentListContainer: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#EBEFEF', borderRadius: 14, overflow: 'hidden' },
+  recentItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 15, borderBottomWidth: 1, borderBottomColor: '#F8FAF9' },
+  recentLeft: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  iconBox: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#EBF7F1', justifyContent: 'center', alignItems: 'center' },
+  recentName: { fontSize: 14, fontWeight: '600', color: '#0E2417' },
+  recentCategory: { fontSize: 11, color: '#8A9A91', marginTop: 2 },
   recentAmount: { fontSize: 14, fontWeight: 'bold', color: '#C0392B' },
-  noRecentBox: { padding: 20, backgroundColor: '#F4F7F5', borderRadius: 10, alignItems: 'center' },
-  noRecentText: { fontSize: 13, color: '#557261' },
-
-  // Empty State
-  emptyState: { padding: 40, alignItems: 'center', gap: 10, marginTop: 40 },
-  emptyText: { fontSize: 16, fontWeight: 'bold', color: '#213502' },
-  emptySub: { fontSize: 12, color: '#557261', textAlign: 'center', lineHeight: 18 }
+  noRecentBox: { padding: 30, backgroundColor: '#FFFFFF', borderRadius: 14, alignItems: 'center', borderWidth: 1, borderColor: '#EBEFEF' },
+  noRecentText: { fontSize: 13, color: '#8A9A91' },
+  emptyState: { padding: 40, alignItems: 'center', gap: 10, marginTop: 15 },
+  emptyText: { fontSize: 16, fontWeight: 'bold', color: '#0E2417' },
+  emptySub: { fontSize: 13, color: '#557261', textAlign: 'center', lineHeight: 20 },
+  
+  // MODAL STYLES
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+  modalContainer: { backgroundColor: '#FFFFFF', width: '100%', maxWidth: 340, padding: 22, borderRadius: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 5 },
+  modalTitle: { fontSize: 18, fontWeight: 'bold', color: '#0E2417', marginBottom: 8 },
+  modalSubtitle: { fontSize: 13, color: '#557261', lineHeight: 18, marginBottom: 15 },
+  modalInput: { backgroundColor: '#F4F7F5', borderWidth: 1, borderColor: '#E2E8E4', borderRadius: 10, padding: 12, fontSize: 18, fontWeight: '600', color: '#0E2417', marginBottom: 20, textAlign: 'center' },
+  modalButtonsRow: { flexDirection: 'row', gap: 12 },
+  modalButton: { flex: 1, paddingVertical: 12, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
+  cancelBtn: { backgroundColor: '#E2E8E4' },
+  cancelBtnText: { color: '#557261', fontWeight: '600', fontSize: 14 },
+  confirmBtn: { backgroundColor: '#0E2417' },
+  confirmBtnText: { color: '#FFFFFF', fontWeight: '600', fontSize: 14 }
 });
