@@ -1,9 +1,24 @@
+// app/(sponsorTabs)/profile.tsx
 import { Ionicons } from '@expo/vector-icons';
 import { decode } from 'base64-arraybuffer';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Image, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  StatusBar as NativeStatusBar,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from 'react-native';
 import { supabase } from '../../lib/supabase';
 
 export default function SpenderProfileScreen() {
@@ -14,7 +29,6 @@ export default function SpenderProfileScreen() {
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
 
-  // Profile fields fetched from database
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('');
@@ -141,12 +155,12 @@ export default function SpenderProfileScreen() {
 
   const handleLogout = async () => {
     Alert.alert(
-      "Log Out",
-      "Are you sure you want to log out of Payton?",
+      "Sign Out",
+      "Are you sure you want to exit your session?",
       [
         { text: "Cancel", style: "cancel" },
         {
-          text: "Log Out",
+          text: "Sign Out",
           style: "destructive",
           onPress: async () => {
             setIsLoggingOut(true);
@@ -167,18 +181,19 @@ export default function SpenderProfileScreen() {
   if (isLoadingProfile) {
     return (
       <SafeAreaView style={[styles.container, styles.centerLoading]}>
-        <ActivityIndicator size="large" color="#58B0A5" />
+        <StatusBar style="dark" />
+        <ActivityIndicator size="small" color="#3AA39F" />
       </SafeAreaView>
     );
   }
 
-  // --- RENDERING SCREEN 2: EDIT PROFILE ---
   if (isEditing) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.navButton} onPress={() => setIsEditing(false)}>
-            <Ionicons name="chevron-back" size={22} color="#58B0A5" />
+        <StatusBar style="dark" />
+        <View style={styles.modernHeader}>
+          <TouchableOpacity style={styles.iconActionBtn} onPress={() => setIsEditing(false)}>
+            <Ionicons name="arrow-back" size={20} color="#1E293B" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Edit Profile</Text>
           <View style={{ width: 40 }} />
@@ -188,43 +203,49 @@ export default function SpenderProfileScreen() {
           <View style={styles.avatarEditContainer}>
             <TouchableOpacity onPress={pickAndUploadImage} style={styles.avatarWrapper} disabled={isUploadingImage}>
               {isUploadingImage ? (
-                <ActivityIndicator color="#58B0A5" />
+                <ActivityIndicator color="#3AA39F" />
               ) : avatarUrl ? (
                 <Image source={{ uri: avatarUrl }} style={styles.editAvatarImage} />
               ) : (
-                <Ionicons name="person" size={50} color="#8A9A93" />
+                <View style={styles.avatarPlaceholderFallback}>
+                  <Text style={styles.avatarInitials}>{fullName ? fullName.charAt(0).toUpperCase() : 'U'}</Text>
+                </View>
               )}
+              <View style={styles.avatarOverlayOverlay}>
+                <Ionicons name="camera-outline" size={18} color="#FFFFFF" />
+              </View>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.editCameraBadge} onPress={pickAndUploadImage} disabled={isUploadingImage}>
-              <Ionicons name="camera" size={14} color="#FFFFFF" />
-            </TouchableOpacity>
+            <Text style={styles.avatarSubtext}>Tap photo to update</Text>
           </View>
 
-          <Text style={styles.editProfileName}>{fullName || "User Name"}</Text>
-          <Text style={styles.editProfileRole}>{role.toUpperCase()}</Text>
-
-          <View style={styles.formContainer}>
-            <Text style={styles.inputLabel}>Full Name</Text>
-            <View style={styles.inputWrapper}>
-              <Ionicons name="person-outline" size={18} color="#8A9A93" style={styles.inputIcon} />
+          <View style={styles.formCardContainer}>
+            <View style={styles.modernInputBlock}>
+              <Text style={styles.modernInputLabel}>Legal Name</Text>
               <TextInput 
-                style={styles.input} 
+                style={styles.modernTextInput} 
                 value={fullName} 
                 onChangeText={setFullName} 
-                placeholder="Your Full Name"
-                placeholderTextColor="#8A9A93"
+                placeholder="Enter full name"
+                placeholderTextColor="#94A3B8"
                 autoCapitalize="words"
               />
             </View>
 
-            <Text style={styles.inputLabel}>Email Address</Text>
-            <View style={[styles.inputWrapper, styles.disabledInputWrapper]}>
-              <Ionicons name="mail-outline" size={18} color="#A3B4AB" style={styles.inputIcon} />
-              <TextInput style={[styles.input, styles.disabledInput]} value={email} editable={false} />
+            <View style={[styles.modernInputBlock, styles.modernInputBlockDisabled]}>
+              <Text style={styles.modernInputLabel}>Registered Email</Text>
+              <TextInput 
+                style={[styles.modernTextInput, styles.modernTextInputDisabled]} 
+                value={email} 
+                editable={false} 
+              />
             </View>
 
-            <TouchableOpacity style={[styles.saveChangesBtn, isUpdating && styles.disabledButton]} onPress={handleUpdateProfile} disabled={isUpdating}>
-              {isUpdating ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.saveChangesBtnText}>Save Changes</Text>}
+            <TouchableOpacity 
+              style={[styles.modernPrimaryActionBtn, isUpdating && styles.disabledButton]} 
+              onPress={handleUpdateProfile} 
+              disabled={isUpdating}
+            >
+              {isUpdating ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.modernPrimaryActionBtnText}>Save Changes</Text>}
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -232,68 +253,104 @@ export default function SpenderProfileScreen() {
     );
   }
 
-  // --- RENDERING SCREEN 1: PROFILE LIST MENU ---
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.navButton} onPress={() => setIsEditing(false)}>
-            <Ionicons name="chevron-back" size={22} color="#58B0A5" />
-          </TouchableOpacity>
-        <Text style={styles.headerTitle}>Profile</Text>
-        <TouchableOpacity style={styles.navButton} onPress={() => setIsEditing(true)}>
-          <Ionicons name="create-outline" size={20} color="#58B0A5" />
+      <StatusBar style="dark" />
+      <View style={styles.modernHeader}>
+        <TouchableOpacity style={styles.iconActionBtn} onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={20} color="#1E293B" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Account</Text>
+        <TouchableOpacity style={styles.iconActionBtn} onPress={() => setIsEditing(true)}>
+          <Ionicons name="options-outline" size={20} color="#1E293B" />
         </TouchableOpacity>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        {/* User Hero Row */}
-        <View style={styles.heroRow}>
+        <View style={styles.modernHeroBlock}>
           {avatarUrl ? (
             <Image source={{ uri: avatarUrl }} style={styles.heroAvatar} />
           ) : (
             <View style={styles.heroAvatarPlaceholder}>
-              <Ionicons name="person" size={32} color="#8A9A93" />
+              <Text style={styles.avatarInitials}>{fullName ? fullName.charAt(0).toUpperCase() : 'U'}</Text>
             </View>
           )}
-          <View>
-            <Text style={styles.heroName}>{fullName || "User Profile"}</Text>
-            <Text style={styles.heroRole}>{role || "Spender"}</Text>
+          <Text style={styles.heroName}>{fullName || "User Account"}</Text>
+          <View style={styles.badgeContainer}>
+            <Text style={styles.badgeText}>{role ? role.toUpperCase() : "SPENDER"}</Text>
           </View>
         </View>
 
-        {/* Menu Navigation Items updated with your custom ordered settings items */}
-        <View style={styles.menuContainer}>
+        <View style={styles.modernCardGroup}>
+          <Text style={styles.groupContextLabel}>Security & Preferences</Text>
           {[
-            { id: 'personal', label: 'Personal Information', icon: 'person-outline', action: () => setIsEditing(true) },
-            { id: 'password', label: 'Change Password', icon: 'lock-closed-outline', action: () => router.push('/profile/change-password' as any) },
-            { id: 'appearance', label: 'Appearance', icon: 'color-palette-outline', action: () => router.push('/profile/appearance' as any) },
-            { id: 'archive', label: 'Archive', icon: 'archive-outline', action: () => router.push('/profile/archive' as any) },
-            { id: 'export', label: 'Export Data', icon: 'download-outline', action: () => router.push('/profile/export' as any) },
-            { id: 'help', label: 'Help Center', icon: 'help-circle-outline', action: () => router.push('/profile/help' as any) },
-            { id: 'terms', label: 'Terms of Service', icon: 'document-text-outline', action: () => router.push('/profile/terms' as any) },
-            { id: 'about', label: 'About', icon: 'information-circle-outline', action: () => router.push('/profile/about' as any) },
+            { id: 'personal', label: 'Personal Details', description: 'Manage your primary account info', icon: 'person-outline', action: () => setIsEditing(true) },
+            { id: 'password', label: 'Security & Password', description: 'Keep your login credentials secure', icon: 'shield-checkmark-outline', action: () => router.push('/profile/change-password' as any) },
+            { id: 'appearance', label: 'Display & UI', description: 'Toggle dark mode and theme choices', icon: 'color-palette-outline', action: () => router.push('/profile/appearance' as any) },
           ].map((item) => (
-            <TouchableOpacity key={item.id} style={styles.menuItem} onPress={item.action}>
-              <View style={styles.menuItemLeft}>
-                <Ionicons name={item.icon as any} size={20} color="#58B0A5" />
-                <Text style={styles.menuItemLabel}>{item.label}</Text>
+            <TouchableOpacity key={item.id} style={styles.modernRowItem} onPress={item.action}>
+              <View style={styles.modernRowLeft}>
+                <View style={styles.iconWrapperSquare}>
+                  <Ionicons name={item.icon as any} size={18} color="#475569" />
+                </View>
+                <View style={styles.rowTextColumn}>
+                  <Text style={styles.rowPrimaryLabel}>{item.label}</Text>
+                  <Text style={styles.rowSubLabel}>{item.description}</Text>
+                </View>
               </View>
-              <View style={styles.menuItemRight}>
-                <Ionicons name="chevron-forward" size={16} color="#A3B4AB" />
-              </View>
+              <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
             </TouchableOpacity>
           ))}
         </View>
 
-        {/* Action Logout Block */}
-        <TouchableOpacity style={[styles.logoutBtn, isLoggingOut && styles.disabledButton]} onPress={handleLogout} disabled={isLoggingOut}>
+        <View style={styles.modernCardGroup}>
+          <Text style={styles.groupContextLabel}>Data Ledger</Text>
+          {[
+            { id: 'archive', label: 'Data Vault Archive', description: 'Access hidden history loops', icon: 'archive-outline', action: () => router.push('/profile/archive' as any) },
+            { id: 'export', label: 'Export Portfolio', description: 'Download complete statement CSVs', icon: 'cloud-download-outline', action: () => router.push('/profile/export' as any) },
+          ].map((item) => (
+            <TouchableOpacity key={item.id} style={styles.modernRowItem} onPress={item.action}>
+              <View style={styles.modernRowLeft}>
+                <View style={styles.iconWrapperSquare}>
+                  <Ionicons name={item.icon as any} size={18} color="#475569" />
+                </View>
+                <View style={styles.rowTextColumn}>
+                  <Text style={styles.rowPrimaryLabel}>{item.label}</Text>
+                  <Text style={styles.rowSubLabel}>{item.description}</Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <View style={styles.modernCardGroup}>
+          <Text style={styles.groupContextLabel}>Support & Info</Text>
+          {[
+            { id: 'help', label: 'Help Desk', description: 'Get quick customer service fixes', icon: 'chatbubbles-outline', action: () => router.push('/profile/help' as any) },
+            { id: 'terms', label: 'Terms of Use', description: 'Review legal terms & agreements', icon: 'document-attach-outline', action: () => router.push('/profile/terms' as any) },
+            { id: 'about', label: 'App Version', description: 'Payton Mobile Edition v2.4.1', icon: 'information-circle-outline', action: () => router.push('/profile/about' as any) },
+          ].map((item) => (
+            <TouchableOpacity key={item.id} style={styles.modernRowItem} onPress={item.action}>
+              <View style={styles.modernRowLeft}>
+                <View style={styles.iconWrapperSquare}>
+                  <Ionicons name={item.icon as any} size={18} color="#475569" />
+                </View>
+                <View style={styles.rowTextColumn}>
+                  <Text style={styles.rowPrimaryLabel}>{item.label}</Text>
+                  <Text style={styles.rowSubLabel}>{item.description}</Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <TouchableOpacity style={styles.modernLogoutBtn} onPress={handleLogout} disabled={isLoggingOut}>
           {isLoggingOut ? (
-            <ActivityIndicator color="#EF4444" />
+            <ActivityIndicator size="small" color="#EF4444" />
           ) : (
-            <>
-              <Ionicons name="log-out-outline" size={18} color="#EF4444" />
-              <Text style={styles.logoutBtnText}>Log Out</Text>
-            </>
+            <Text style={styles.modernLogoutText}>Disconnect Account</Text>
           )}
         </TouchableOpacity>
       </ScrollView>
@@ -302,48 +359,54 @@ export default function SpenderProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F7F9F8' },
+  container: { 
+    flex: 1, 
+    backgroundColor: '#FAFBFD',
+    paddingTop: Platform.OS === 'android' ? NativeStatusBar.currentHeight : 0
+  },
   centerLoading: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  scrollContent: { paddingBottom: 40 },
+  scrollContent: { paddingBottom: 110 },
   
-  // Custom Top Appbar Navigation Layout
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 50 },
-  navButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0' },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: '#1B3623' },
+  modernHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, height: 60, marginTop: 4 },
+  iconActionBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#EDF2F7' },
+  headerTitle: { fontSize: 16, fontWeight: '600', color: '#1E293B', letterSpacing: -0.2 },
 
-  // Screen 1: Profile View List styles
-  heroRow: { flexDirection: 'row', alignItems: 'center', gap: 16, paddingHorizontal: 24, marginVertical: 16 },
-  heroAvatar: { width: 64, height: 64, borderRadius: 32, borderWidth: 2, borderColor: '#FFFFFF' },
-  heroAvatarPlaceholder: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#E2E8F0', justifyContent: 'center', alignItems: 'center' },
-  heroName: { fontSize: 20, fontWeight: '700', color: '#1B3623' },
-  heroRole: { fontSize: 13, color: '#586A61', marginTop: 2 },
+  modernHeroBlock: { alignItems: 'center', marginTop: 20, marginBottom: 32 },
+  heroAvatar: { width: 88, height: 88, borderRadius: 28, backgroundColor: '#E2E8F0' },
+  heroAvatarPlaceholder: { width: 88, height: 88, borderRadius: 28, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center' },
+  avatarPlaceholderFallback: { width: '100%', height: '100%', backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center' },
+  avatarInitials: { fontSize: 26, fontWeight: '600', color: '#475569' },
+  heroName: { fontSize: 22, fontWeight: '700', color: '#1E293B', marginTop: 14, letterSpacing: -0.5 },
   
-  menuContainer: { borderTopWidth: 1, borderColor: '#E2E8F0' },
-  menuItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 18, paddingHorizontal: 24, borderBottomWidth: 1, borderColor: '#E2E8F0', backgroundColor: '#FFFFFF' },
-  menuItemLeft: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  menuItemLabel: { fontSize: 15, color: '#1B3623', fontWeight: '500' },
-  menuItemRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  badgeContainer: { backgroundColor: '#EBF6F5', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, marginTop: 8, borderWidth: 1, borderColor: '#D1ECEB' },
+  badgeText: { fontSize: 11, fontWeight: '700', color: '#3AA39F', letterSpacing: 0.5 },
+  
+  modernCardGroup: { paddingHorizontal: 20, marginTop: 24 },
+  groupContextLabel: { fontSize: 12, fontWeight: '600', color: '#94A3B8', textTransform: 'uppercase', marginBottom: 10, letterSpacing: 0.5, paddingLeft: 4 },
+  modernRowItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FFFFFF', padding: 14, borderRadius: 16, marginBottom: 8, borderWidth: 1, borderColor: '#F1F5F9' },
+  modernRowLeft: { flexDirection: 'row', alignItems: 'center', flex: 1, paddingRight: 10 },
+  iconWrapperSquare: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#F8FAFC', justifyContent: 'center', alignItems: 'center', marginRight: 14, borderWidth: 1, borderColor: '#F1F5F9' },
+  rowTextColumn: { flex: 1 },
+  rowPrimaryLabel: { fontSize: 14, fontWeight: '600', color: '#1E293B' },
+  rowSubLabel: { fontSize: 12, color: '#64748B', marginTop: 2, fontWeight: '400' },
 
-  // Screen 2: Edit Profile specific UI items
-  avatarEditContainer: { alignSelf: 'center', position: 'relative', marginTop: 20 },
-  avatarWrapper: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#E2E8F0', justifyContent: 'center', alignItems: 'center', overflow: 'hidden', borderWidth: 3, borderColor: '#FFFFFF' },
+  avatarEditContainer: { alignItems: 'center', marginTop: 20, marginBottom: 32 },
+  avatarWrapper: { width: 100, height: 100, borderRadius: 32, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center', overflow: 'hidden', position: 'relative' },
   editAvatarImage: { width: '100%', height: '100%' },
-  editCameraBadge: { position: 'absolute', bottom: 0, right: 0, backgroundColor: '#58B0A5', width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#F7F9F8' },
-  editProfileName: { color: '#1B3623', fontSize: 18, fontWeight: '700', textAlign: 'center', marginTop: 16 },
-  editProfileRole: { color: '#586A61', fontSize: 12, textAlign: 'center', marginTop: 4, letterSpacing: 0.5 },
+  avatarOverlayOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(30, 41, 59, 0.3)', justifyContent: 'center', alignItems: 'center' },
+  avatarSubtext: { fontSize: 13, color: '#64748B', marginTop: 10, fontWeight: '500' },
   
-  formContainer: { paddingHorizontal: 24, marginTop: 32 },
-  inputLabel: { color: '#1B3623', fontSize: 13, fontWeight: '700', marginBottom: 8, paddingLeft: 2, textTransform: 'uppercase', letterSpacing: 0.5 },
-  inputWrapper: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', marginBottom: 20, paddingHorizontal: 16, height: 56 },
-  inputIcon: { marginRight: 12 },
-  input: { flex: 1, color: '#1B3623', fontSize: 15, height: '100%' },
-  disabledInputWrapper: { backgroundColor: '#EDF2F7', borderColor: '#E2E8F0' },
-  disabledInput: { color: '#718096' },
-  disabledButton: { backgroundColor: '#A3B4AB' },
+  formCardContainer: { paddingHorizontal: 20 },
+  modernInputBlock: { backgroundColor: '#FFFFFF', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 16, borderWidth: 1, borderColor: '#E2E8F0', marginBottom: 12 },
+  modernInputBlockDisabled: { backgroundColor: '#F8FAFC', borderColor: '#E2E8F0' },
+  modernInputLabel: { fontSize: 11, fontWeight: '600', color: '#94A3B8', textTransform: 'uppercase', marginBottom: 2, letterSpacing: 0.3 },
+  modernTextInput: { fontSize: 15, color: '#1E293B', fontWeight: '500', height: 30, padding: 0 },
+  modernTextInputDisabled: { color: '#64748B' },
+  disabledButton: { backgroundColor: '#CBD5E1' },
   
-  saveChangesBtn: { backgroundColor: '#58B0A5', height: 56, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginTop: 10 },
-  saveChangesBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
+  modernPrimaryActionBtn: { backgroundColor: '#3AA39F', height: 52, borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginTop: 16 },
+  modernPrimaryActionBtnText: { color: '#FFFFFF', fontSize: 15, fontWeight: '600', letterSpacing: -0.1 },
   
-  logoutBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginHorizontal: 24, marginTop: 12, height: 54, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8F0' },
-  logoutBtnText: { color: '#EF4444', fontSize: 15, fontWeight: '600' }
+  modernLogoutBtn: { alignSelf: 'center', marginTop: 32, paddingVertical: 14, paddingHorizontal: 24, borderRadius: 14 },
+  modernLogoutText: { color: '#EF4444', fontSize: 14, fontWeight: '600', letterSpacing: -0.1 }
 });

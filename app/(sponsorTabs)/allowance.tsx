@@ -1,17 +1,19 @@
 // app/allowance.tsx
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  StatusBar as NativeStatusBar,
   Platform,
   SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
+  TouchableOpacity, // Gidugang para sa Android height calculation
   View
 } from 'react-native';
 import { supabase } from '../../lib/supabase';
@@ -28,13 +30,13 @@ export default function AllowanceScreen() {
 
   const handleSaveAllowance = async () => {
     if (!allowanceName.trim() || !amount.trim() || !startDate.trim() || !endDate.trim()) {
-      Alert.alert("Ops!", "Palihog og sulod sa tanang gikinahanglan nga fields.");
+      Alert.alert("Required Fields", "Please populate all mandatory fields to distribute this allowance.");
       return;
     }
 
     const numericAmount = parseFloat(amount);
     if (isNaN(numericAmount) || numericAmount <= 0) {
-      Alert.alert("Sayop nga Amount", "Siguroha nga saktong numero ug mas dako sa 0.");
+      Alert.alert("Invalid Amount", "Please input a valid numeric value greater than 0.");
       return;
     }
 
@@ -58,10 +60,10 @@ export default function AllowanceScreen() {
 
       if (error) throw error;
 
-      Alert.alert("Success 🎉", `Allowance para kang ${spenderName} na-save na!`);
+      Alert.alert("Success 🎉", `Allowance allocation for ${spenderName} saved successfully!`);
       router.back(); 
     } catch (error: any) {
-      Alert.alert("Database Error ❌", error.message);
+      Alert.alert("Database Error ❌", error.message || "Failed to commit record changes.");
     } finally {
       setLoading(false);
     }
@@ -69,40 +71,91 @@ export default function AllowanceScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
+      {/* Gi-force ang icons sa top system bar nga magpabiling dark ug makita */}
+      <StatusBar style="dark" />
+      
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Navigation Layer */}
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#213502" />
+          <View style={styles.backButtonCircle}>
+            <Ionicons name="arrow-back" size={16} color="#475569" />
+          </View>
+          <Text style={styles.backButtonText}>Cancel</Text>
         </TouchableOpacity>
 
+        {/* Dynamic Context Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Set Allowance</Text>
-          <Text style={styles.headerSubtitle}>Nagbutang ka og allowance para kang:</Text>
+          <Text style={styles.headerSubtitle}>Configure and allocate budget structures for your dependent:</Text>
+          
           <View style={styles.spenderCard}>
-            <Text style={styles.spenderName}>{spenderName}</Text>
-            <Text style={styles.spenderEmail}>{spenderEmail}</Text>
+            <View style={styles.avatarCircle}>
+              <Ionicons name="person-outline" size={16} color="#3AA39F" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.spenderName}>{spenderName || 'Unknown Recipient'}</Text>
+              <Text style={styles.spenderEmail} numberOfLines={1}>{spenderEmail || 'No verified email link'}</Text>
+            </View>
           </View>
         </View>
 
+        {/* Form Inputs Container */}
         <View style={styles.form}>
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Allowance Name</Text>
-            <TextInput style={styles.input} placeholder="e.g., Weekly Baon" placeholderTextColor="#7DA08E" value={allowanceName} onChangeText={setAllowanceName} />
-          </View>
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Amount (PHP)</Text>
-            <TextInput style={styles.input} placeholder="0.00" placeholderTextColor="#7DA08E" keyboardType="numeric" value={amount} onChangeText={setAmount} />
-          </View>
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Start Date</Text>
-            <TextInput style={styles.input} value={startDate} onChangeText={setStartDate} />
-          </View>
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>End Date</Text>
-            <TextInput style={styles.input} placeholder="YYYY-MM-DD" placeholderTextColor="#7DA08E" value={endDate} onChangeText={setEndDate} />
+            <Text style={styles.label}>Allowance Label</Text>
+            <TextInput 
+              style={styles.input} 
+              placeholder="e.g., Weekly Transportation & Meals" 
+              placeholderTextColor="#94A3B8" 
+              value={allowanceName} 
+              onChangeText={setAllowanceName} 
+            />
           </View>
 
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Allocation Budget (PHP)</Text>
+            <View style={styles.currencyInputWrapper}>
+              <Text style={styles.currencySymbol}>₱</Text>
+              <TextInput 
+                style={[styles.input, { paddingLeft: 34 }]} 
+                placeholder="0.00" 
+                placeholderTextColor="#94A3B8" 
+                keyboardType="numeric" 
+                value={amount} 
+                onChangeText={setAmount} 
+              />
+            </View>
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Activation Effective Date</Text>
+            <TextInput 
+              style={styles.input} 
+              placeholder="YYYY-MM-DD"
+              placeholderTextColor="#94A3B8"
+              value={startDate} 
+              onChangeText={setStartDate} 
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Expiration Settlement Date</Text>
+            <TextInput 
+              style={styles.input} 
+              placeholder="YYYY-MM-DD" 
+              placeholderTextColor="#94A3B8" 
+              value={endDate} 
+              onChangeText={setEndDate} 
+            />
+          </View>
+
+          {/* Core Action Call-To-Action Button */}
           <TouchableOpacity style={styles.saveButton} onPress={handleSaveAllowance} disabled={loading}>
-            {loading ? <ActivityIndicator color="#FFF" size="small" /> : <Text style={styles.saveButtonText}>Save Allowance</Text>}
+            {loading ? (
+              <ActivityIndicator color="#FFF" size="small" />
+            ) : (
+              <Text style={styles.saveButtonText}>Confirm & Authorize Budget</Text>
+            )}
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -111,19 +164,42 @@ export default function AllowanceScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFFFFF' },
-  content: { padding: 20 },
-  backButton: { marginBottom: 15, marginTop: Platform.OS === 'android' ? 15 : 0 },
-  header: { marginBottom: 25 },
-  headerTitle: { fontSize: 26, fontWeight: 'bold', color: '#213502' },
-  headerSubtitle: { fontSize: 14, color: '#557261', marginTop: 4 },
-  spenderCard: { backgroundColor: '#F4F7F5', padding: 14, borderRadius: 10, marginTop: 12, borderWidth: 1, borderColor: '#E2E8E4' },
-  spenderName: { fontSize: 16, fontWeight: '600', color: '#213502' },
-  spenderEmail: { fontSize: 12, color: '#557261', marginTop: 2 },
+  container: { 
+    flex: 1, 
+    backgroundColor: '#FAFBFD',
+    // FIXED: Gi-inject ang system bar spacing para sa Android para protektado sa overlap sa taas
+    paddingTop: Platform.OS === 'android' ? NativeStatusBar.currentHeight : 0 
+  },
+  content: { paddingHorizontal: 20, paddingBottom: 40 },
+  
+  backButton: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: 8, 
+    marginBottom: 20, 
+    marginTop: 12, // Gi-normalize ang top margin alang sa layout spacing
+    alignSelf: 'flex-start' 
+  },
+  backButtonCircle: { width: 32, height: 32, borderRadius: 10, backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#F1F5F9' },
+  backButtonText: { fontSize: 14, fontWeight: '600', color: '#64748B' },
+  
+  header: { marginBottom: 24 },
+  headerTitle: { fontSize: 24, fontWeight: '700', color: '#1E293B', letterSpacing: -0.5 },
+  headerSubtitle: { fontSize: 13, color: '#64748B', marginTop: 4, lineHeight: 18 },
+  
+  spenderCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', padding: 14, borderRadius: 16, marginTop: 14, borderWidth: 1, borderColor: '#F1F5F9' },
+  avatarCircle: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#EBF6F5', justifyContent: 'center', alignItems: 'center', marginRight: 12, borderWidth: 1, borderColor: '#D1ECEB' },
+  spenderName: { fontSize: 15, fontWeight: '600', color: '#1E293B', letterSpacing: -0.2 },
+  spenderEmail: { fontSize: 12, color: '#64748B', marginTop: 1 },
+  
   form: { gap: 16 },
-  inputGroup: { gap: 6 },
-  label: { fontSize: 14, fontWeight: '600', color: '#213502' },
-  input: { backgroundColor: '#F4F7F5', paddingHorizontal: 14, paddingVertical: 12, borderRadius: 8, fontSize: 14, borderWidth: 1, borderColor: '#7DA08E', color: '#213502' },
-  saveButton: { backgroundColor: '#0CD964', padding: 14, borderRadius: 8, alignItems: 'center', marginTop: 10, height: 50, justifyContent: 'center' },
-  saveButtonText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 }
+  inputGroup: { gap: 8 },
+  label: { fontSize: 12, fontWeight: '600', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: 0.3, paddingLeft: 2 },
+  currencyInputWrapper: { position: 'relative', justifyContent: 'center' },
+  currencySymbol: { position: 'absolute', left: 14, zIndex: 10, fontSize: 14, fontWeight: '600', color: '#1E293B' },
+  
+  input: { backgroundColor: '#FFFFFF', paddingHorizontal: 14, paddingVertical: 12, borderRadius: 14, fontSize: 14, fontWeight: '500', borderWidth: 1, borderColor: '#E2E8F0', color: '#1E293B', height: 48 },
+  
+  saveButton: { backgroundColor: '#3AA39F', padding: 14, borderRadius: 16, alignItems: 'center', marginTop: 12, height: 50, justifyContent: 'center', shadowColor: '#3AA39F', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 10, elevation: 3 },
+  saveButtonText: { color: '#FFFFFF', fontWeight: '700', fontSize: 15, letterSpacing: -0.1 }
 });

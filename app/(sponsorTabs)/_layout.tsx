@@ -7,30 +7,28 @@ export default function SponsorTabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: '#0CD964',
-        tabBarInactiveTintColor: '#7DA08E',
+        tabBarActiveTintColor: '#3AA39F', // Premium Mint-Teal
+        tabBarInactiveTintColor: '#94A3B8', // Minimal Slate Gray
+        headerShown: false,
         tabBarStyle: {
-          backgroundColor: "white",
-          borderTopWidth: 0,
-          height: Platform.OS === 'ios' ? 85 : 65,
-          paddingBottom: Platform.OS === 'ios' ? 20 : 6,
-          paddingTop: 6,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: 0.1,
-          shadowRadius: 4,
-          elevation: 4,
+          backgroundColor: '#FFFFFF',
+          borderTopWidth: 1,
+          borderTopColor: '#F1F5F9',
+          height: Platform.OS === 'ios' ? 88 : 64, // Standard fixed height
+          paddingTop: 8,
+          paddingBottom: Platform.OS === 'ios' ? 28 : 10, // Safe padding for modern device indicators
+          elevation: 0,
+          shadowOpacity: 0,
         },
         tabBarLabelStyle: {
-          fontSize: 10,
-          fontWeight: '500',
+          fontSize: 11,
+          fontWeight: '600',
+          letterSpacing: -0.1,
           marginTop: 2,
-          marginBottom: Platform.OS === 'ios' ? 2 : 0,
         },
         tabBarIconStyle: {
-          marginTop: Platform.OS === 'ios' ? 4 : 0,
+          marginTop: 0,
         },
-        headerShown: false,
       }}
     >
       <Tabs.Screen
@@ -39,72 +37,55 @@ export default function SponsorTabsLayout() {
           title: 'Home',
           tabBarIcon: ({ color, focused }) => (
             <View style={[styles.tabIcon, focused && styles.tabIconActive]}>
-              <Ionicons 
-                name={focused ? "home" : "home-outline"} 
-                size={24} 
-                color={color} 
-              />
+              <Ionicons name={focused ? "home" : "home-outline"} size={20} color={color} />
             </View>
           ),
         }}
       />
+      
       <Tabs.Screen
         name="allowance"
         options={{
           title: 'Allowance',
           tabBarIcon: ({ color, focused }) => (
             <View style={[styles.tabIcon, focused && styles.tabIconActive]}>
-              <Ionicons 
-                name={focused ? "wallet" : "wallet-outline"} 
-                size={24} 
-                color={color} 
-              />
+              <Ionicons name={focused ? "wallet" : "wallet-outline"} size={20} color={color} />
             </View>
           ),
         }}
       />
+      
       <Tabs.Screen
         name="monitoring"
         options={{
           title: 'Monitoring',
           tabBarIcon: ({ color, focused }) => (
             <View style={[styles.tabIcon, focused && styles.tabIconActive]}>
-              <Ionicons 
-                name={focused ? "list" : "list-outline"} 
-                size={24} 
-                color={color} 
-              />
+              <Ionicons name={focused ? "analytics" : "analytics-outline"} size={20} color={color} />
             </View>
           ),
         }}
       />
-      {/* KINI ANG BAG-ONG GIDUGANG NGA MEMBERS TAB */}
+      
       <Tabs.Screen
         name="members"
         options={{
           title: 'Members',
           tabBarIcon: ({ color, focused }) => (
             <View style={[styles.tabIcon, focused && styles.tabIconActive]}>
-              <Ionicons 
-                name={focused ? "people" : "people-outline"} 
-                size={24} 
-                color={color} 
-              />
+              <Ionicons name={focused ? "people" : "people-outline"} size={20} color={color} />
             </View>
           ),
         }}
       />
+      
       <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
           tabBarIcon: ({ color, focused }) => (
             <View style={[styles.tabIcon, focused && styles.tabIconActive]}>
-              <Ionicons 
-                name={focused ? "person" : "person-outline"} 
-                size={24} 
-                color={color} 
-              />
+              <Ionicons name={focused ? "person" : "person-outline"} size={20} color={color} />
             </View>
           ),
         }}
@@ -115,15 +96,14 @@ export default function SponsorTabsLayout() {
 
 const styles = StyleSheet.create({
   tabIcon: {
-    paddingVertical: 4,
-    paddingHorizontal: 12,
-    borderRadius: 8,
+    width: 44,
+    height: 30,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: 50,
-    minHeight: 30,
+    marginTop: 2,
   },
   tabIconActive: {
-    backgroundColor: 'rgba(12, 217, 100, 0.15)',
+    backgroundColor: '#EBF6F5', // Soft Mint aura
   },
 });

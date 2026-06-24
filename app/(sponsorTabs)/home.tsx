@@ -1,16 +1,19 @@
 // app/(sponsorTabs)/home.tsx
 import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  StatusBar as NativeStatusBar,
   Platform,
   SafeAreaView,
   StyleSheet,
   Text,
   View
 } from 'react-native';
-import { supabase } from '../../lib/supabase'; // I-adjust ang path sumala sa folder structure
+import { supabase } from '../../lib/supabase';
 
 interface AllowanceDashboardItem {
   id: string;
@@ -27,14 +30,14 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [totalAllocated, setTotalAllocated] = useState(0);
 
-  // FUNCTION PARA MO-FETCH SA TANANG GI-SET NGA ALLOWANCE
+  // FETCH ALL ALLOCATED ALLOWANCES FOR THE DASHBOARD
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // I-query ang allowances ug i-join ang profile sa spender gamit ang 'full_name'
+      // Query allowances table and join profile metadata fields on spender relation
       const { data, error } = await supabase
         .from('allowances')
         .select(`
@@ -49,29 +52,28 @@ export default function HomeScreen() {
           )
         `)
         .eq('sponsor_id', user.id)
-        .order('received_at', { ascending: false });
+        .order('received_at', { ascending: false }); // FIXED: Gi-saktong column name gikan sa imong schema
 
       if (error) throw error;
 
-      // I-map ang nakuha nga relasyon gikan sa database ngadto sa state array
+      // Transform response relations into structured data arrays
       const formatted = (data || []).map((item: any) => {
-        // Siguraduhon nga ma-extract ang profile bisan pa og array o single object ang i-return sa Supabase
         const profileData = Array.isArray(item.profiles) ? item.profiles[0] : item.profiles;
 
         return {
           id: item.id,
-          allowance_name: item.allowance_name || 'Allowance',
+          allowance_name: item.allowance_name || 'Allowance Allocation',
           amount: Number(item.amount),
           start_date: item.start_date || 'N/A',
           end_date: item.end_date || 'N/A',
-          spender_name: profileData?.full_name || 'Unknown Spender',
-          spender_email: profileData?.email || 'No Email'
+          spender_name: profileData?.full_name || 'Unknown Recipient',
+          spender_email: profileData?.email || 'No Email Registered'
         };
       });
 
       setAllowances(formatted);
 
-      // Kwentahon ang kinatibuk-ang kwarta nga gi-allocate
+      // Compute total absolute cumulative allowances issued
       const total = formatted.reduce((sum, item) => sum + item.amount, 0);
       setTotalAllocated(total);
 
@@ -82,60 +84,75 @@ export default function HomeScreen() {
     }
   };
 
-  // Mo-run inig abli sa screen
-  useEffect(() => {
-    fetchDashboardData();
-  }, []);
+  // Automated trigger to refresh state metrics every time the screen becomes active
+  useFocusEffect(
+    useCallback(() => {
+      fetchDashboardData();
+    }, [])
+  );
 
   return (
     <SafeAreaView style={styles.container}>
+      <StatusBar style="dark" />
+      
       <View style={styles.content}>
         
-        {/* Total Summary Header Card */}
+        {/* Total Summary Header Card Frame */}
         <View style={styles.summaryCard}>
-          <Text style={styles.summaryLabel}>Total Allocated Allowance</Text>
+          <Text style={styles.summaryLabel}>Total Allocated Capital</Text>
           <Text style={styles.summaryAmount}>₱{totalAllocated.toFixed(2)}</Text>
           <View style={styles.summaryBadge}>
-            <Ionicons name="trending-up" size={14} color="#0CD964" />
-            <Text style={styles.summaryBadgeText}>Active Monitoring</Text>
+            <Ionicons name="trending-up" size={12} color="#21dad3" />
+            <Text style={styles.summaryBadgeText}>Active Monitoring Enabled</Text>
           </View>
         </View>
 
-        {/* List Section Header */}
-        <Text style={styles.sectionTitle}>Mga Gi-set nga Allowance</Text>
+        {/* List Section Title Header */}
+        <Text style={styles.sectionTitle}>Active Allowances ({allowances.length})</Text>
 
-        {loading ? (
-          <ActivityIndicator color="#0CD964" size="large" style={{ marginTop: 30 }} />
+        {loading && allowances.length === 0 ? (
+          <View style={styles.centerLoading}>
+            <ActivityIndicator color="#3AA39F" size="small" />
+          </View>
         ) : allowances.length === 0 ? (
           <View style={styles.emptyState}>
-            <Ionicons name="wallet-outline" size={48} color="#7DA08E" />
-            <Text style={styles.emptyText}>Wala pa kay allowance nga gitala</Text>
-            <Text style={styles.emptySubtext}>Adto sa Members tab ug pilia ang 'Accepted Spender' para butangan og allowance.</Text>
+            <View style={styles.emptyIconWrapper}>
+              <Ionicons name="wallet-outline" size={32} color="#94A3B8" />
+            </View>
+            <Text style={styles.emptyText}>No Active Allocations</Text>
+            <Text style={styles.emptySubtext}>Navigate over to your Members channel and configure an active balance schema for an accepted dependent.</Text>
           </View>
         ) : (
           <FlatList
             data={allowances}
             keyExtractor={(item) => item.id}
             refreshing={loading}
-            onRefresh={fetchDashboardData} // Swipe down to refresh
+            showsVerticalScrollIndicator={false}
+            onRefresh={fetchDashboardData}
+            contentContainerStyle={styles.listPadding}
             renderItem={({ item }) => (
               <View style={styles.allowanceCard}>
                 <View style={styles.cardLeft}>
                   <View style={styles.iconContainer}>
-                    <Ionicons name="cash" size={22} color="#0CD964" />
+                    <Ionicons name="cash-outline" size={18} color="#3AA39F" />
                   </View>
                   <View style={styles.infoBlock}>
-                    <Text style={styles.allowanceName}>{item.allowance_name}</Text>
-                    <Text style={styles.spenderName}>Para kang: {item.spender_name}</Text>
-                    <Text style={styles.dateDuration}>
-                      📅 {item.start_date} to {item.end_date}
-                    </Text>
+                    <Text style={styles.allowanceName} numberOfLines={1}>{item.allowance_name}</Text>
+                    <Text style={styles.spenderName} numberOfLines={1}>Recipient: {item.spender_name}</Text>
+                    
+                    <View style={styles.dateBadgeRow}>
+                      <Ionicons name="calendar-outline" size={11} color="#64748B" />
+                      <Text style={styles.dateDuration}>
+                        {item.start_date} to {item.end_date}
+                      </Text>
+                    </View>
                   </View>
                 </View>
-                <Text style={styles.cardAmount}>₱{item.amount.toFixed(2)}</Text>
+                <View style={styles.cardRight}>
+                  <Text style={styles.cardAmount}>₱{item.amount.toFixed(2)}</Text>
+                </View>
               </View>
             )}
-            contentContainerStyle={styles.listPadding}
           />
         )}
 
@@ -145,24 +162,49 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFFFFF' },
-  content: { flex: 1, padding: 20 },
-  summaryCard: { backgroundColor: '#213502', padding: 20, borderRadius: 16, marginBottom: 25, marginTop: Platform.OS === 'android' ? 20 : 10 },
-  summaryLabel: { color: '#7DA08E', fontSize: 13, fontWeight: '600', textTransform: 'uppercase' },
-  summaryAmount: { color: '#FFFFFF', fontSize: 32, fontWeight: 'bold', marginTop: 6, marginBottom: 12 },
-  summaryBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(12, 217, 100, 0.15)', alignSelf: 'flex-start', paddingVertical: 4, paddingHorizontal: 10, borderRadius: 20, gap: 4 },
-  summaryBadgeText: { color: '#0CD964', fontSize: 11, fontWeight: 'bold' },
-  sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#213502', marginBottom: 14 },
-  listPadding: { paddingBottom: 20 },
-  allowanceCard: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F4F7F5', padding: 14, borderRadius: 12, marginBottom: 12, borderWidth: 1, borderColor: '#E2E8E4' },
-  cardLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
-  iconContainer: { width: 42, height: 42, borderRadius: 10, backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#E2E8E4' },
+  container: { 
+    flex: 1, 
+    backgroundColor: '#FAFBFD',
+    paddingTop: Platform.OS === 'android' ? NativeStatusBar.currentHeight : 0 
+  },
+  content: { flex: 1, paddingHorizontal: 20 },
+  centerLoading: { flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 40 },
+  listPadding: { paddingBottom: 110 },
+  
+  summaryCard: { 
+    backgroundColor: '#133b13', 
+    padding: 20, 
+    borderRadius: 24, 
+    marginBottom: 24, 
+    marginTop: 12, 
+    shadowColor: '#0F172A', 
+    shadowOffset: { width: 0, height: 10 }, 
+    shadowOpacity: 0.05, 
+    shadowRadius: 15, 
+    elevation: 4 
+  },
+  summaryLabel: { color: '#94A3B8', fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
+  summaryAmount: { color: '#FFFFFF', fontSize: 32, fontWeight: '700', marginTop: 6, marginBottom: 14, letterSpacing: -0.5 },
+  summaryBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(58, 163, 159, 0.12)', alignSelf: 'flex-start', paddingVertical: 4, paddingHorizontal: 10, borderRadius: 8, gap: 6, borderWidth: 1, borderColor: 'rgba(58, 163, 159, 0.2)' },
+  summaryBadgeText: { color: '#21dad3', fontSize: 11, fontWeight: '600' },
+  
+  sectionTitle: { fontSize: 12, fontWeight: '600', color: '#94A3B8', textTransform: 'uppercase', marginBottom: 14, letterSpacing: 0.5, paddingLeft: 2 },
+  
+  allowanceCard: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FFFFFF', padding: 14, borderRadius: 20, marginBottom: 10, borderWidth: 1, borderColor: '#F1F5F9' },
+  cardLeft: { flexDirection: 'row', alignItems: 'center', gap: 14, flex: 1 },
+  iconContainer: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#EBF6F5', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#D1ECEB' },
   infoBlock: { flex: 1, gap: 2 },
-  allowanceName: { fontSize: 15, fontWeight: 'bold', color: '#213502' },
-  spenderName: { fontSize: 12, color: '#557261', fontWeight: '500' },
-  dateDuration: { fontSize: 10, color: '#7DA08E', marginTop: 2 },
-  cardAmount: { fontSize: 16, fontWeight: 'bold', color: '#213502' },
-  emptyState: { flex: 0.6, justifyContent: 'center', alignItems: 'center', gap: 10 },
-  emptyText: { fontSize: 15, fontWeight: '600', color: '#213502', marginTop: 6 },
-  emptySubtext: { fontSize: 12, color: '#557261', textAlign: 'center', paddingHorizontal: 30, lineHeight: 16 }
+  allowanceName: { fontSize: 15, fontWeight: '600', color: '#1E293B', letterSpacing: -0.2 },
+  spenderName: { fontSize: 12, color: '#64748B', fontWeight: '500' },
+  
+  dateBadgeRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
+  dateDuration: { fontSize: 11, color: '#64748B', fontWeight: '400' },
+  
+  cardRight: { paddingLeft: 12, alignItems: 'flex-end' },
+  cardAmount: { fontSize: 15, fontWeight: '700', color: '#1E293B', letterSpacing: -0.2 },
+  
+  emptyState: { flex: 0.8, justifyContent: 'center', alignItems: 'center' },
+  emptyIconWrapper: { width: 64, height: 64, borderRadius: 20, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
+  emptyText: { fontSize: 15, fontWeight: '600', color: '#1E293B', textAlign: 'center' },
+  emptySubtext: { fontSize: 13, color: '#64748B', textAlign: 'center', marginTop: 6, paddingHorizontal: 32, lineHeight: 18 }
 });
