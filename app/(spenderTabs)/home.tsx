@@ -1,30 +1,30 @@
 // app/(spenderTabs)/home.tsx
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Dimensions,
-    Modal,
-    StatusBar as NativeStatusBar,
-    Platform,
-    RefreshControl,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  Animated,
+  Dimensions,
+  Modal,
+  StatusBar as NativeStatusBar,
+  PanResponder,
+  Platform,
+  RefreshControl,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { supabase } from '../../lib/supabase';
 
 const { width } = Dimensions.get('window');
-// Card geometry tuned for explicit snapping mechanics
-const CARD_WIDTH = width * 0.84;
-const CARD_MARGIN = 10;
-const SNAP_INTERVAL = CARD_WIDTH + (CARD_MARGIN * 2);
+const CARD_WIDTH = width * 0.86;
+const SWIPE_THRESHOLD = 80; // Gi-ubasan gamay para mas sensitibo ug dali ra i-swipe
 
 interface DashboardSummary {
   allowanceId: string;
@@ -61,11 +61,17 @@ export default function SpenderHomeScreen() {
   const [categories, setCategories] = useState<DynamicCategory[]>([]);
   const [recentExpenses, setRecentExpenses] = useState<RecentExpense[]>([]);
 
+  // Carousel Stack Index Tracker State
+  const [currentCardIndex, setCurrentCardIndex] = useState(0);
+
   // Modal Allocation Layer States
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<DynamicCategory | null>(null);
   const [allocateAmount, setAllocateAmount] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  // Animation drivers para sa swipe mechanics
+  const position = useRef(new Animated.ValueXY()).current;
 
   // FETCH INTEGRATED LEDGER DASHBOARD DATA DATASETS
   const fetchDashboardData = async () => {
@@ -94,7 +100,7 @@ export default function SpenderHomeScreen() {
           id: cat.id,
           name: cat.name,
           icon: cat.icon || 'options',
-          color: cat.color || '#1E293B',
+          color: cat.color || '#1E463A',
           totalSpent: 0,
           allocatedAmount: 0,
           remainingAmount: 0 
@@ -279,6 +285,49 @@ export default function SpenderHomeScreen() {
     fetchDashboardData();
   };
 
+  // Sigurado ug solid nga PanResponder bindings para sa pag-swipe sa states
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        return Math.abs(gestureState.dx) > 5;
+      },
+      onPanResponderMove: (_, gestureState) => {
+        position.setValue({ x: gestureState.dx, y: 0 });
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dx < -SWIPE_THRESHOLD && currentCardIndex < categories.length - 1) {
+          // Swipe Left -> Balhin sa Next Card
+          Animated.timing(position, {
+            toValue: { x: -width - 50, y: 0 },
+            duration: 180,
+            useNativeDriver: false
+          }).start(() => {
+            setCurrentCardIndex(currentCardIndex + 1);
+            position.setValue({ x: 0, y: 0 });
+          });
+        } else if (gestureState.dx > SWIPE_THRESHOLD && currentCardIndex > 0) {
+          // Swipe Right -> Balik sa Previous Card
+          Animated.timing(position, {
+            toValue: { x: width + 50, y: 0 },
+            duration: 180,
+            useNativeDriver: false
+          }).start(() => {
+            setCurrentCardIndex(currentCardIndex - 1);
+            position.setValue({ x: 0, y: 0 });
+          });
+        } else {
+          // Balik sa tunga kung kulang ang swipe distance
+          Animated.spring(position, {
+            toValue: { x: 0, y: 0 },
+            friction: 4,
+            useNativeDriver: false
+          }).start();
+        }
+      }
+    })
+  ).current;
+
   if (loading) {
     return (
       <SafeAreaView style={[styles.container, styles.centeredLoading]}>
@@ -292,6 +341,99 @@ export default function SpenderHomeScreen() {
     ? Math.min((summary.totalSpent / summary.totalAllowance) * 100, 100)
     : 0;
 
+  // Deck Interface Render Logic
+  const renderCardDeck = () => {
+    if (categories.length === 0) {
+      return (
+        <View style={styles.emptyCardsBox}>
+          <Text style={styles.emptyCardsText}>Walay category folders nga nakit-an.</Text>
+        </View>
+      );
+    }
+
+    const currentCat = categories[currentCardIndex];
+    const remainingPercentage = currentCat.allocatedAmount > 0 
+      ? Math.min((currentCat.remainingAmount / currentCat.allocatedAmount) * 100, 100) 
+      : 0;
+
+    return (
+      <View style={styles.deckWrapper}>
+        {/* BACKGROUND CARD LAYER - preview sa sunod nga card para nindot tan-awon */}
+        {currentCardIndex < categories.length - 1 && (
+          <View 
+            style={[
+              styles.creditCardLayout, 
+              styles.backgroundCardLayer, 
+              { backgroundColor: categories[currentCardIndex + 1].color || '#1E463A' }
+            ]} 
+          />
+        )}
+
+        {/* ACTIVE DRAGGABLE CARD LAYER */}
+        <Animated.View 
+          {...panResponder.panHandlers}
+          style={[styles.creditCardLayout, position.getLayout()]}
+        >
+          <TouchableOpacity 
+            activeOpacity={1}
+            onPress={() => openAllocateModal(currentCat)}
+            style={{ flex: 1 }}
+          >
+            {/* Top segment */}
+            <View style={[styles.creditCardTopHalf, { backgroundColor: currentCat.color || '#1E463A' }]}>
+              <View style={styles.cardHeaderRow}>
+                <View style={styles.cardBrandCircles}>
+                  <View style={[styles.brandCircle, { backgroundColor: '#FF5F56' }]} />
+                  <View style={[styles.brandCircle, { backgroundColor: '#FFA500', marginLeft: -10 }]} />
+                </View>
+                <View style={styles.categoryIconCapsule}>
+                  {/* @ts-ignore */}
+                  <Ionicons name={currentCat.icon} size={16} color="#FFFFFF" />
+                </View>
+              </View>
+              
+              <Text style={styles.maskedCardNumbers}>••••   ••••   ••••   {currentCat.name.substring(0,4).toUpperCase()}</Text>
+            </View>
+
+            {/* Bottom segment */}
+            <View style={styles.creditCardBottomHalf}>
+              <View style={styles.metaDataColumns}>
+                <View>
+                  <Text style={styles.metaLabelText}>Card holder</Text>
+                  <Text style={styles.metaValueText} numberOfLines={1}>{currentCat.name}</Text>
+                </View>
+                <View style={{ alignItems: 'flex-end' }}>
+                  <Text style={styles.metaLabelText}>Remaining</Text>
+                  <Text style={styles.metaValueText}>₱{currentCat.remainingAmount.toLocaleString('en-US', { maximumFractionDigits: 0 })}</Text>
+                </View>
+              </View>
+
+              <View style={styles.cardProgressSystem}>
+                <View style={styles.miniProgressBg}>
+                  <View style={[styles.miniProgressFill, { width: `${remainingPercentage}%` }]} />
+                </View>
+                <View style={styles.miniTextRow}>
+                  <Text style={styles.miniProgressLabel}>Budget: ₱{currentCat.allocatedAmount}</Text>
+                  <Text style={styles.miniProgressLabel}>Spent: ₱{currentCat.totalSpent}</Text>
+                </View>
+              </View>
+            </View>
+          </TouchableOpacity>
+        </Animated.View>
+
+        {/* DOTS TRACKER INDICATOR */}
+        <View style={styles.dotsRowContainer}>
+          {categories.map((_, dotIndex) => (
+            <View 
+              key={dotIndex} 
+              style={[styles.indicatorDot, currentCardIndex === dotIndex ? styles.activeDot : styles.inactiveDot]} 
+            />
+          ))}
+        </View>
+      </View>
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
@@ -299,7 +441,7 @@ export default function SpenderHomeScreen() {
         contentContainerStyle={styles.scrollContent}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#C5FF42']} />}
       >
-        {/* Deep Emerald Fintech Dashboard Hero node inspired by image_21af8a.png */}
+        {/* Emerald Header */}
         <View style={styles.headerBackground}>
           <View style={styles.welcomeRow}>
             <View style={styles.avatarRow}>
@@ -337,76 +479,12 @@ export default function SpenderHomeScreen() {
           )}
         </View>
 
-        {/* Categories Horizontal Snapping Wallet Deck */}
+        {/* Categories Carousel Center Deck */}
         <View style={styles.cardsSectionContainer}>
-          <ScrollView 
-            horizontal 
-            pagingEnabled={false}
-            decelerationRate="fast"
-            snapToInterval={SNAP_INTERVAL}
-            snapToAlignment="center"
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.swipeableCardsContainer}
-          >
-            {categories.map((cat) => {
-              const remainingPercentage = cat.allocatedAmount > 0 
-                ? Math.min((cat.remainingAmount / cat.allocatedAmount) * 100, 100) 
-                : 0;
-
-              return (
-                <TouchableOpacity 
-                  key={cat.id} 
-                  activeOpacity={0.9}
-                  onPress={() => openAllocateModal(cat)}
-                  style={styles.creditCardLayout}
-                >
-                  {/* Top segment representing mastercard element styles */}
-                  <View style={styles.creditCardTopHalf}>
-                    <View style={styles.cardHeaderRow}>
-                      <View style={styles.cardBrandCircles}>
-                        <View style={[styles.brandCircle, { backgroundColor: '#FF5F56' }]} />
-                        <View style={[styles.brandCircle, { backgroundColor: '#FFA500', marginLeft: -10 }]} />
-                      </View>
-                      <View style={styles.categoryIconCapsule}>
-                        {/* @ts-ignore */}
-                        <Ionicons name={cat.icon} size={16} color="#FFFFFF" />
-                      </View>
-                    </View>
-                    
-                    <Text style={styles.maskedCardNumbers}>••••  ••••  ••••  {cat.name.substring(0,4).toUpperCase()}</Text>
-                  </View>
-
-                  {/* Lighter lower deck segment directly mapping layouts of image_21af8a.png */}
-                  <View style={styles.creditCardBottomHalf}>
-                    <View style={styles.metaDataColumns}>
-                      <View>
-                        <Text style={styles.metaLabelText}>Card holder</Text>
-                        <Text style={styles.metaValueText} numberOfLines={1}>{cat.name}</Text>
-                      </View>
-                      <View style={{ alignItems: 'flex-end' }}>
-                        <Text style={styles.metaLabelText}>Remaining</Text>
-                        <Text style={styles.metaValueText}>₱{cat.remainingAmount.toLocaleString('en-US', { maximumFractionDigits: 0 })}</Text>
-                      </View>
-                    </View>
-
-                    {/* Operational Progress bar indicator embedded neatly */}
-                    <View style={styles.cardProgressSystem}>
-                      <View style={styles.miniProgressBg}>
-                        <View style={[styles.miniProgressFill, { width: `${remainingPercentage}%` }]} />
-                      </View>
-                      <View style={styles.miniTextRow}>
-                        <Text style={styles.miniProgressLabel}>Budget: ₱{cat.allocatedAmount}</Text>
-                        <Text style={styles.miniProgressLabel}>Spent: ₱{cat.totalSpent}</Text>
-                      </View>
-                    </View>
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
+          {renderCardDeck()}
         </View>
 
-        {/* Recent Transactions List Node Stack */}
+        {/* Recent Transactions List */}
         <View style={styles.contentBody}>
           <View style={styles.recentSectionHeader}>
             <Text style={styles.sectionTitle}>Recent Transaction</Text>
@@ -480,7 +558,6 @@ const styles = StyleSheet.create({
   centeredLoading: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#06261D' },
   scrollContent: { paddingBottom: 40 },
   
-  // Custom Emerald Premium Header Deck
   headerBackground: { 
     backgroundColor: '#06261D', 
     paddingHorizontal: 24, 
@@ -506,15 +583,14 @@ const styles = StyleSheet.create({
   headerMetricsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   headerMetricText: { color: '#A3B8B0', fontSize: 11, fontWeight: '500' },
 
-  // Carousel positioning system pulling cards over the dark deck block
-  cardsSectionContainer: { marginTop: -45, marginBottom: 15 },
-  swipeableCardsContainer: { paddingHorizontal: (width - CARD_WIDTH) / 2 - CARD_MARGIN, paddingBottom: 12 },
+  // Center Deck Carousel Configuration
+  cardsSectionContainer: { marginTop: -45, marginBottom: 15, alignItems: 'center', justifyContent: 'center', width: '100%' },
+  deckWrapper: { width: '100%', alignItems: 'center', position: 'relative', height: 225 },
+  backgroundCardLayer: { position: 'absolute', transform: [{ scale: 0.92 }], top: 10, opacity: 0.45, zIndex: -1 },
   
-  // Custom Dual-layered Credit Card layout matching image_21af8a.png
   creditCardLayout: {
     width: CARD_WIDTH,
     height: 190,
-    marginHorizontal: CARD_MARGIN,
     borderRadius: 24,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
@@ -525,7 +601,6 @@ const styles = StyleSheet.create({
   },
   creditCardTopHalf: {
     flex: 1.1,
-    backgroundColor: '#1E463A',
     padding: 18,
     justifyContent: 'space-between'
   },
@@ -551,6 +626,14 @@ const styles = StyleSheet.create({
   miniProgressFill: { height: '100%', backgroundColor: '#06261D', borderRadius: 2 },
   miniTextRow: { flexDirection: 'row', justifyContent: 'space-between' },
   miniProgressLabel: { fontSize: 9, color: '#5C7A11', fontWeight: '500' },
+
+  dotsRowContainer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 14, gap: 6 },
+  indicatorDot: { height: 6, borderRadius: 3 },
+  activeDot: { width: 14, backgroundColor: '#06261D' },
+  inactiveDot: { width: 6, backgroundColor: '#CBD5E1' },
+
+  emptyCardsBox: { width: CARD_WIDTH, height: 190, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 24, borderWidth: 1, borderColor: '#E2E8F0' },
+  emptyCardsText: { color: '#718096', fontSize: 13 },
 
   contentBody: { paddingHorizontal: 24, marginTop: 10 },
   sectionTitle: { fontSize: 16, fontWeight: '700', color: '#06261D', letterSpacing: -0.2 },

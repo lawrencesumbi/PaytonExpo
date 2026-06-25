@@ -191,11 +191,13 @@ export default function AllowanceScreen() {
 
         <View style={styles.header}>
           <Text style={styles.headerTitle}>{allowanceId ? 'Edit Allowance' : 'Set Allowance'}</Text>
+          <Text style={styles.mainSubtitle}>Select a spender and allocate allowance.</Text>
+          
           
           {selectedSpender ? (
             <View style={styles.selectedSpenderCard}>
               <View style={{flex: 1}}>
-                <Text style={styles.headerSubtitle}>Allocating budget for:</Text>
+                <Text style={styles.headerSubtitle}>Allocating allowance for:</Text>
                 <Text style={styles.spenderName}>{selectedSpender.name}</Text>
               </View>
               <TouchableOpacity onPress={() => setSelectedSpender(null)} style={styles.removeButton}>
@@ -261,6 +263,8 @@ const styles = StyleSheet.create({
   header: { marginBottom: 24 },
   headerTitle: { fontSize: 24, fontWeight: '700', color: '#1E293B' },
   headerSubtitle: { color: '#64748B', marginTop: 4, fontSize: 12 },
+  mainSubtitle: { fontSize: 13, color: '#64748B', marginTop: 4, marginBottom: 24, lineHeight: 18 },
+
   form: { gap: 16 },
   inputGroup: { gap: 8 },
   label: { fontSize: 12, fontWeight: '600', color: '#94A3B8', textTransform: 'uppercase' },

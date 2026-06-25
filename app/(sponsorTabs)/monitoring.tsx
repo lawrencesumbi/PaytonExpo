@@ -299,6 +299,7 @@ export default function MonitoringScreen() {
                   <Ionicons name="analytics-outline" size={32} color="#94A3B8" />
                 </View>
                 <Text style={styles.emptySpendersText}>No Monitored Allowances</Text>
+                <Text style={styles.emptySubtext}>Monitor your Spender's Expenses in real time.</Text>
               </View>
             ) : (
               <FlatList
@@ -390,5 +391,6 @@ const styles = StyleSheet.create({
   emptyIconWrapper: { width: 64, height: 64, borderRadius: 20, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
   emptySpendersText: { fontSize: 15, fontWeight: '600', color: '#1E293B' },
   emptyExpensesBlock: { flex: 0.5, justifyContent: 'center', alignItems: 'center' },
-  emptyExpensesText: { fontSize: 15, fontWeight: '600', color: '#1E293B' }
+  emptyExpensesText: { fontSize: 15, fontWeight: '600', color: '#1E293B' },
+  emptySubtext: { fontSize: 13, color: '#64748B', textAlign: 'center', marginTop: 4, paddingHorizontal: 32, lineHeight: 18 },
 });
