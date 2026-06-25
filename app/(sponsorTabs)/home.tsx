@@ -1,16 +1,20 @@
 // app/(sponsorTabs)/home.tsx
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
+  Image,
   StatusBar as NativeStatusBar,
   Platform,
   SafeAreaView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View
 } from 'react-native';
 import { supabase } from '../../lib/supabase';
@@ -22,189 +26,193 @@ interface AllowanceDashboardItem {
   start_date: string;
   end_date: string;
   spender_name: string;
-  spender_email: string;
 }
 
 export default function HomeScreen() {
+  const router = useRouter();
   const [allowances, setAllowances] = useState<AllowanceDashboardItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalAllocated, setTotalAllocated] = useState(0);
+  const [sponsorProfile, setSponsorProfile] = useState<{ full_name: string; avatar_url: string | null } | null>(null);
 
-  // FETCH ALL ALLOCATED ALLOWANCES FOR THE DASHBOARD
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Query allowances table and join profile metadata fields on spender relation
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name, avatar_url')
+        .eq('id', user.id)
+        .single();
+      setSponsorProfile(profile);
+
       const { data, error } = await supabase
         .from('allowances')
         .select(`
-          id,
-          allowance_name,
-          amount,
-          start_date,
-          end_date,
-          profiles!allowances_spender_id_fkey (
-            full_name,
-            email
-          )
+          id, allowance_name, amount, start_date, end_date,
+          profiles!allowances_spender_id_fkey (full_name)
         `)
         .eq('sponsor_id', user.id)
-        .order('received_at', { ascending: false }); // FIXED: Gi-saktong column name gikan sa imong schema
+        .order('received_at', { ascending: false });
 
       if (error) throw error;
 
-      // Transform response relations into structured data arrays
-      const formatted = (data || []).map((item: any) => {
-        const profileData = Array.isArray(item.profiles) ? item.profiles[0] : item.profiles;
-
-        return {
-          id: item.id,
-          allowance_name: item.allowance_name || 'Allowance Allocation',
-          amount: Number(item.amount),
-          start_date: item.start_date || 'N/A',
-          end_date: item.end_date || 'N/A',
-          spender_name: profileData?.full_name || 'Unknown Recipient',
-          spender_email: profileData?.email || 'No Email Registered'
-        };
-      });
+      const formatted = (data || []).map((item: any) => ({
+        id: item.id,
+        allowance_name: item.allowance_name,
+        amount: Number(item.amount),
+        start_date: item.start_date,
+        end_date: item.end_date,
+        spender_name: item.profiles?.full_name || 'Unknown'
+      }));
 
       setAllowances(formatted);
-
-      // Compute total absolute cumulative allowances issued
-      const total = formatted.reduce((sum, item) => sum + item.amount, 0);
-      setTotalAllocated(total);
-
+      setTotalAllocated(formatted.reduce((sum, item) => sum + item.amount, 0));
     } catch (error: any) {
-      console.error("Dashboard Fetch Error:", error.message);
+      console.error("Error:", error.message);
     } finally {
       setLoading(false);
     }
   };
 
-  // Automated trigger to refresh state metrics every time the screen becomes active
-  useFocusEffect(
-    useCallback(() => {
-      fetchDashboardData();
-    }, [])
-  );
+  useFocusEffect(useCallback(() => { fetchDashboardData(); }, []));
+
+  const handleDelete = (id: string) => {
+    Alert.alert("Delete Allowance", "Are you sure you want to delete this?", [
+      { text: "Cancel", style: "cancel" },
+      { 
+        text: "Delete", 
+        style: "destructive",
+        onPress: async () => {
+          const { error } = await supabase.from('allowances').delete().eq('id', id);
+          if (error) {
+            Alert.alert("Error", "Failed to delete allowance.");
+          } else {
+            fetchDashboardData();
+          }
+        }
+      }
+    ]);
+  };
+
+  const handleEdit = (item: AllowanceDashboardItem) => {
+    router.push({ pathname: '/allowance', params: { id: item.id } });
+  };
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
-      
       <View style={styles.content}>
-        
-        {/* Total Summary Header Card Frame */}
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryLabel}>Total Allocated Capital</Text>
-          <Text style={styles.summaryAmount}>₱{totalAllocated.toFixed(2)}</Text>
-          <View style={styles.summaryBadge}>
-            <Ionicons name="trending-up" size={12} color="#21dad3" />
-            <Text style={styles.summaryBadgeText}>Active Monitoring Enabled</Text>
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.welcomeText}>Welcome back,</Text>
+            <Text style={styles.userName}>{sponsorProfile?.full_name || 'Sponsor'}</Text>
           </View>
+          {sponsorProfile?.avatar_url ? (
+            <Image source={{ uri: sponsorProfile.avatar_url }} style={styles.avatar} />
+          ) : (
+            <View style={styles.avatarPlaceholder}><Ionicons name="person" size={24} color="#3AA39F" /></View>
+          )}
         </View>
 
-        {/* List Section Title Header */}
+        <LinearGradient 
+          colors={['#3AA39F', '#133b13']} 
+          start={{x: 0, y: 0}} end={{x: 1, y: 1}}
+          style={styles.summaryCard}
+        >
+          <View style={styles.cardChip} />
+          <Text style={styles.cardLabel}>TOTAL ALLOCATED</Text>
+          <Text style={styles.cardAmount}>₱{totalAllocated.toLocaleString(undefined, { minimumFractionDigits: 2 })}</Text>
+          <View style={styles.cardFooter}>
+            <View style={styles.cardBadge}><Text style={styles.cardBadgeText}>ACTIVE MONITORING</Text></View>
+            <Ionicons name="card-outline" size={24} color="rgba(255,255,255,0.4)" />
+          </View>
+        </LinearGradient>
+
         <Text style={styles.sectionTitle}>Active Allowances ({allowances.length})</Text>
 
-        {loading && allowances.length === 0 ? (
-          <View style={styles.centerLoading}>
-            <ActivityIndicator color="#3AA39F" size="small" />
-          </View>
+        {loading ? (
+          <ActivityIndicator size="large" color="#3AA39F" style={{ marginTop: 40 }} />
         ) : allowances.length === 0 ? (
-          <View style={styles.emptyState}>
-            <View style={styles.emptyIconWrapper}>
-              <Ionicons name="wallet-outline" size={32} color="#94A3B8" />
-            </View>
-            <Text style={styles.emptyText}>No Active Allocations</Text>
-            <Text style={styles.emptySubtext}>Navigate over to your Members channel and configure an active balance schema for an accepted dependent.</Text>
+          <View style={styles.emptyContainer}>
+            <Ionicons name="wallet-outline" size={48} color="#CBD5E1" />
+            <Text style={styles.emptyTitle}>No active allowances</Text>
+            <Text style={styles.emptySubtitle}>
+              To set up an allowance, go to the Members tab and select the person you wish to assign one to.
+            </Text>
+            <TouchableOpacity 
+              style={styles.navigateBtn}
+              onPress={() => router.push('/(sponsorTabs)/members')}
+            >
+              <Text style={styles.navigateBtnText}>Go to Members</Text>
+            </TouchableOpacity>
           </View>
         ) : (
           <FlatList
             data={allowances}
             keyExtractor={(item) => item.id}
-            refreshing={loading}
             showsVerticalScrollIndicator={false}
-            onRefresh={fetchDashboardData}
-            contentContainerStyle={styles.listPadding}
+            contentContainerStyle={{ paddingBottom: 20 }}
             renderItem={({ item }) => (
               <View style={styles.allowanceCard}>
                 <View style={styles.cardLeft}>
-                  <View style={styles.iconContainer}>
-                    <Ionicons name="cash-outline" size={18} color="#3AA39F" />
-                  </View>
+                  <View style={styles.iconContainer}><Ionicons name="wallet" size={18} color="#3AA39F" /></View>
                   <View style={styles.infoBlock}>
-                    <Text style={styles.allowanceName} numberOfLines={1}>{item.allowance_name}</Text>
-                    <Text style={styles.spenderName} numberOfLines={1}>Recipient: {item.spender_name}</Text>
-                    
-                    <View style={styles.dateBadgeRow}>
-                      <Ionicons name="calendar-outline" size={11} color="#64748B" />
-                      <Text style={styles.dateDuration}>
-                        {item.start_date} to {item.end_date}
-                      </Text>
-                    </View>
+                    <Text style={styles.allowanceName}>{item.allowance_name}</Text>
+                    <Text style={styles.spenderName}>{item.spender_name}</Text>
                   </View>
                 </View>
-                <View style={styles.cardRight}>
-                  <Text style={styles.cardAmount}>₱{item.amount.toFixed(2)}</Text>
+                
+                <View style={{ alignItems: 'flex-end', gap: 8 }}>
+                  <Text style={styles.cardAmountText}>₱{item.amount.toLocaleString()}</Text>
+                  <View style={styles.actionRow}>
+                      <TouchableOpacity onPress={() => handleEdit(item)} style={styles.actionBtn}>
+                          <Ionicons name="pencil" size={16} color="#3AA39F" />
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => handleDelete(item.id)} style={styles.actionBtn}>
+                          <Ionicons name="trash" size={16} color="#FF6B6B" />
+                      </TouchableOpacity>
+                  </View>
                 </View>
               </View>
             )}
           />
         )}
-
       </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: '#FAFBFD',
-    paddingTop: Platform.OS === 'android' ? NativeStatusBar.currentHeight : 0 
-  },
+  container: { flex: 1, backgroundColor: '#FAFBFD', paddingTop: Platform.OS === 'android' ? NativeStatusBar.currentHeight : 0 },
   content: { flex: 1, paddingHorizontal: 20 },
-  centerLoading: { flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 40 },
-  listPadding: { paddingBottom: 110 },
-  
-  summaryCard: { 
-    backgroundColor: '#133b13', 
-    padding: 20, 
-    borderRadius: 24, 
-    marginBottom: 24, 
-    marginTop: 12, 
-    shadowColor: '#0F172A', 
-    shadowOffset: { width: 0, height: 10 }, 
-    shadowOpacity: 0.05, 
-    shadowRadius: 15, 
-    elevation: 4 
-  },
-  summaryLabel: { color: '#94A3B8', fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
-  summaryAmount: { color: '#FFFFFF', fontSize: 32, fontWeight: '700', marginTop: 6, marginBottom: 14, letterSpacing: -0.5 },
-  summaryBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(58, 163, 159, 0.12)', alignSelf: 'flex-start', paddingVertical: 4, paddingHorizontal: 10, borderRadius: 8, gap: 6, borderWidth: 1, borderColor: 'rgba(58, 163, 159, 0.2)' },
-  summaryBadgeText: { color: '#21dad3', fontSize: 11, fontWeight: '600' },
-  
-  sectionTitle: { fontSize: 12, fontWeight: '600', color: '#94A3B8', textTransform: 'uppercase', marginBottom: 14, letterSpacing: 0.5, paddingLeft: 2 },
-  
-  allowanceCard: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FFFFFF', padding: 14, borderRadius: 20, marginBottom: 10, borderWidth: 1, borderColor: '#F1F5F9' },
-  cardLeft: { flexDirection: 'row', alignItems: 'center', gap: 14, flex: 1 },
-  iconContainer: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#EBF6F5', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#D1ECEB' },
-  infoBlock: { flex: 1, gap: 2 },
-  allowanceName: { fontSize: 15, fontWeight: '600', color: '#1E293B', letterSpacing: -0.2 },
-  spenderName: { fontSize: 12, color: '#64748B', fontWeight: '500' },
-  
-  dateBadgeRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
-  dateDuration: { fontSize: 11, color: '#64748B', fontWeight: '400' },
-  
-  cardRight: { paddingLeft: 12, alignItems: 'flex-end' },
-  cardAmount: { fontSize: 15, fontWeight: '700', color: '#1E293B', letterSpacing: -0.2 },
-  
-  emptyState: { flex: 0.8, justifyContent: 'center', alignItems: 'center' },
-  emptyIconWrapper: { width: 64, height: 64, borderRadius: 20, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
-  emptyText: { fontSize: 15, fontWeight: '600', color: '#1E293B', textAlign: 'center' },
-  emptySubtext: { fontSize: 13, color: '#64748B', textAlign: 'center', marginTop: 6, paddingHorizontal: 32, lineHeight: 18 }
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, marginTop: 10 },
+  welcomeText: { fontSize: 14, color: '#64748B' },
+  userName: { fontSize: 20, fontWeight: '700', color: '#1E293B' },
+  avatar: { width: 50, height: 50, borderRadius: 25 },
+  avatarPlaceholder: { width: 50, height: 50, borderRadius: 25, backgroundColor: '#EBF6F5', justifyContent: 'center', alignItems: 'center' },
+  summaryCard: { padding: 24, borderRadius: 24, marginBottom: 24, elevation: 8, shadowColor: '#133b13', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 15 },
+  cardChip: { width: 45, height: 32, backgroundColor: 'rgb(255, 243, 136)', borderRadius: 8, marginBottom: 16 },
+  cardLabel: { color: 'rgba(255,255,255,0.7)', fontSize: 12, fontWeight: '600', letterSpacing: 1 },
+  cardAmount: { color: '#FFFFFF', fontSize: 32, fontWeight: '800', marginTop: 4 },
+  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 20 },
+  cardBadge: { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
+  cardBadgeText: { color: '#FFFFFF', fontSize: 10, fontWeight: '700' },
+  sectionTitle: { fontSize: 12, fontWeight: '600', color: '#94A3B8', textTransform: 'uppercase', marginBottom: 14 },
+  allowanceCard: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FFFFFF', padding: 16, borderRadius: 20, marginBottom: 10, borderWidth: 1, borderColor: '#F1F5F9' },
+  cardLeft: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  iconContainer: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#EBF6F5', justifyContent: 'center', alignItems: 'center' },
+  infoBlock: { gap: 2 },
+  allowanceName: { fontSize: 15, fontWeight: '600', color: '#1E293B' },
+  spenderName: { fontSize: 12, color: '#64748B' },
+  cardAmountText: { fontSize: 15, fontWeight: '700', color: '#1E293B' },
+  actionRow: { flexDirection: 'row', gap: 15 },
+  actionBtn: { padding: 4 },
+  emptyContainer: { marginTop: 40, alignItems: 'center', padding: 20, backgroundColor: '#FFFFFF', borderRadius: 20, borderWidth: 1, borderColor: '#F1F5F9' },
+  emptyTitle: { fontSize: 16, fontWeight: '700', color: '#1E293B', marginTop: 12 },
+  emptySubtitle: { fontSize: 14, color: '#64748B', textAlign: 'center', marginTop: 8, marginBottom: 20, lineHeight: 20 },
+  navigateBtn: { backgroundColor: '#3AA39F', paddingVertical: 12, paddingHorizontal: 24, borderRadius: 12 },
+  navigateBtnText: { color: '#FFFFFF', fontWeight: '600' }
 });

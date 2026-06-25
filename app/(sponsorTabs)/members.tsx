@@ -237,7 +237,7 @@ export default function MembersScreen() {
                       style={styles.setAllowanceBtn}
                       onPress={() => {
                         router.push({
-                          pathname: '/allowance',
+                          pathname: '/(sponsorTabs)/allowance',
                           params: { 
                             spenderId: item.spender_id, 
                             spenderName: item.name,

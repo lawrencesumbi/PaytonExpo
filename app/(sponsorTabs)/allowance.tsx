@@ -1,205 +1,474 @@
-// app/allowance.tsx
+// app/(sponsorTabs)/allowance.tsx
+
 import { Ionicons } from '@expo/vector-icons';
+
 import { useLocalSearchParams, useRouter } from 'expo-router';
+
 import { StatusBar } from 'expo-status-bar';
-import React, { useState } from 'react';
+
+import React, { useEffect, useState } from 'react';
+
 import {
-  ActivityIndicator,
-  Alert,
+  ActivityIndicator, Alert,
+
   StatusBar as NativeStatusBar,
-  Platform,
-  SafeAreaView,
-  ScrollView,
+
+  Platform, SafeAreaView, ScrollView,
+
   StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity, // Gidugang para sa Android height calculation
-  View
+
+  Switch,
+
+  Text, TextInput, TouchableOpacity, View
 } from 'react-native';
+
 import { supabase } from '../../lib/supabase';
 
+
+
 export default function AllowanceScreen() {
+
   const router = useRouter();
-  const { spenderId, spenderName, spenderEmail } = useLocalSearchParams();
 
-  const [allowanceName, setAllowanceName] = useState('');
-  const [amount, setAmount] = useState('');
-  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]); 
-  const [endDate, setEndDate] = useState('');
-  const [loading, setLoading] = useState(false);
+  const params = useLocalSearchParams();
 
-  const handleSaveAllowance = async () => {
-    if (!allowanceName.trim() || !amount.trim() || !startDate.trim() || !endDate.trim()) {
-      Alert.alert("Required Fields", "Please populate all mandatory fields to distribute this allowance.");
-      return;
+  const allowanceId = params.id as string; // Check kung naay ID para sa edit
+
+
+
+  // State para sa Spender Selection
+
+  const [selectedSpender, setSelectedSpender] = useState<{ id: string, name: string, email: string } | null>(null);
+
+
+
+  // Sync params to state
+
+  useEffect(() => {
+
+    if (params.spenderId) {
+
+      setSelectedSpender({
+
+        id: params.spenderId as string,
+
+        name: params.spenderName as string,
+
+        email: params.spenderEmail as string
+
+      });
+
     }
 
-    const numericAmount = parseFloat(amount);
-    if (isNaN(numericAmount) || numericAmount <= 0) {
-      Alert.alert("Invalid Amount", "Please input a valid numeric value greater than 0.");
-      return;
+  }, [params.spenderId, params.spenderName, params.spenderEmail]);
+
+
+
+  // Fetch data kung naa'y ID (Edit mode)
+
+  useEffect(() => {
+
+    if (allowanceId) {
+
+      fetchAllowanceDetails();
+
     }
+
+  }, [allowanceId]);
+
+
+
+  const fetchAllowanceDetails = async () => {
 
     try {
-      setLoading(true);
-      const { data: { user: currentSponsor } } = await supabase.auth.getUser();
-      if (!currentSponsor) return;
 
-      const { error } = await supabase
+      setLoading(true);
+
+      // 1. Kuhaon ang data sa allowance
+
+      const { data, error } = await supabase
+
         .from('allowances')
-        .insert([
-          {
-            sponsor_id: currentSponsor.id,
-            spender_id: spenderId,
-            allowance_name: allowanceName.trim(),
-            amount: numericAmount,
-            start_date: startDate,
-            end_date: endDate
-          }
-        ]);
+
+        .select('*')
+
+        .eq('id', allowanceId)
+
+        .single();
+
+
 
       if (error) throw error;
 
-      Alert.alert("Success 🎉", `Allowance allocation for ${spenderName} saved successfully!`);
-      router.back(); 
-    } catch (error: any) {
-      Alert.alert("Database Error ❌", error.message || "Failed to commit record changes.");
+
+
+      // 2. Kuhaon ang pangalan sa spender gikan sa profiles
+
+      const { data: profileData } = await supabase
+
+        .from('profiles')
+
+        .select('full_name')
+
+        .eq('id', data.spender_id)
+
+        .single();
+
+
+
+      setAllowanceName(data.allowance_name);
+
+      setAmount(data.amount.toString());
+
+      setStartDate(data.start_date);
+
+      setEndDate(data.end_date);
+
+      setIsCustomDate(true);
+
+      setSelectedSpender({
+
+        id: data.spender_id,
+
+        name: profileData?.full_name || 'Member',
+
+        email: ''
+
+      });
+
+    } catch (e: any) {
+
+      Alert.alert("Error", "Dili ma-load ang detalye: " + e.message);
+
     } finally {
+
       setLoading(false);
+
     }
+
   };
 
+
+
+  const [allowanceName, setAllowanceName] = useState('');
+
+  const [amount, setAmount] = useState('');
+
+  const [loading, setLoading] = useState(false);
+
+ 
+
+  // Custom Date States
+
+  const [isCustomDate, setIsCustomDate] = useState(false);
+
+  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
+
+  const [endDate, setEndDate] = useState('');
+
+
+
+  const now = new Date();
+
+  const autoStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+
+  const autoEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+
+
+
+  const handleSaveAllowance = async () => {
+
+    if (!selectedSpender) {
+
+      Alert.alert("Member Required", "Please select a member first.");
+
+      return;
+
+    }
+
+    if (!allowanceName.trim() || !amount.trim()) {
+
+      Alert.alert("Required Fields", "Please provide a name and amount.");
+
+      return;
+
+    }
+
+
+
+    const finalStart = isCustomDate ? startDate : autoStart;
+
+    const finalEnd = isCustomDate ? endDate : autoEnd;
+
+
+
+    try {
+
+      setLoading(true);
+
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) return;
+
+
+
+      if (allowanceId) {
+
+        // Update existing
+
+        const { error } = await supabase
+
+          .from('allowances')
+
+          .update({
+
+            allowance_name: allowanceName,
+
+            amount: parseFloat(amount),
+
+            start_date: finalStart,
+
+            end_date: finalEnd
+
+          })
+
+          .eq('id', allowanceId);
+
+        if (error) throw error;
+
+        Alert.alert("Success 🎉", "Allowance updated successfully!");
+
+      } else {
+
+        // Create new
+
+        const { error } = await supabase.from('allowances').insert([{
+
+          sponsor_id: user.id,
+
+          spender_id: selectedSpender.id,
+
+          allowance_name: allowanceName,
+
+          amount: parseFloat(amount),
+
+          start_date: finalStart,
+
+          end_date: finalEnd
+
+        }]);
+
+        if (error) throw error;
+
+        Alert.alert("Success 🎉", "Allowance allocated successfully!");
+
+      }
+
+      router.back();
+
+    } catch (e: any) { Alert.alert("Error", e.message); } finally { setLoading(false); }
+
+  };
+
+
+
   return (
+
     <SafeAreaView style={styles.container}>
-      {/* Gi-force ang icons sa top system bar nga magpabiling dark ug makita */}
+
       <StatusBar style="dark" />
-      
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Navigation Layer */}
+
+      <ScrollView contentContainerStyle={styles.content}>
+
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <View style={styles.backButtonCircle}>
-            <Ionicons name="arrow-back" size={16} color="#475569" />
-          </View>
-          <Text style={styles.backButtonText}>Cancel</Text>
+
+          <Ionicons name="arrow-back" size={16} color="#475569" />
+
+          <Text style={styles.backButtonText}>Back</Text>
+
         </TouchableOpacity>
 
-        {/* Dynamic Context Header */}
+
+
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Set Allowance</Text>
-          <Text style={styles.headerSubtitle}>Configure and allocate budget structures for your dependent:</Text>
-          
-          <View style={styles.spenderCard}>
-            <View style={styles.avatarCircle}>
-              <Ionicons name="person-outline" size={16} color="#3AA39F" />
+
+          <Text style={styles.headerTitle}>{allowanceId ? 'Edit Allowance' : 'Set Allowance'}</Text>
+
+         
+
+          {selectedSpender ? (
+
+            <View style={styles.selectedSpenderCard}>
+
+              <View style={{flex: 1}}>
+
+                <Text style={styles.headerSubtitle}>Allocating budget for:</Text>
+
+                <Text style={styles.spenderName}>{selectedSpender.name}</Text>
+
+              </View>
+
+              <TouchableOpacity onPress={() => setSelectedSpender(null)} style={styles.removeButton}>
+
+                <Ionicons name="close-circle" size={24} color="#EF4444" />
+
+              </TouchableOpacity>
+
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.spenderName}>{spenderName || 'Unknown Recipient'}</Text>
-              <Text style={styles.spenderEmail} numberOfLines={1}>{spenderEmail || 'No verified email link'}</Text>
-            </View>
-          </View>
+
+          ) : (
+
+            <TouchableOpacity
+
+              style={styles.selectMemberButton}
+
+              onPress={() => router.push('/(sponsorTabs)/members')}
+
+            >
+
+              <Ionicons name="add-circle" size={20} color="#3AA39F" />
+
+              <Text style={styles.selectMemberText}>Select a Member to allocate</Text>
+
+            </TouchableOpacity>
+
+          )}
+
         </View>
 
-        {/* Form Inputs Container */}
+
+
         <View style={styles.form}>
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Allowance Label</Text>
-            <TextInput 
-              style={styles.input} 
-              placeholder="e.g., Weekly Transportation & Meals" 
-              placeholderTextColor="#94A3B8" 
-              value={allowanceName} 
-              onChangeText={setAllowanceName} 
-            />
-          </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Allocation Budget (PHP)</Text>
-            <View style={styles.currencyInputWrapper}>
-              <Text style={styles.currencySymbol}>₱</Text>
-              <TextInput 
-                style={[styles.input, { paddingLeft: 34 }]} 
-                placeholder="0.00" 
-                placeholderTextColor="#94A3B8" 
-                keyboardType="numeric" 
-                value={amount} 
-                onChangeText={setAmount} 
-              />
+
+            <Text style={styles.label}>Allowance Name</Text>
+
+            <TextInput style={styles.input} value={allowanceName} onChangeText={setAllowanceName} placeholder="e.g. January Allowance" />
+
+          </View>
+
+
+
+          <View style={styles.inputGroup}>
+
+            <Text style={styles.label}>Amount (PHP)</Text>
+
+            <TextInput style={styles.input} keyboardType="numeric" value={amount} onChangeText={setAmount} placeholder="0.00" />
+
+          </View>
+
+
+
+          <View style={styles.inputGroup}>
+
+            <View style={styles.rowBetween}>
+
+              <Text style={styles.label}>Coverage Period</Text>
+
+              <View style={styles.row}>
+
+                <Text style={styles.switchLabel}>Custom</Text>
+
+                <Switch value={isCustomDate} onValueChange={setIsCustomDate} trackColor={{ true: '#3AA39F' }} />
+
+              </View>
+
             </View>
-          </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Activation Effective Date</Text>
-            <TextInput 
-              style={styles.input} 
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor="#94A3B8"
-              value={startDate} 
-              onChangeText={setStartDate} 
-            />
-          </View>
+            {isCustomDate ? (
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Expiration Settlement Date</Text>
-            <TextInput 
-              style={styles.input} 
-              placeholder="YYYY-MM-DD" 
-              placeholderTextColor="#94A3B8" 
-              value={endDate} 
-              onChangeText={setEndDate} 
-            />
-          </View>
+              <View style={styles.customDateContainer}>
 
-          {/* Core Action Call-To-Action Button */}
-          <TouchableOpacity style={styles.saveButton} onPress={handleSaveAllowance} disabled={loading}>
-            {loading ? (
-              <ActivityIndicator color="#FFF" size="small" />
+                <TextInput style={styles.input} placeholder="Start (YYYY-MM-DD)" value={startDate} onChangeText={setStartDate} />
+
+                <TextInput style={styles.input} placeholder="End (YYYY-MM-DD)" value={endDate} onChangeText={setEndDate} />
+
+              </View>
+
             ) : (
-              <Text style={styles.saveButtonText}>Confirm & Authorize Budget</Text>
+
+              <View style={styles.dateDisplay}>
+
+                <Ionicons name="calendar" size={18} color="#3AA39F" />
+
+                <Text style={styles.dateText}>{now.toLocaleDateString('en-PH', { month: 'long', year: 'numeric' })}</Text>
+
+              </View>
+
             )}
+
+          </View>
+
+
+
+          <TouchableOpacity style={styles.saveButton} onPress={handleSaveAllowance} disabled={loading}>
+
+            {loading ? <ActivityIndicator color="#FFF" /> : <Text style={styles.saveButtonText}>{allowanceId ? 'Update Allocation' : 'Confirm Allocation'}</Text>}
+
           </TouchableOpacity>
+
         </View>
+
       </ScrollView>
+
     </SafeAreaView>
+
   );
+
 }
 
+
+
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: '#FAFBFD',
-    // FIXED: Gi-inject ang system bar spacing para sa Android para protektado sa overlap sa taas
-    paddingTop: Platform.OS === 'android' ? NativeStatusBar.currentHeight : 0 
-  },
-  content: { paddingHorizontal: 20, paddingBottom: 40 },
-  
-  backButton: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    gap: 8, 
-    marginBottom: 20, 
-    marginTop: 12, // Gi-normalize ang top margin alang sa layout spacing
-    alignSelf: 'flex-start' 
-  },
-  backButtonCircle: { width: 32, height: 32, borderRadius: 10, backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#F1F5F9' },
-  backButtonText: { fontSize: 14, fontWeight: '600', color: '#64748B' },
-  
+
+  container: { flex: 1, backgroundColor: '#FAFBFD', paddingTop: Platform.OS === 'android' ? NativeStatusBar.currentHeight : 0 },
+
+  content: { padding: 20 },
+
+  backButton: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 20 },
+
+  backButtonText: { fontWeight: '600', color: '#64748B' },
+
   header: { marginBottom: 24 },
-  headerTitle: { fontSize: 24, fontWeight: '700', color: '#1E293B', letterSpacing: -0.5 },
-  headerSubtitle: { fontSize: 13, color: '#64748B', marginTop: 4, lineHeight: 18 },
-  
-  spenderCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', padding: 14, borderRadius: 16, marginTop: 14, borderWidth: 1, borderColor: '#F1F5F9' },
-  avatarCircle: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#EBF6F5', justifyContent: 'center', alignItems: 'center', marginRight: 12, borderWidth: 1, borderColor: '#D1ECEB' },
-  spenderName: { fontSize: 15, fontWeight: '600', color: '#1E293B', letterSpacing: -0.2 },
-  spenderEmail: { fontSize: 12, color: '#64748B', marginTop: 1 },
-  
+
+  headerTitle: { fontSize: 24, fontWeight: '700', color: '#1E293B' },
+
+  headerSubtitle: { color: '#64748B', marginTop: 4, fontSize: 12 },
+
   form: { gap: 16 },
+
   inputGroup: { gap: 8 },
-  label: { fontSize: 12, fontWeight: '600', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: 0.3, paddingLeft: 2 },
-  currencyInputWrapper: { position: 'relative', justifyContent: 'center' },
-  currencySymbol: { position: 'absolute', left: 14, zIndex: 10, fontSize: 14, fontWeight: '600', color: '#1E293B' },
-  
-  input: { backgroundColor: '#FFFFFF', paddingHorizontal: 14, paddingVertical: 12, borderRadius: 14, fontSize: 14, fontWeight: '500', borderWidth: 1, borderColor: '#E2E8F0', color: '#1E293B', height: 48 },
-  
-  saveButton: { backgroundColor: '#3AA39F', padding: 14, borderRadius: 16, alignItems: 'center', marginTop: 12, height: 50, justifyContent: 'center', shadowColor: '#3AA39F', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 10, elevation: 3 },
-  saveButtonText: { color: '#FFFFFF', fontWeight: '700', fontSize: 15, letterSpacing: -0.1 }
-});
+
+  label: { fontSize: 12, fontWeight: '600', color: '#94A3B8', textTransform: 'uppercase' },
+
+  input: { backgroundColor: '#FFF', padding: 14, borderRadius: 14, borderWidth: 1, borderColor: '#E2E8F0', height: 48 },
+
+  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+
+  row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+
+  switchLabel: { fontSize: 12, color: '#64748B' },
+
+  selectMemberButton: { flexDirection: 'row', alignItems: 'center', marginTop: 12, padding: 16, backgroundColor: '#F1F5F9', borderRadius: 16, borderStyle: 'dashed', borderWidth: 1, borderColor: '#CBD5E1' },
+
+  selectMemberText: { color: '#3AA39F', fontWeight: '600', marginLeft: 8 },
+
+  selectedSpenderCard: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, padding: 16, backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: '#E2E8F0' },
+
+  spenderName: { fontSize: 16, fontWeight: '700', color: '#1E293B', marginTop: 2 },
+
+  removeButton: { padding: 4 },
+
+  customDateContainer: { gap: 10 },
+
+  dateDisplay: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#EBF6F5', padding: 14, borderRadius: 14, gap: 10, borderWidth: 1, borderColor: '#D1ECEB' },
+
+  dateText: { fontSize: 14, fontWeight: '600', color: '#3AA39F' },
+
+  saveButton: { backgroundColor: '#3AA39F', padding: 16, borderRadius: 16, alignItems: 'center', marginTop: 10 },
+
+  saveButtonText: { color: '#FFF', fontWeight: '700' }
+
+}); 
+
