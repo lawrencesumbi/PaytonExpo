@@ -116,7 +116,7 @@ export default function MonitoringScreen() {
   // 2. FETCH SPECIFIC TRANSACTIONS
   const fetchSpenderExpenses = async (spenderId: string) => {
     try {
-      loadingExpenses || setLoadingExpenses(true);
+      setLoadingExpenses(true);
       
       const { data: categoriesData } = await supabase
         .from('categories')
@@ -233,18 +233,26 @@ export default function MonitoringScreen() {
               </View>
 
               <View style={styles.ccFooter}>
-                <View>
+                <View style={{ flex: 1 }}>
                   <Text style={styles.ccHolderLabel}>CARDHOLDER</Text>
-                  <Text style={styles.ccHolderName}>{selectedSpender.full_name}</Text>
+                  <Text style={styles.ccHolderNameDetail}>{selectedSpender.full_name}</Text>
                 </View>
+                
+                {/* 3 COLUMN METRICS (ALLOCATED IS NOW MINUS SPENT) */}
                 <View style={styles.ccMiniMetricsRow}>
-                  <View style={{ alignItems: 'flex-end', marginRight: 16 }}>
+                  <View style={{ alignItems: 'flex-end' }}>
                     <Text style={styles.ccMiniLabel}>TOTAL</Text>
                     <Text style={styles.ccMiniValue}>₱{selectedSpender.total_allowance.toLocaleString('en-US', { maximumFractionDigits: 0 })}</Text>
                   </View>
                   <View style={{ alignItems: 'flex-end' }}>
                     <Text style={styles.ccMiniLabel}>ALLOCATED</Text>
-                    <Text style={[styles.ccMiniValue, { color: '#FFD166' }]}>₱{selectedSpender.total_allocated.toLocaleString('en-US', { maximumFractionDigits: 0 })}</Text>
+                    <Text style={[styles.ccMiniValue, { color: '#FFD166' }]}>
+                      ₱{(selectedSpender.total_allocated - selectedSpender.total_spent).toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                    </Text>
+                  </View>
+                  <View style={{ alignItems: 'flex-end' }}>
+                    <Text style={styles.ccMiniLabel}>SPENT</Text>
+                    <Text style={[styles.ccMiniValue, { color: '#F87171' }]}>₱{selectedSpender.total_spent.toLocaleString('en-US', { maximumFractionDigits: 0 })}</Text>
                   </View>
                 </View>
               </View>
@@ -318,7 +326,6 @@ export default function MonitoringScreen() {
                 renderItem={({ item }) => {
                   const remaining = item.total_allowance - item.total_allocated;
                   return (
-                    /* CREDIT CARD STYLE FOR THE MAIN LIST */
                     <TouchableOpacity style={styles.creditCardOverview} onPress={() => handleSelectSpender(item)}>
                       <View style={styles.ccHeader}>
                         <View>
@@ -362,9 +369,9 @@ const styles = StyleSheet.create({
   mainTitle: { fontSize: 24, fontWeight: '700', color: '#1E293B', marginTop: 12 },
   mainSubtitle: { fontSize: 13, color: '#64748B', marginTop: 4, marginBottom: 24, lineHeight: 18 },
   
-  // CREDIT CARD BRAND NEW STYLES
+  // CREDIT CARD PREMIUM STYLES
   creditCardOverview: {
-    backgroundColor: '#0F172A', // Sleek Slate Black/Dark Navy look
+    backgroundColor: '#0F172A',
     padding: 20,
     borderRadius: 20,
     marginBottom: 16,
@@ -373,11 +380,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 15,
     elevation: 8,
-    position: 'relative',
-    overflow: 'hidden'
   },
   creditCardDetail: {
-    backgroundColor: '#1E1B4B', // Deep indigo variant para sa single card focus view
+    backgroundColor: '#1E1B4B',
     padding: 22,
     borderRadius: 24,
     marginBottom: 24,
@@ -395,7 +400,7 @@ const styles = StyleSheet.create({
   ccTypeLabel: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#38BDF8', // Neon Sky Blue tag accents
+    color: '#38BDF8',
     letterSpacing: 1.5,
   },
   ccEmailText: {
@@ -417,7 +422,7 @@ const styles = StyleSheet.create({
   ccChip: {
     width: 38,
     height: 28,
-    backgroundColor: '#faea04',
+    backgroundColor: '#E2E8F0',
     borderRadius: 6,
     opacity: 0.85,
     borderWidth: 1,
@@ -441,7 +446,7 @@ const styles = StyleSheet.create({
   ccBalanceOverviewText: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#34D399', // Clean light green balance
+    color: '#34D399',
     marginTop: 2
   },
   ccAllowanceOverviewText: {
@@ -450,8 +455,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     marginTop: 2
   },
-  
-  // CC EXPANDED STATE STYLES
   ccBalanceContainer: {
     marginVertical: 14,
   },
@@ -474,7 +477,8 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: 'rgba(255, 255, 255, 0.1)',
     paddingTop: 14,
-    marginTop: 4
+    marginTop: 4,
+    gap: 12
   },
   ccHolderLabel: {
     fontSize: 9,
@@ -482,8 +486,15 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: 1
   },
+  ccHolderNameDetail: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginTop: 2,
+  },
   ccMiniMetricsRow: {
     flexDirection: 'row',
+    gap: 14,
   },
   ccMiniLabel: {
     fontSize: 9,
@@ -498,7 +509,7 @@ const styles = StyleSheet.create({
     marginTop: 2
   },
 
-  // REST OF THE UI
+  // COMMON UI ELEMENTS
   backButton: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 20, marginTop: 12 },
   backButtonText: { fontSize: 14, fontWeight: '600', color: '#475569' },
   sectionTitle: { fontSize: 12, fontWeight: '600', color: '#94A3B8', textTransform: 'uppercase', marginBottom: 12, paddingLeft: 2 },
