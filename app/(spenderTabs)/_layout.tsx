@@ -71,6 +71,26 @@ export default function SpenderLayout() {
           ) 
         }} 
       />
+
+      <Tabs.Screen 
+        name="split" 
+        options={{ 
+          title: 'Split', 
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? "share-social" : "share-social-outline"} size={22} color={color} />
+          ) 
+        }} 
+      />
+
+      <Tabs.Screen 
+        name="friends" 
+        options={{ 
+          title: 'Friends', 
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? "people" : "people-outline"} size={22} color={color} />
+          ) 
+        }} 
+      />
       
       <Tabs.Screen 
         name="invitations" 

@@ -1,146 +1,108 @@
-import * as Linking from 'expo-linking';
+import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useState } from 'react';
+import { Alert, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { supabase } from '../../lib/supabase';
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
-  
-  // 1. Listen to the raw incoming deep link URL directly
-  const incomingUrl = Linking.useURL();
-  
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-
-  // 2. Parse the hash fragment manually whenever the URL changes
-  useEffect(() => {
-    const establishSessionFromUrl = async () => {
-      if (!incomingUrl) return;
-
-      // Look for the '#' fragment in the URL string
-      const hashSplit = incomingUrl.split('#')[1];
-      if (!hashSplit) return;
-
-      // Convert the hash string variables into a usable object
-      const params = Object.fromEntries(new URLSearchParams(hashSplit));
-
-      if (params.access_token && params.refresh_token) {
-        const { error } = await supabase.auth.setSession({
-          access_token: params.access_token,
-          refresh_token: params.refresh_token,
-        });
-
-        if (error) {
-          Alert.alert('Session Error', 'The reset link may have expired. Please request a new one.');
-        } else {
-          console.log("Supabase session successfully established from deep link!");
-        }
-      }
-    };
-
-    establishSessionFromUrl();
-  }, [incomingUrl]);
 
   const handleUpdatePassword = async () => {
     if (!password || !confirmPassword) {
-      Alert.alert('Error', 'Please fill in all fields.');
+      Alert.alert("Error", "Palihog og fill up sa tanang fields.");
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match.');
-      return;
-    }
-
-    if (password.length < 6) {
-      Alert.alert('Error', 'Password should be at least 6 characters long.');
+      Alert.alert("Error", "Dili pareha ang password ug confirm password.");
       return;
     }
 
     setLoading(true);
-    try {
-      const { error } = await supabase.auth.updateUser({
-        password: password
-      });
 
-      if (error) throw error;
+    const { error } = await supabase.auth.updateUser({
+      password: password
+    });
 
+    setLoading(false);
+
+    if (error) {
+      Alert.alert("Error", error.message);
+    } else {
       Alert.alert(
-        'Success', 
-        'Your password has been securely updated.',
-        [{ text: 'Login', onPress: () => router.replace('/login') }]
+        "Success", 
+        "Nailisan na og malampuson ang imong password!",
+        [{ text: "Mao ba", onPress: () => router.replace('/login') }]
       );
-    } catch (error: any) {
-      Alert.alert('Update Failed', error.message || 'An error occurred while updating your password.');
-    } finally {
-      setLoading(false);
     }
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "white" }}>
       <View style={styles.innerContainer}>
-        <Text style={styles.title}>Reset Password</Text>
-        <Text style={styles.subtitle}>Create a strong, new password for secure transactions.</Text>
+        <View style={styles.headerContainer}>
+          <Text style={styles.title}>Reset Password</Text>
+          <Text style={styles.subtitle}>Isulod ang imong bag-ong password sa ubos.</Text>
+        </View>
 
-        <TextInput
-          style={styles.input}
-          placeholder="New Password"
-          placeholderTextColor="#8A9A93"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          editable={!loading}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Confirm New Password"
-          placeholderTextColor="#8A9A93"
-          value={confirmPassword}
-          onChangeText={setConfirmPassword}
-          secureTextEntry
-          editable={!loading}
-        />
+        <View style={styles.form}>
+          {/* New Password */}
+          <View style={styles.inputWrapper}>
+            <Feather name="lock" color="#085334" size={20} style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              placeholder="New Password"
+              placeholderTextColor="#A0AEC0"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+            />
+          </View>
 
-        <TouchableOpacity 
-          style={[styles.primaryButton, loading && { opacity: 0.7 }]} 
-          onPress={handleUpdatePassword}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <Text style={styles.buttonText}>Update Password</Text>
-          )}
-        </TouchableOpacity>
+          {/* Confirm Password */}
+          <View style={styles.inputWrapper}>
+            <Feather name="lock" color="#085334" size={20} style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              placeholder="Confirm New Password"
+              placeholderTextColor="#A0AEC0"
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              secureTextEntry={!showPassword}
+            />
+            <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
+              <Feather name={showPassword ? 'eye-off' : 'eye'} color="#718096" size={20} />
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity 
+            style={[styles.primaryButton, loading && { opacity: 0.7 }]} 
+            onPress={handleUpdatePassword}
+            disabled={loading}
+          >
+            <Text style={styles.buttonText}>{loading ? "Updating..." : "Update Password"}</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </SafeAreaView>
   );
 }
 
+// Pareha nga styles gihapon para limpyo tan-awon
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F7F9F8' },
-  innerContainer: { flex: 1, padding: 24, justifyContent: 'center' },
-  title: { fontSize: 26, fontWeight: 'bold', color: '#1B3623', marginBottom: 12 },
-  subtitle: { fontSize: 16, color: '#586A61', marginBottom: 24 },
-  input: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    color: '#1B3623',
-    marginBottom: 16,
-  },
-  primaryButton: {
-    backgroundColor: '#1B3623',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  buttonText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' },
+  innerContainer: { flex: 1, paddingHorizontal: 28, justifyContent: 'center' },
+  headerContainer: { marginBottom: 40 },
+  title: { fontSize: 30, fontWeight: 'bold', color: '#000000', marginBottom: 12 },
+  subtitle: { fontSize: 14, color: '#0e9b59', lineHeight: 18 },
+  form: { width: '100%' },
+  inputWrapper: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#e6f5ef', borderRadius: 30, paddingHorizontal: 20, height: 58, marginBottom: 18 },
+  inputIcon: { marginRight: 12 },
+  input: { flex: 1, fontSize: 15, color: '#1A202C', height: '100%' },
+  eyeIcon: { padding: 4 },
+  primaryButton: { backgroundColor: '#204d3a', borderRadius: 30, height: 56, alignItems: 'center', justifyContent: 'center', marginTop: 10 },
+  buttonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' }
 });
