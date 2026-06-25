@@ -5,11 +5,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Animated,
   Dimensions,
+  FlatList,
   Modal,
   StatusBar as NativeStatusBar,
-  PanResponder,
   Platform,
   RefreshControl,
   SafeAreaView,
@@ -23,8 +22,9 @@ import {
 import { supabase } from '../../lib/supabase';
 
 const { width } = Dimensions.get('window');
-const CARD_WIDTH = width * 0.86;
-const SWIPE_THRESHOLD = 80; // Gi-ubasan gamay para mas sensitibo ug dali ra i-swipe
+const CARD_WIDTH = width * 0.84;
+const CARD_MARGIN = 10;
+const SNAP_INTERVAL = CARD_WIDTH + (CARD_MARGIN * 2);
 
 interface DashboardSummary {
   allowanceId: string;
@@ -61,7 +61,7 @@ export default function SpenderHomeScreen() {
   const [categories, setCategories] = useState<DynamicCategory[]>([]);
   const [recentExpenses, setRecentExpenses] = useState<RecentExpense[]>([]);
 
-  // Carousel Stack Index Tracker State
+  // Tracker para sa Dots indicator
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
 
   // Modal Allocation Layer States
@@ -70,8 +70,9 @@ export default function SpenderHomeScreen() {
   const [allocateAmount, setAllocateAmount] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  // Animation drivers para sa swipe mechanics
-  const position = useRef(new Animated.ValueXY()).current;
+  // References para sa FlatList ug Auto-Scroll interval timer (Safe sa Live Share environment errors)
+  const flatListRef = useRef<FlatList>(null);
+  const autoScrollTimer = useRef<any>(null);
 
   // FETCH INTEGRATED LEDGER DASHBOARD DATA DATASETS
   const fetchDashboardData = async () => {
@@ -100,7 +101,7 @@ export default function SpenderHomeScreen() {
           id: cat.id,
           name: cat.name,
           icon: cat.icon || 'options',
-          color: cat.color || '#1E463A',
+          color: cat.color || '#1E463A', // Default background fallback color
           totalSpent: 0,
           allocatedAmount: 0,
           remainingAmount: 0 
@@ -276,57 +277,59 @@ export default function SpenderHomeScreen() {
     setModalVisible(true);
   };
 
+  // Engine para sa Automatic Auto-Swipe/Auto-Scroll rotation logic (Standard cross-env setup)
+  const startAutoScrollEngine = () => {
+    stopAutoScrollEngine(); // Limpyohan una ang daan nga timer aron dili mag-overlap
+    
+    if (categories.length <= 1) return;
+
+    autoScrollTimer.current = window.setInterval(() => {
+      setCurrentCardIndex((prevIndex) => {
+        const nextIndex = prevIndex >= categories.length - 1 ? 0 : prevIndex + 1;
+        
+        flatListRef.current?.scrollToOffset({
+          offset: nextIndex * SNAP_INTERVAL,
+          animated: true
+        });
+
+        return nextIndex;
+      });
+    }, 3500); // Motalikod/Mabalhin matag 3.5 ka segundo
+  };
+
+  const stopAutoScrollEngine = () => {
+    if (autoScrollTimer.current) {
+      window.clearInterval(autoScrollTimer.current);
+      autoScrollTimer.current = null;
+    }
+  };
+
   useEffect(() => {
     fetchDashboardData();
+    return () => stopAutoScrollEngine(); // I-clear ang timer kung mo-leave sa screen
   }, []);
+
+  useEffect(() => {
+    if (categories.length > 0) {
+      startAutoScrollEngine();
+    }
+  }, [categories]);
 
   const onRefresh = () => {
     setRefreshing(true);
     fetchDashboardData();
   };
 
-  // Sigurado ug solid nga PanResponder bindings para sa pag-swipe sa states
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: (_, gestureState) => {
-        return Math.abs(gestureState.dx) > 5;
-      },
-      onPanResponderMove: (_, gestureState) => {
-        position.setValue({ x: gestureState.dx, y: 0 });
-      },
-      onPanResponderRelease: (_, gestureState) => {
-        if (gestureState.dx < -SWIPE_THRESHOLD && currentCardIndex < categories.length - 1) {
-          // Swipe Left -> Balhin sa Next Card
-          Animated.timing(position, {
-            toValue: { x: -width - 50, y: 0 },
-            duration: 180,
-            useNativeDriver: false
-          }).start(() => {
-            setCurrentCardIndex(currentCardIndex + 1);
-            position.setValue({ x: 0, y: 0 });
-          });
-        } else if (gestureState.dx > SWIPE_THRESHOLD && currentCardIndex > 0) {
-          // Swipe Right -> Balik sa Previous Card
-          Animated.timing(position, {
-            toValue: { x: width + 50, y: 0 },
-            duration: 180,
-            useNativeDriver: false
-          }).start(() => {
-            setCurrentCardIndex(currentCardIndex - 1);
-            position.setValue({ x: 0, y: 0 });
-          });
-        } else {
-          // Balik sa tunga kung kulang ang swipe distance
-          Animated.spring(position, {
-            toValue: { x: 0, y: 0 },
-            friction: 4,
-            useNativeDriver: false
-          }).start();
-        }
-      }
-    })
-  ).current;
+  // Mo-update sa index tracker dots kung ang manual interaction mahitabo
+  const onScrollMomentumEnd = (event: any) => {
+    const offsetX = event.nativeEvent.contentOffset.x;
+    const index = Math.round(offsetX / SNAP_INTERVAL);
+    if (index >= 0 && index < categories.length) {
+      setCurrentCardIndex(index);
+    }
+    // I-restart ang auto scroll pagkahuman sa manual gesture interaction
+    startAutoScrollEngine();
+  };
 
   if (loading) {
     return (
@@ -341,99 +344,6 @@ export default function SpenderHomeScreen() {
     ? Math.min((summary.totalSpent / summary.totalAllowance) * 100, 100)
     : 0;
 
-  // Deck Interface Render Logic
-  const renderCardDeck = () => {
-    if (categories.length === 0) {
-      return (
-        <View style={styles.emptyCardsBox}>
-          <Text style={styles.emptyCardsText}>Walay category folders nga nakit-an.</Text>
-        </View>
-      );
-    }
-
-    const currentCat = categories[currentCardIndex];
-    const remainingPercentage = currentCat.allocatedAmount > 0 
-      ? Math.min((currentCat.remainingAmount / currentCat.allocatedAmount) * 100, 100) 
-      : 0;
-
-    return (
-      <View style={styles.deckWrapper}>
-        {/* BACKGROUND CARD LAYER - preview sa sunod nga card para nindot tan-awon */}
-        {currentCardIndex < categories.length - 1 && (
-          <View 
-            style={[
-              styles.creditCardLayout, 
-              styles.backgroundCardLayer, 
-              { backgroundColor: categories[currentCardIndex + 1].color || '#1E463A' }
-            ]} 
-          />
-        )}
-
-        {/* ACTIVE DRAGGABLE CARD LAYER */}
-        <Animated.View 
-          {...panResponder.panHandlers}
-          style={[styles.creditCardLayout, position.getLayout()]}
-        >
-          <TouchableOpacity 
-            activeOpacity={1}
-            onPress={() => openAllocateModal(currentCat)}
-            style={{ flex: 1 }}
-          >
-            {/* Top segment */}
-            <View style={[styles.creditCardTopHalf, { backgroundColor: currentCat.color || '#1E463A' }]}>
-              <View style={styles.cardHeaderRow}>
-                <View style={styles.cardBrandCircles}>
-                  <View style={[styles.brandCircle, { backgroundColor: '#FF5F56' }]} />
-                  <View style={[styles.brandCircle, { backgroundColor: '#FFA500', marginLeft: -10 }]} />
-                </View>
-                <View style={styles.categoryIconCapsule}>
-                  {/* @ts-ignore */}
-                  <Ionicons name={currentCat.icon} size={16} color="#FFFFFF" />
-                </View>
-              </View>
-              
-              <Text style={styles.maskedCardNumbers}>••••   ••••   ••••   {currentCat.name.substring(0,4).toUpperCase()}</Text>
-            </View>
-
-            {/* Bottom segment */}
-            <View style={styles.creditCardBottomHalf}>
-              <View style={styles.metaDataColumns}>
-                <View>
-                  <Text style={styles.metaLabelText}>Card holder</Text>
-                  <Text style={styles.metaValueText} numberOfLines={1}>{currentCat.name}</Text>
-                </View>
-                <View style={{ alignItems: 'flex-end' }}>
-                  <Text style={styles.metaLabelText}>Remaining</Text>
-                  <Text style={styles.metaValueText}>₱{currentCat.remainingAmount.toLocaleString('en-US', { maximumFractionDigits: 0 })}</Text>
-                </View>
-              </View>
-
-              <View style={styles.cardProgressSystem}>
-                <View style={styles.miniProgressBg}>
-                  <View style={[styles.miniProgressFill, { width: `${remainingPercentage}%` }]} />
-                </View>
-                <View style={styles.miniTextRow}>
-                  <Text style={styles.miniProgressLabel}>Budget: ₱{currentCat.allocatedAmount}</Text>
-                  <Text style={styles.miniProgressLabel}>Spent: ₱{currentCat.totalSpent}</Text>
-                </View>
-              </View>
-            </View>
-          </TouchableOpacity>
-        </Animated.View>
-
-        {/* DOTS TRACKER INDICATOR */}
-        <View style={styles.dotsRowContainer}>
-          {categories.map((_, dotIndex) => (
-            <View 
-              key={dotIndex} 
-              style={[styles.indicatorDot, currentCardIndex === dotIndex ? styles.activeDot : styles.inactiveDot]} 
-            />
-          ))}
-        </View>
-      </View>
-    );
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
@@ -441,7 +351,7 @@ export default function SpenderHomeScreen() {
         contentContainerStyle={styles.scrollContent}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#C5FF42']} />}
       >
-        {/* Emerald Header */}
+        {/* Emerald Header Section */}
         <View style={styles.headerBackground}>
           <View style={styles.welcomeRow}>
             <View style={styles.avatarRow}>
@@ -479,9 +389,77 @@ export default function SpenderHomeScreen() {
           )}
         </View>
 
-        {/* Categories Carousel Center Deck */}
+        {/* Stable Auto-Scrolling Dynamic Category Cards Carousel */}
         <View style={styles.cardsSectionContainer}>
-          {renderCardDeck()}
+          <FlatList
+            ref={flatListRef}
+            data={categories}
+            horizontal
+            decelerationRate="fast"
+            snapToInterval={SNAP_INTERVAL}
+            snapToAlignment="center"
+            showsHorizontalScrollIndicator={false}
+            onMomentumScrollEnd={onScrollMomentumEnd}
+            onScrollBeginDrag={stopAutoScrollEngine} // Undangon una samtang ginahikap sa user
+            contentContainerStyle={{
+              paddingHorizontal: (width - CARD_WIDTH) / 2 - CARD_MARGIN
+            }}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item: cat }) => {
+              const remainingPercentage = cat.allocatedAmount > 0 
+                ? Math.min((cat.remainingAmount / cat.allocatedAmount) * 100, 100) 
+                : 0;
+
+              return (
+                <TouchableOpacity 
+                  activeOpacity={0.9}
+                  onPress={() => openAllocateModal(cat)}
+                  style={[styles.originalCategoryCard, { backgroundColor: cat.color || '#1E463A' }]}
+                >
+                  <View style={styles.cardMainHeader}>
+                    <View style={styles.cardTitleCluster}>
+                      <View style={styles.originalIconCircle}>
+                        {/* @ts-ignore */}
+                        <Ionicons name={cat.icon} size={18} color={cat.color || '#1E463A'} />
+                      </View>
+                      <Text style={styles.originalCardName} numberOfLines={1}>{cat.name}</Text>
+                    </View>
+                    <View style={styles.remainingBadge}>
+                      <Text style={styles.remainingBadgeText}>Remaining</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.originalCardMiddleBody}>
+                    <Text style={styles.originalRemainingAmount}>
+                      ₱{cat.remainingAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    </Text>
+                  </View>
+
+                  <View style={styles.originalCardBottomFooter}>
+                    <View style={styles.originalProgressBackground}>
+                      <View style={[styles.originalProgressFill, { width: `${remainingPercentage}%` }]} />
+                    </View>
+                    <View style={styles.originalCardMetricsRow}>
+                      <Text style={styles.originalFooterMetaText}>Budget: ₱{cat.allocatedAmount.toLocaleString()}</Text>
+                      <Text style={styles.originalFooterMetaText}>Spent: ₱{cat.totalSpent.toLocaleString()}</Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              );
+            }}
+          />
+
+          {/* Dots Indicator sa ubos sa carousel */}
+          {categories.length > 0 && (
+            <View style={styles.dotsRowContainer}>
+              {categories.map((_, dotIndex) => (
+                <View 
+                  key={dotIndex} 
+                  style={[styles.indicatorDot, currentCardIndex === dotIndex ? styles.activeDot : styles.inactiveDot]} 
+                />
+              ))}
+            </View>
+          )}
         </View>
 
         {/* Recent Transactions List */}
@@ -583,56 +561,46 @@ const styles = StyleSheet.create({
   headerMetricsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   headerMetricText: { color: '#A3B8B0', fontSize: 11, fontWeight: '500' },
 
-  // Center Deck Carousel Configuration
-  cardsSectionContainer: { marginTop: -45, marginBottom: 15, alignItems: 'center', justifyContent: 'center', width: '100%' },
-  deckWrapper: { width: '100%', alignItems: 'center', position: 'relative', height: 225 },
-  backgroundCardLayer: { position: 'absolute', transform: [{ scale: 0.92 }], top: 10, opacity: 0.45, zIndex: -1 },
+  // Carousel Layout Container
+  cardsSectionContainer: { marginTop: -45, marginBottom: 15, width: '100%' },
   
-  creditCardLayout: {
+  // Imong Original Flat-styled Solid Card Structure (Walay Credit Card Lines/Emblems)
+  originalCategoryCard: {
     width: CARD_WIDTH,
-    height: 190,
+    height: 175,
+    marginHorizontal: CARD_MARGIN,
     borderRadius: 24,
+    padding: 20,
+    justifyContent: 'space-between',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    elevation: 6,
-    overflow: 'hidden'
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 6
   },
-  creditCardTopHalf: {
-    flex: 1.1,
-    padding: 18,
-    justifyContent: 'space-between'
-  },
-  cardHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  cardBrandCircles: { flexDirection: 'row', alignItems: 'center' },
-  brandCircle: { width: 22, height: 22, borderRadius: 11, opacity: 0.85 },
-  categoryIconCapsule: { width: 30, height: 30, borderRadius: 15, backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center' },
-  maskedCardNumbers: { color: '#FFFFFF', fontSize: 15, fontWeight: '600', letterSpacing: 2, opacity: 0.9 },
+  cardMainHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  cardTitleCluster: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 0.75 },
+  originalIconCircle: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center' },
+  originalCardName: { color: '#FFFFFF', fontSize: 16, fontWeight: '700', letterSpacing: -0.2 },
+  remainingBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.14)' },
+  remainingBadgeText: { color: '#FFFFFF', fontSize: 10, fontWeight: '600', textTransform: 'uppercase' },
   
-  creditCardBottomHalf: {
-    flex: 1,
-    backgroundColor: '#C5FF42',
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    justifyContent: 'space-between'
-  },
-  metaDataColumns: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  metaLabelText: { fontSize: 10, color: '#5C7A11', textTransform: 'uppercase', fontWeight: '600' },
-  metaValueText: { fontSize: 14, fontWeight: '700', color: '#06261D', marginTop: 2, maxWidth: width * 0.4 },
+  originalCardMiddleBody: { marginVertical: 4 },
+  originalRemainingAmount: { color: '#FFFFFF', fontSize: 28, fontWeight: '700', letterSpacing: -0.5 },
   
-  cardProgressSystem: { borderTopWidth: 1, borderTopColor: 'rgba(92,122,17,0.12)', paddingTop: 8 },
-  miniProgressBg: { height: 4, backgroundColor: 'rgba(6,38,29,0.1)', borderRadius: 2, overflow: 'hidden', marginBottom: 4 },
-  miniProgressFill: { height: '100%', backgroundColor: '#06261D', borderRadius: 2 },
-  miniTextRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  miniProgressLabel: { fontSize: 9, color: '#5C7A11', fontWeight: '500' },
+  originalCardBottomFooter: { gap: 8 },
+  originalProgressBackground: { height: 5, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 3, overflow: 'hidden' },
+  originalProgressFill: { height: '100%', backgroundColor: '#FFFFFF', borderRadius: 3 },
+  originalCardMetricsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  originalFooterMetaText: { color: 'rgba(255,255,255,0.75)', fontSize: 11, fontWeight: '500' },
 
+  // Carousel Dots Indicator Setup
   dotsRowContainer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 14, gap: 6 },
   indicatorDot: { height: 6, borderRadius: 3 },
   activeDot: { width: 14, backgroundColor: '#06261D' },
   inactiveDot: { width: 6, backgroundColor: '#CBD5E1' },
 
-  emptyCardsBox: { width: CARD_WIDTH, height: 190, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 24, borderWidth: 1, borderColor: '#E2E8F0' },
+  emptyCardsBox: { width: CARD_WIDTH, height: 175, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 24, borderWidth: 1, borderColor: '#E2E8F0', marginHorizontal: (width - CARD_WIDTH) / 2 },
   emptyCardsText: { color: '#718096', fontSize: 13 },
 
   contentBody: { paddingHorizontal: 24, marginTop: 10 },

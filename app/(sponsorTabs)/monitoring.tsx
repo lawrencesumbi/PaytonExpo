@@ -72,7 +72,6 @@ export default function MonitoringScreen() {
 
       const formattedSpenders: SpenderMonitoringInfo[] = await Promise.all(
         allowancesData.map(async (allowance: any) => {
-          // Sakto nga subquery method: basahon ang budgets sa spender
           const { data: budgetsData } = await supabase
             .from('budgets')
             .select(`
@@ -114,12 +113,11 @@ export default function MonitoringScreen() {
     }
   };
 
-  // 2. FETCH SPECIFIC TRANSACTIONS (Gisunod sa exact logic sa Spender's home.tsx)
+  // 2. FETCH SPECIFIC TRANSACTIONS
   const fetchSpenderExpenses = async (spenderId: string) => {
     try {
-      setLoadingExpenses(true);
+      loadingExpenses || setLoadingExpenses(true);
       
-      // Mag-fetch sa categories para sa text mapping
       const { data: categoriesData } = await supabase
         .from('categories')
         .select('id, name');
@@ -129,7 +127,6 @@ export default function MonitoringScreen() {
         categoryMap[cat.id] = cat.name || 'Food & Dining';
       });
 
-      // Relational embedding method para ma-bypass ang standalone RLS restrictions sa expenses table
       const { data: budgetsData, error: budgetError } = await supabase
         .from('budgets')
         .select(`
@@ -163,9 +160,7 @@ export default function MonitoringScreen() {
         });
       });
 
-      // I-sort gikan sa pinakabag-o nga transaction spent_at timestamp
       allExpenses.sort((a, b) => b.spent_at.localeCompare(a.spent_at));
-
       setExpenses(allExpenses);
     } catch (error: any) {
       console.error("Fetch Spender Expenses Error:", error.message);
@@ -216,30 +211,41 @@ export default function MonitoringScreen() {
               <Text style={styles.backButtonText}>Back to Dashboard</Text>
             </TouchableOpacity>
 
-            <View style={styles.detailHeaderCard}>
-              <Text style={styles.detailSpenderName}>{selectedSpender.full_name}</Text>
-              <Text style={styles.detailSpenderEmail}>{selectedSpender.email}</Text>
-              <View style={styles.divider} />
-              
-              <View style={styles.allowanceLabelRow}>
-                <Ionicons name="bookmark-outline" size={14} color="#94A3B8" />
-                <Text style={styles.detailAllowanceName}>{selectedSpender.allowance_name}</Text>
+            {/* CREDIT CARD STYLE FOR DETAILS HEADER */}
+            <View style={styles.creditCardDetail}>
+              <View style={styles.ccHeader}>
+                <View>
+                  <Text style={styles.ccTypeLabel}>{selectedSpender.allowance_name.toUpperCase()}</Text>
+                  <Text style={styles.ccEmailText}>{selectedSpender.email}</Text>
+                </View>
+                <Ionicons name="wifi" size={20} color="rgba(255,255,255,0.6)" style={{ transform: [{ rotate: '90deg' }] }} />
               </View>
-              
-              <View style={styles.budgetRow}>
+
+              <View style={styles.ccChipContainer}>
+                <View style={styles.ccChip} />
+              </View>
+
+              <View style={styles.ccBalanceContainer}>
+                <Text style={styles.ccBalanceLabel}>REMAINING BALANCE</Text>
+                <Text style={styles.ccBalanceValue}>
+                  ₱{(selectedSpender.total_allowance - selectedSpender.total_allocated).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                </Text>
+              </View>
+
+              <View style={styles.ccFooter}>
                 <View>
-                  <Text style={styles.budgetLabel}>Allowance</Text>
-                  <Text style={styles.budgetAmount}>₱{selectedSpender.total_allowance.toLocaleString('en-US', { minimumFractionDigits: 2 })}</Text>
+                  <Text style={styles.ccHolderLabel}>CARDHOLDER</Text>
+                  <Text style={styles.ccHolderName}>{selectedSpender.full_name}</Text>
                 </View>
-                <View>
-                  <Text style={styles.budgetLabel}>Allocated</Text>
-                  <Text style={[styles.budgetAmount, { color: '#FFA500' }]}>₱{selectedSpender.total_allocated.toLocaleString('en-US', { minimumFractionDigits: 2 })}</Text>
-                </View>
-                <View style={{ alignItems: 'flex-end' }}>
-                  <Text style={styles.budgetLabel}>Remaining Balance</Text>
-                  <Text style={[styles.budgetAmount, { color: '#3AA39F' }]}>
-                    ₱{(selectedSpender.total_allowance - selectedSpender.total_allocated).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                  </Text>
+                <View style={styles.ccMiniMetricsRow}>
+                  <View style={{ alignItems: 'flex-end', marginRight: 16 }}>
+                    <Text style={styles.ccMiniLabel}>TOTAL</Text>
+                    <Text style={styles.ccMiniValue}>₱{selectedSpender.total_allowance.toLocaleString('en-US', { maximumFractionDigits: 0 })}</Text>
+                  </View>
+                  <View style={{ alignItems: 'flex-end' }}>
+                    <Text style={styles.ccMiniLabel}>ALLOCATED</Text>
+                    <Text style={[styles.ccMiniValue, { color: '#FFD166' }]}>₱{selectedSpender.total_allocated.toLocaleString('en-US', { maximumFractionDigits: 0 })}</Text>
+                  </View>
                 </View>
               </View>
             </View>
@@ -248,7 +254,7 @@ export default function MonitoringScreen() {
 
             {loadingExpenses ? (
               <View style={styles.centerLoading}>
-                <ActivityIndicator size="small" color="#3AA39F" />
+                <ActivityIndicator size="small" color="#0F172A" />
               </View>
             ) : expenses.length === 0 ? (
               <View style={styles.emptyExpensesBlock}>
@@ -291,7 +297,7 @@ export default function MonitoringScreen() {
 
             {loadingSpenders ? (
               <View style={styles.centerLoading}>
-                <ActivityIndicator size="small" color="#3AA39F" />
+                <ActivityIndicator size="small" color="#0F172A" />
               </View>
             ) : spenders.length === 0 ? (
               <View style={styles.emptySpendersBlock}>
@@ -312,31 +318,28 @@ export default function MonitoringScreen() {
                 renderItem={({ item }) => {
                   const remaining = item.total_allowance - item.total_allocated;
                   return (
-                    <TouchableOpacity style={styles.spenderCard} onPress={() => handleSelectSpender(item)}>
-                      <View style={styles.cardTopRow}>
-                        <View style={{ flex: 1, paddingRight: 8 }}>
-                          <Text style={styles.spenderName}>{item.full_name}</Text>
-                          <Text style={styles.allowanceTag}>{item.allowance_name}</Text>
+                    /* CREDIT CARD STYLE FOR THE MAIN LIST */
+                    <TouchableOpacity style={styles.creditCardOverview} onPress={() => handleSelectSpender(item)}>
+                      <View style={styles.ccHeader}>
+                        <View>
+                          <Text style={styles.ccTypeLabel}>{item.allowance_name.toUpperCase()}</Text>
+                          <Text style={styles.ccHolderName}>{item.full_name}</Text>
                         </View>
-                        <View style={styles.chevronWrapper}>
-                          <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
-                        </View>
+                        <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.7)" />
                       </View>
-                      
-                      <View style={styles.cardMetricsRow}>
+
+                      <View style={styles.ccChipContainer}>
+                        <View style={styles.ccChip} />
+                      </View>
+
+                      <View style={styles.ccMetricsContainer}>
                         <View>
-                          <Text style={styles.metricLabel}>Total</Text>
-                          <Text style={styles.metricValue}>₱{item.total_allowance.toLocaleString('en-US', { maximumFractionDigits: 0 })}</Text>
+                          <Text style={styles.ccLabelText}>REMAINING BALANCE</Text>
+                          <Text style={styles.ccBalanceOverviewText}>₱{remaining.toLocaleString('en-US', { maximumFractionDigits: 0 })}</Text>
                         </View>
-                        <View>
-                          <Text style={styles.metricLabel}>Allocated</Text>
-                          <Text style={[styles.metricValue, { color: '#FFA500' }]}>₱{item.total_allocated.toLocaleString('en-US', { maximumFractionDigits: 0 })}</Text>
-                        </View>
-                        <View style={styles.metricLabelBlockRight}>
-                          <Text style={styles.metricLabelRight}>Remaining Balance</Text>
-                          <Text style={[styles.metricValueRight, { color: '#3AA39F' }]}>
-                            ₱{remaining.toLocaleString('en-US', { maximumFractionDigits: 0 })}
-                          </Text>
+                        <View style={{ alignItems: 'flex-end' }}>
+                          <Text style={styles.ccLabelText}>TOTAL ALLOWANCE</Text>
+                          <Text style={styles.ccAllowanceOverviewText}>₱{item.total_allowance.toLocaleString('en-US', { maximumFractionDigits: 0 })}</Text>
                         </View>
                       </View>
                     </TouchableOpacity>
@@ -358,28 +361,146 @@ const styles = StyleSheet.create({
   listContent: { paddingBottom: 110 },
   mainTitle: { fontSize: 24, fontWeight: '700', color: '#1E293B', marginTop: 12 },
   mainSubtitle: { fontSize: 13, color: '#64748B', marginTop: 4, marginBottom: 24, lineHeight: 18 },
-  spenderCard: { backgroundColor: '#FFFFFF', padding: 16, borderRadius: 20, marginBottom: 12, borderWidth: 1, borderColor: '#F1F5F9' },
-  cardTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
-  spenderName: { fontSize: 16, fontWeight: '600', color: '#1E293B' },
-  allowanceTag: { fontSize: 12, color: '#64748B', marginTop: 2 },
-  chevronWrapper: { width: 28, height: 28, borderRadius: 8, backgroundColor: '#F8FAFC', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#F1F5F9' },
-  cardMetricsRow: { flexDirection: 'row', gap: 32, borderTopWidth: 1, borderTopColor: '#F1F5F9', paddingTop: 12 },
-  metricLabel: { fontSize: 11, color: '#94A3B8', fontWeight: '600', textTransform: 'uppercase' },
-  metricValue: { fontSize: 14, fontWeight: '600', color: '#1E293B', marginTop: 2 },
-  metricLabelBlockRight: { marginLeft: 'auto', alignItems: 'flex-end' },
-  metricLabelRight: { fontSize: 11, color: '#94A3B8', fontWeight: '600', textTransform: 'uppercase' },
-  metricValueRight: { fontSize: 14, fontWeight: '700', marginTop: 2 },
+  
+  // CREDIT CARD BRAND NEW STYLES
+  creditCardOverview: {
+    backgroundColor: '#0F172A', // Sleek Slate Black/Dark Navy look
+    padding: 20,
+    borderRadius: 20,
+    marginBottom: 16,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.2,
+    shadowRadius: 15,
+    elevation: 8,
+    position: 'relative',
+    overflow: 'hidden'
+  },
+  creditCardDetail: {
+    backgroundColor: '#1E1B4B', // Deep indigo variant para sa single card focus view
+    padding: 22,
+    borderRadius: 24,
+    marginBottom: 24,
+    shadowColor: '#1E1B4B',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  ccHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  ccTypeLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#38BDF8', // Neon Sky Blue tag accents
+    letterSpacing: 1.5,
+  },
+  ccEmailText: {
+    fontSize: 12,
+    color: '#94A3B8',
+    marginTop: 2
+  },
+  ccHolderName: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginTop: 4,
+    letterSpacing: 0.5
+  },
+  ccChipContainer: {
+    marginTop: 14,
+    marginBottom: 10
+  },
+  ccChip: {
+    width: 38,
+    height: 28,
+    backgroundColor: '#faea04',
+    borderRadius: 6,
+    opacity: 0.85,
+    borderWidth: 1,
+    borderColor: '#CBD5E1'
+  },
+  ccMetricsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    marginTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.08)',
+    paddingTop: 12
+  },
+  ccLabelText: {
+    fontSize: 9,
+    color: '#94A3B8',
+    fontWeight: '600',
+    letterSpacing: 1
+  },
+  ccBalanceOverviewText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#34D399', // Clean light green balance
+    marginTop: 2
+  },
+  ccAllowanceOverviewText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginTop: 2
+  },
+  
+  // CC EXPANDED STATE STYLES
+  ccBalanceContainer: {
+    marginVertical: 14,
+  },
+  ccBalanceLabel: {
+    fontSize: 10,
+    color: '#94A3B8',
+    fontWeight: '600',
+    letterSpacing: 1.2
+  },
+  ccBalanceValue: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#34D399',
+    marginTop: 4
+  },
+  ccFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+    paddingTop: 14,
+    marginTop: 4
+  },
+  ccHolderLabel: {
+    fontSize: 9,
+    color: '#94A3B8',
+    fontWeight: '600',
+    letterSpacing: 1
+  },
+  ccMiniMetricsRow: {
+    flexDirection: 'row',
+  },
+  ccMiniLabel: {
+    fontSize: 9,
+    color: '#94A3B8',
+    fontWeight: '600',
+    letterSpacing: 0.8
+  },
+  ccMiniValue: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginTop: 2
+  },
+
+  // REST OF THE UI
   backButton: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 20, marginTop: 12 },
   backButtonText: { fontSize: 14, fontWeight: '600', color: '#475569' },
-  detailHeaderCard: { backgroundColor: '#133b13', padding: 20, borderRadius: 24, marginBottom: 24 },
-  detailSpenderName: { fontSize: 20, fontWeight: '700', color: '#FFFFFF' },
-  detailSpenderEmail: { fontSize: 12, color: '#94A3B8', marginTop: 2 },
-  divider: { height: 1, backgroundColor: 'rgba(148, 163, 184, 0.15)', marginVertical: 14 },
-  allowanceLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  detailAllowanceName: { color: '#94A3B8', fontSize: 13, fontWeight: '600' },
-  budgetRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 16 },
-  budgetLabel: { fontSize: 10, color: '#64748B', fontWeight: '700', textTransform: 'uppercase' },
-  budgetAmount: { fontSize: 16, fontWeight: '700', color: '#FFFFFF', marginTop: 4 },
   sectionTitle: { fontSize: 12, fontWeight: '600', color: '#94A3B8', textTransform: 'uppercase', marginBottom: 12, paddingLeft: 2 },
   expenseListItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FFFFFF', padding: 14, borderRadius: 16, marginBottom: 8, borderWidth: 1, borderColor: '#F1F5F9' },
   expenseItemLeft: { flexDirection: 'row', alignItems: 'center', gap: 14 },
