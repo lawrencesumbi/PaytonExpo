@@ -3,25 +3,28 @@ import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Dimensions,
-  Modal,
-  StatusBar as NativeStatusBar,
-  Platform,
-  RefreshControl,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    Modal,
+    StatusBar as NativeStatusBar,
+    Platform,
+    RefreshControl,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { supabase } from '../../lib/supabase';
 
 const { width } = Dimensions.get('window');
-const CARD_WIDTH = width * 0.78; 
+// Card geometry tuned for explicit snapping mechanics
+const CARD_WIDTH = width * 0.84;
+const CARD_MARGIN = 10;
+const SNAP_INTERVAL = CARD_WIDTH + (CARD_MARGIN * 2);
 
 interface DashboardSummary {
   allowanceId: string;
@@ -280,12 +283,11 @@ export default function SpenderHomeScreen() {
     return (
       <SafeAreaView style={[styles.container, styles.centeredLoading]}>
         <StatusBar style="light" />
-        <ActivityIndicator size="small" color="#10B981" />
+        <ActivityIndicator size="small" color="#C5FF42" />
       </SafeAreaView>
     );
   }
 
-  // Calculate global spent percentage for header progress alignment
   const globalSpentPercentage = summary && summary.totalAllowance > 0
     ? Math.min((summary.totalSpent / summary.totalAllowance) * 100, 100)
     : 0;
@@ -295,52 +297,54 @@ export default function SpenderHomeScreen() {
       <StatusBar style="light" />
       <ScrollView 
         contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#10B981']} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#C5FF42']} />}
       >
-        {/* Immersive Dark Fintech Balance Card Panel */}
+        {/* Deep Emerald Fintech Dashboard Hero node inspired by image_21af8a.png */}
         <View style={styles.headerBackground}>
           <View style={styles.welcomeRow}>
             <View style={styles.avatarRow}>
               <View style={styles.avatarPlaceholder}>
-                <Ionicons name="person" size={16} color="#FFFFFF" />
+                <Ionicons name="person" size={15} color="#FFFFFF" />
               </View>
               <View>
-                <Text style={styles.welcomeSubtext}>Welcome Back</Text>
-                <Text style={styles.welcomeText}>Hello, {spenderName}! 👋</Text>
+                <Text style={styles.welcomeSubtext}>Hello, {spenderName}</Text>
+                <Text style={styles.welcomeText}>Welcome Back</Text>
               </View>
             </View>
+            <TouchableOpacity style={styles.bellIconBox}>
+              <Ionicons name="notifications-outline" size={20} color="#FFFFFF" />
+              <View style={styles.bellDot} />
+            </TouchableOpacity>
           </View>
           
           <View style={styles.balanceContainer}>
-            <Text style={styles.balanceLabel}>Unallocated Allowance Pool</Text>
+            <Text style={styles.balanceLabel}>Total Balance</Text>
             <Text style={styles.mainBalance}>
               ₱{summary ? summary.remaining.toLocaleString('en-US', { minimumFractionDigits: 2 }) : "0.00"}
             </Text>
           </View>
 
-          {/* NEW INTEGRATED ALLOWANCE INSIGHT BLOCK */}
           {summary && (
             <View style={styles.headerMetricsWrapper}>
               <View style={styles.headerProgressBarBg}>
                 <View style={[styles.headerProgressBarFill, { width: `${globalSpentPercentage}%` }]} />
               </View>
               <View style={styles.headerMetricsRow}>
-                <Text style={styles.headerMetricText}>Total Matrix Target: ₱{summary.totalAllowance.toLocaleString()}</Text>
-                <Text style={styles.headerMetricText}>Aggregate Spent: ₱{summary.totalSpent.toLocaleString()}</Text>
+                <Text style={styles.headerMetricText}>Total Allowance: ₱{summary.totalAllowance.toLocaleString()}</Text>
+                <Text style={styles.headerMetricText}>Total Spent: ₱{summary.totalSpent.toLocaleString()}</Text>
               </View>
             </View>
           )}
         </View>
 
-        {/* Categories Horizon Stream Slider */}
-        <View style={[styles.contentBody, { marginTop: 24 }]}>
-          <View style={styles.sliderHeader}>
-            <Text style={styles.sectionTitle}>Expense Folders</Text>
-            {categories.length > 1 && <Text style={styles.swipeHint}>Tap Card to Fund ➔</Text>}
-          </View>
-          
+        {/* Categories Horizontal Snapping Wallet Deck */}
+        <View style={styles.cardsSectionContainer}>
           <ScrollView 
             horizontal 
+            pagingEnabled={false}
+            decelerationRate="fast"
+            snapToInterval={SNAP_INTERVAL}
+            snapToAlignment="center"
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.swipeableCardsContainer}
           >
@@ -354,31 +358,46 @@ export default function SpenderHomeScreen() {
                   key={cat.id} 
                   activeOpacity={0.9}
                   onPress={() => openAllocateModal(cat)}
-                  style={[styles.catCard, { backgroundColor: cat.color || '#1E293B', width: CARD_WIDTH }]}
+                  style={styles.creditCardLayout}
                 >
-                  <View style={styles.cardTop}>
-                    <View style={styles.cardIconWrapper}>
-                      {/* @ts-ignore */}
-                      <Ionicons name={cat.icon} size={22} color="#FFFFFF" />
+                  {/* Top segment representing mastercard element styles */}
+                  <View style={styles.creditCardTopHalf}>
+                    <View style={styles.cardHeaderRow}>
+                      <View style={styles.cardBrandCircles}>
+                        <View style={[styles.brandCircle, { backgroundColor: '#FF5F56' }]} />
+                        <View style={[styles.brandCircle, { backgroundColor: '#FFA500', marginLeft: -10 }]} />
+                      </View>
+                      <View style={styles.categoryIconCapsule}>
+                        {/* @ts-ignore */}
+                        <Ionicons name={cat.icon} size={16} color="#FFFFFF" />
+                      </View>
                     </View>
-                    <Text style={styles.cardNetwork}>{cat.name}</Text>
+                    
+                    <Text style={styles.maskedCardNumbers}>••••  ••••  ••••  {cat.name.substring(0,4).toUpperCase()}</Text>
                   </View>
 
-                  <View style={styles.cardMiddle}>
-                    <Text style={styles.cardBalanceAmount}>
-                      ₱{cat.remainingAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                    </Text>
-                    <Text style={styles.cardLabel}>Remaining Balance</Text>
-                  </View>
-
-                  {/* Progressive Matrix Metric Fill */}
-                  <View style={styles.cardBottomRowVertical}>
-                    <View style={styles.cardProgressBarBg}>
-                      <View style={[styles.cardProgressBarFill, { width: `${remainingPercentage}%` }]} />
+                  {/* Lighter lower deck segment directly mapping layouts of image_21af8a.png */}
+                  <View style={styles.creditCardBottomHalf}>
+                    <View style={styles.metaDataColumns}>
+                      <View>
+                        <Text style={styles.metaLabelText}>Card holder</Text>
+                        <Text style={styles.metaValueText} numberOfLines={1}>{cat.name}</Text>
+                      </View>
+                      <View style={{ alignItems: 'flex-end' }}>
+                        <Text style={styles.metaLabelText}>Remaining</Text>
+                        <Text style={styles.metaValueText}>₱{cat.remainingAmount.toLocaleString('en-US', { maximumFractionDigits: 0 })}</Text>
+                      </View>
                     </View>
-                    <View style={styles.cardProgressLabels}>
-                      <Text style={styles.cardProgressText}>Limit: ₱{cat.allocatedAmount.toFixed(0)}</Text>
-                      <Text style={styles.cardProgressText}>Spent: ₱{cat.totalSpent.toFixed(0)}</Text>
+
+                    {/* Operational Progress bar indicator embedded neatly */}
+                    <View style={styles.cardProgressSystem}>
+                      <View style={styles.miniProgressBg}>
+                        <View style={[styles.miniProgressFill, { width: `${remainingPercentage}%` }]} />
+                      </View>
+                      <View style={styles.miniTextRow}>
+                        <Text style={styles.miniProgressLabel}>Budget: ₱{cat.allocatedAmount}</Text>
+                        <Text style={styles.miniProgressLabel}>Spent: ₱{cat.totalSpent}</Text>
+                      </View>
                     </View>
                   </View>
                 </TouchableOpacity>
@@ -387,10 +406,11 @@ export default function SpenderHomeScreen() {
           </ScrollView>
         </View>
 
-        {/* Recents Ledger Stack */}
+        {/* Recent Transactions List Node Stack */}
         <View style={styles.contentBody}>
           <View style={styles.recentSectionHeader}>
-            <Text style={styles.sectionTitle}>Recent Transactions</Text>
+            <Text style={styles.sectionTitle}>Recent Transaction</Text>
+            <TouchableOpacity><Text style={styles.seeAllText}>See all</Text></TouchableOpacity>
           </View>
 
           {recentExpenses.length === 0 ? (
@@ -404,7 +424,7 @@ export default function SpenderHomeScreen() {
                   <View style={styles.recentLeft}>
                     <View style={styles.iconBox}>
                       {/* @ts-ignore */}
-                      <Ionicons name={item.category_icon} size={16} color="#475569" />
+                      <Ionicons name={item.category_icon} size={16} color="#06261D" />
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.recentName} numberOfLines={1}>{item.expense_name}</Text>
@@ -456,89 +476,106 @@ export default function SpenderHomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FAFBFD' },
-  centeredLoading: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#1E293B' },
+  container: { flex: 1, backgroundColor: '#F8F9FA' },
+  centeredLoading: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#06261D' },
   scrollContent: { paddingBottom: 40 },
   
-  // Immersive Fintech Header Node
+  // Custom Emerald Premium Header Deck
   headerBackground: { 
-    backgroundColor: '#1E293B', 
-    paddingHorizontal: 22, 
+    backgroundColor: '#06261D', 
+    paddingHorizontal: 24, 
     paddingTop: Platform.OS === 'android' ? (NativeStatusBar.currentHeight ? NativeStatusBar.currentHeight + 14 : 45) : 16, 
-    paddingBottom: 28, 
-    borderBottomLeftRadius: 28, 
-    borderBottomRightRadius: 28 
+    paddingBottom: 64, 
+    borderBottomLeftRadius: 32, 
+    borderBottomRightRadius: 32 
   },
-  welcomeRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  avatarRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  avatarPlaceholder: { width: 32, height: 32, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.12)', justifyContent: 'center', alignItems: 'center' },
-  welcomeSubtext: { fontSize: 11, color: '#94A3B8' },
-  welcomeText: { fontSize: 16, fontWeight: '600', color: '#FFFFFF', letterSpacing: -0.3 },
-  balanceContainer: { alignItems: 'center', marginTop: 10 },
-  balanceLabel: { fontSize: 12, color: '#94A3B8', fontWeight: '500', marginBottom: 4 },
-  mainBalance: { fontSize: 38, fontWeight: '700', color: '#FFFFFF', letterSpacing: -0.8 },
+  welcomeRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
+  avatarRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  avatarPlaceholder: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center' },
+  welcomeSubtext: { fontSize: 13, color: '#A3B8B0' },
+  welcomeText: { fontSize: 16, fontWeight: '700', color: '#FFFFFF', marginTop: 1 },
+  bellIconBox: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.08)', justifyContent: 'center', alignItems: 'center', position: 'relative' },
+  bellDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#C5FF42', position: 'absolute', top: 11, right: 11, borderWidth: 1.5, borderColor: '#06261D' },
+  balanceContainer: { alignItems: 'center', marginTop: 8 },
+  balanceLabel: { fontSize: 13, color: '#A3B8B0', fontWeight: '500', marginBottom: 6 },
+  mainBalance: { fontSize: 36, fontWeight: '700', color: '#FFFFFF', letterSpacing: -0.5 },
   
-  // NEW Header Metrics UI Stack
-  headerMetricsWrapper: { marginTop: 22, paddingTop: 14, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.1)' },
-  headerProgressBarBg: { height: 6, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 10, overflow: 'hidden', marginBottom: 8 },
-  headerProgressBarFill: { height: '100%', backgroundColor: '#10B981', borderRadius: 10}, // Renders fill progress working from left leaning into the RIGHT target anchor point
+  headerMetricsWrapper: { marginTop: 20, paddingTop: 14, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.08)' },
+  headerProgressBarBg: { height: 5, backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 10, overflow: 'hidden', marginBottom: 8 },
+  headerProgressBarFill: { height: '100%', backgroundColor: '#C5FF42', borderRadius: 10 },
   headerMetricsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  headerMetricText: { color: '#94A3B8', fontSize: 11, fontWeight: '500' },
+  headerMetricText: { color: '#A3B8B0', fontSize: 11, fontWeight: '500' },
 
-  contentBody: { paddingHorizontal: 22, marginTop: 14 },
-  sliderHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
-  swipeHint: { fontSize: 11, color: '#64748B', fontWeight: '600' },
-  swipeableCardsContainer: { paddingRight: 22, paddingBottom: 8 },
+  // Carousel positioning system pulling cards over the dark deck block
+  cardsSectionContainer: { marginTop: -45, marginBottom: 15 },
+  swipeableCardsContainer: { paddingHorizontal: (width - CARD_WIDTH) / 2 - CARD_MARGIN, paddingBottom: 12 },
   
-  // Custom Card Matrix Styling Bounds
-  catCard: { 
-    padding: 20, 
-    borderRadius: 22, 
-    height: 175, 
-    justifyContent: 'space-between', 
-    marginRight: 14, 
-    shadowColor: '#0F172A', 
-    shadowOffset: { width: 0, height: 6 }, 
-    shadowOpacity: 0.12, 
-    shadowRadius: 8, 
-    elevation: 4 
+  // Custom Dual-layered Credit Card layout matching image_21af8a.png
+  creditCardLayout: {
+    width: CARD_WIDTH,
+    height: 190,
+    marginHorizontal: CARD_MARGIN,
+    borderRadius: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 6,
+    overflow: 'hidden'
   },
-  cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  cardIconWrapper: { width: 36, height: 36, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center' },
-  cardNetwork: { color: '#FFFFFF', fontSize: 14, fontWeight: '600', letterSpacing: -0.2 },
-  cardMiddle: { marginTop: 12 },
-  cardBalanceAmount: { color: '#FFFFFF', fontSize: 28, fontWeight: '700', letterSpacing: -0.5 },
-  cardLabel: { color: 'rgba(255,255,255,0.65)', fontSize: 11, fontWeight: '500', textTransform: 'uppercase', letterSpacing: 0.4, marginTop: 2 },
-  cardBottomRowVertical: { borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.12)', paddingTop: 12, marginTop: 4, width: '100%' },
-  cardProgressBarBg: { height: 5, backgroundColor: 'rgba(255, 255, 255, 0.2)', borderRadius: 10, overflow: 'hidden', marginBottom: 6 },
-  cardProgressBarFill: { height: '100%', backgroundColor: '#10B981', borderRadius: 10 },
-  cardProgressLabels: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  cardProgressText: { color: 'rgba(255, 255, 255, 0.85)', fontSize: 11, fontWeight: '500' },
+  creditCardTopHalf: {
+    flex: 1.1,
+    backgroundColor: '#1E463A',
+    padding: 18,
+    justifyContent: 'space-between'
+  },
+  cardHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  cardBrandCircles: { flexDirection: 'row', alignItems: 'center' },
+  brandCircle: { width: 22, height: 22, borderRadius: 11, opacity: 0.85 },
+  categoryIconCapsule: { width: 30, height: 30, borderRadius: 15, backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center' },
+  maskedCardNumbers: { color: '#FFFFFF', fontSize: 15, fontWeight: '600', letterSpacing: 2, opacity: 0.9 },
   
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#1E293B', letterSpacing: -0.3 },
-  recentSectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  creditCardBottomHalf: {
+    flex: 1,
+    backgroundColor: '#C5FF42',
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    justifyContent: 'space-between'
+  },
+  metaDataColumns: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  metaLabelText: { fontSize: 10, color: '#5C7A11', textTransform: 'uppercase', fontWeight: '600' },
+  metaValueText: { fontSize: 14, fontWeight: '700', color: '#06261D', marginTop: 2, maxWidth: width * 0.4 },
   
-  // Ledger Stream Items
-  recentListContainer: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#F1F5F9', borderRadius: 18, overflow: 'hidden' },
-  recentItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#FAFBFD' },
-  recentLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 0.75 },
-  iconBox: { width: 36, height: 36, borderRadius: 12, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center' },
-  recentName: { fontSize: 14, fontWeight: '600', color: '#1E293B', letterSpacing: -0.2 },
-  recentCategory: { fontSize: 11, color: '#64748B', marginTop: 1 },
-  recentAmount: { fontSize: 14, fontWeight: '700', color: '#EF4444' },
-  noRecentBox: { padding: 32, backgroundColor: '#FFFFFF', borderRadius: 18, alignItems: 'center', borderWidth: 1, borderColor: '#F1F5F9' },
-  noRecentText: { fontSize: 13, color: '#64748B' },
+  cardProgressSystem: { borderTopWidth: 1, borderTopColor: 'rgba(92,122,17,0.12)', paddingTop: 8 },
+  miniProgressBg: { height: 4, backgroundColor: 'rgba(6,38,29,0.1)', borderRadius: 2, overflow: 'hidden', marginBottom: 4 },
+  miniProgressFill: { height: '100%', backgroundColor: '#06261D', borderRadius: 2 },
+  miniTextRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  miniProgressLabel: { fontSize: 9, color: '#5C7A11', fontWeight: '500' },
+
+  contentBody: { paddingHorizontal: 24, marginTop: 10 },
+  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#06261D', letterSpacing: -0.2 },
+  recentSectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
+  seeAllText: { fontSize: 13, color: '#718096', fontWeight: '600' },
   
-  // Adaptive Modal Frameworks
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.4)', justifyContent: 'center', alignItems: 'center' },
-  modalContainer: { backgroundColor: '#FFFFFF', width: '88%', padding: 24, borderRadius: 24, shadowColor: '#0F172A', shadowOpacity: 0.15, shadowRadius: 12, elevation: 8 },
-  modalTitle: { fontSize: 18, fontWeight: '700', color: '#1E293B', letterSpacing: -0.4 },
-  modalSubText: { fontSize: 13, color: '#64748B', marginTop: 4, marginBottom: 18, lineHeight: 18 },
-  modalInput: { borderWidth: 1, borderColor: '#E2E8F0', padding: 14, borderRadius: 14, marginBottom: 20, fontSize: 18, fontWeight: '600', color: '#1E293B', backgroundColor: '#FAFBFD' },
+  recentListContainer: { backgroundColor: '#FFFFFF', borderRadius: 20, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.03, shadowRadius: 6, elevation: 1 },
+  recentItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#F7F9FA' },
+  recentLeft: { flexDirection: 'row', alignItems: 'center', gap: 14, flex: 0.75 },
+  iconBox: { width: 40, height: 40, borderRadius: 14, backgroundColor: '#F0F4F2', justifyContent: 'center', alignItems: 'center' },
+  recentName: { fontSize: 14, fontWeight: '600', color: '#06261D' },
+  recentCategory: { fontSize: 11, color: '#718096', marginTop: 1 },
+  recentAmount: { fontSize: 14, fontWeight: '700', color: '#06261D' },
+  noRecentBox: { padding: 32, backgroundColor: '#FFFFFF', borderRadius: 20, alignItems: 'center' },
+  noRecentText: { fontSize: 13, color: '#718096' },
+  
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(6, 38, 29, 0.4)', justifyContent: 'center', alignItems: 'center' },
+  modalContainer: { backgroundColor: '#FFFFFF', width: '88%', padding: 24, borderRadius: 24, shadowColor: '#06261D', shadowOpacity: 0.15, shadowRadius: 12, elevation: 8 },
+  modalTitle: { fontSize: 18, fontWeight: '700', color: '#06261D' },
+  modalSubText: { fontSize: 13, color: '#718096', marginTop: 4, marginBottom: 18, lineHeight: 18 },
+  modalInput: { borderWidth: 1, borderColor: '#E2E8F0', padding: 14, borderRadius: 14, marginBottom: 20, fontSize: 18, fontWeight: '600', color: '#06261D', backgroundColor: '#F8F9FA' },
   modalButtonsRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10 },
   modalButton: { paddingVertical: 12, paddingHorizontal: 18, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
   cancelBtn: { backgroundColor: '#F1F5F9' },
   cancelBtnText: { color: '#475569', fontWeight: '600', fontSize: 14 },
-  confirmBtn: { backgroundColor: '#1E293B', minWidth: 110 },
+  confirmBtn: { backgroundColor: '#06261D', minWidth: 110 },
   confirmBtnText: { color: '#FFFFFF', fontWeight: '600', fontSize: 14 }
 });

@@ -11,6 +11,7 @@ import {
   Image,
   StatusBar as NativeStatusBar,
   Platform,
+  RefreshControl,
   SafeAreaView,
   StyleSheet,
   Text,
@@ -32,12 +33,15 @@ export default function HomeScreen() {
   const router = useRouter();
   const [allowances, setAllowances] = useState<AllowanceDashboardItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false); // 2. State para sa refreshing indicator
   const [totalAllocated, setTotalAllocated] = useState(0);
   const [sponsorProfile, setSponsorProfile] = useState<{ full_name: string; avatar_url: string | null } | null>(null);
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = async (isRefreshing = false) => {
     try {
-      setLoading(true);
+      // Kung pull-to-refresh, dili nato i-true ang main loading indicator para dili magdungan ang duha ka spinner
+      if (!isRefreshing) setLoading(true);
+      
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
@@ -74,10 +78,17 @@ export default function HomeScreen() {
       console.error("Error:", error.message);
     } finally {
       setLoading(false);
+      setRefreshing(false); // Siguraduon nga mapalong ang pull-to-refresh spinner
     }
   };
 
   useFocusEffect(useCallback(() => { fetchDashboardData(); }, []));
+
+  // 3. Function nga mo-trigger inig bira paubos sa screen
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchDashboardData(true);
+  }, []);
 
   const handleDelete = (id: string) => {
     Alert.alert("Delete Allowance", "Are you sure you want to delete this?", [
@@ -133,28 +144,39 @@ export default function HomeScreen() {
 
         <Text style={styles.sectionTitle}>Active Allowances ({allowances.length})</Text>
 
-        {loading ? (
+        {loading && !refreshing ? (
           <ActivityIndicator size="large" color="#3AA39F" style={{ marginTop: 40 }} />
-        ) : allowances.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="wallet-outline" size={48} color="#CBD5E1" />
-            <Text style={styles.emptyTitle}>No active allowances</Text>
-            <Text style={styles.emptySubtitle}>
-              To set up an allowance, go to the Members tab and select the person you wish to assign one to.
-            </Text>
-            <TouchableOpacity 
-              style={styles.navigateBtn}
-              onPress={() => router.push('/(sponsorTabs)/members')}
-            >
-              <Text style={styles.navigateBtnText}>Go to Members</Text>
-            </TouchableOpacity>
-          </View>
         ) : (
+          /* 4. Gigamit na ang FlatList para sa tibuok view, lakip ang empty state */
           <FlatList
             data={allowances}
             keyExtractor={(item) => item.id}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: 20 }}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={['#3AA39F']} // Android spinner color
+                tintColor="#3AA39F"  // iOS spinner color
+              />
+            }
+            // Kani nga prop ang mo-gawas kung 0 ang sulod sa allowances array
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <Ionicons name="wallet-outline" size={48} color="#CBD5E1" />
+                <Text style={styles.emptyTitle}>No active allowances</Text>
+                <Text style={styles.emptySubtitle}>
+                  To set up an allowance, go to the Members tab and select the person you wish to assign one to.
+                </Text>
+                <TouchableOpacity 
+                  style={styles.navigateBtn}
+                  onPress={() => router.push('/(sponsorTabs)/members')}
+                >
+                  <Text style={styles.navigateBtnText}>Go to Members</Text>
+                </TouchableOpacity>
+              </View>
+            }
             renderItem={({ item }) => (
               <View style={styles.allowanceCard}>
                 <View style={styles.cardLeft}>
@@ -210,7 +232,7 @@ const styles = StyleSheet.create({
   cardAmountText: { fontSize: 15, fontWeight: '700', color: '#1E293B' },
   actionRow: { flexDirection: 'row', gap: 15 },
   actionBtn: { padding: 4 },
-  emptyContainer: { marginTop: 40, alignItems: 'center', padding: 20, backgroundColor: '#FFFFFF', borderRadius: 20, borderWidth: 1, borderColor: '#F1F5F9' },
+  emptyContainer: { marginTop: 20, alignItems: 'center', padding: 20, backgroundColor: '#FFFFFF', borderRadius: 20, borderWidth: 1, borderColor: '#F1F5F9' },
   emptyTitle: { fontSize: 16, fontWeight: '700', color: '#1E293B', marginTop: 12 },
   emptySubtitle: { fontSize: 14, color: '#64748B', textAlign: 'center', marginTop: 8, marginBottom: 20, lineHeight: 20 },
   navigateBtn: { backgroundColor: '#3AA39F', paddingVertical: 12, paddingHorizontal: 24, borderRadius: 12 },
