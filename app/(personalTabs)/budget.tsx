@@ -1,528 +1,506 @@
-import { supabase } from '@/lib/supabase';
+import { Ionicons } from '@expo/vector-icons';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from 'react-native';
+import { supabase } from '../../lib/supabase';
 
-interface BudgetEntry {
+interface BudgetOption {
   id: string;
-  category: string;
-  amount: number;
-  month_year: string;
+  allocated_amount: number;
+  remaining_amount: number;
+  categories: {
+    id: string;
+    name: string;
+    icon: string;
+    color: string;
+  };
 }
 
-interface ExpenseSummary {
-  [category: string]: number;
-}
+export default function PersonalExpensesScreen() {
+  const router = useRouter();
+  const { scannedName, scannedAmount } = useLocalSearchParams<{ scannedName?: string; scannedAmount?: string }>();
 
-export default function BudgetScreen() {
-  const [budgets, setBudgets] = useState<BudgetEntry[]>([]);
-  const [expenses, setExpenses] = useState<ExpenseSummary>({});
-  const [loading, setLoading] = useState(false);
-  const [isModalVisible, setIsModalVisible] = useState(false);
-
-  // Form States para sa Bag-ong Budget
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  
+  const [budgets, setBudgets] = useState<BudgetOption[]>([]);
+  const [selectedBudget, setSelectedBudget] = useState<BudgetOption | null>(null);
   const [amount, setAmount] = useState('');
-  const [category, setCategory] = useState('All');
-  const [formLoading, setFormLoading] = useState(false);
+  const [description, setDescription] = useState('');
+  
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // DYNAMIC DATE: Awtomatiko nga mokuha sa kasamtangang tuig ug bulan (Format: YYYY-MM)
-  const getCurrentMonthYear = () => {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0'); // i-ensure nga 2 digits (e.g., '06')
-    return `${year}-${month}`;
-  };
-
-  const currentMonthYear = getCurrentMonthYear(); 
-
-  // Para sa human-readable display sa UI (e.g., "Hunyo 2026")
-  const getReadableMonth = () => {
-    const options: Intl.DateTimeFormatOptions = { month: 'long', year: 'numeric' };
-    return new Date().toLocaleDateString('eb-PH', options); // Pwede ra 'en-US' kung gusto kag English text
-  };
-
+  // Auto-fill trigger kon gikan sa scanner modules
   useEffect(() => {
-    loadBudgetData();
-  }, []);
+    if (scannedAmount) setAmount(scannedAmount);
+    if (scannedName) setDescription(`Scanned: ${scannedName}`);
+    if (scannedAmount || scannedName) setIsModalOpen(true);
+  }, [scannedAmount, scannedName]);
 
-  const loadBudgetData = async () => {
-    setLoading(true);
+  const fetchActiveBudgets = async () => {
     try {
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError || !session?.user) throw new Error('Walay active user session.');
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-      const userId = session.user.id;
-
-      // 1. Fetch Budgets para sa kasamtangang bulan ('YYYY-MM')
-      const { data: budgetData, error: budgetError } = await supabase
+      const { data, error } = await supabase
         .from('budgets')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('month_year', currentMonthYear);
+        .select(`
+          id,
+          allocated_amount,
+          remaining_amount,
+          categories (
+            id,
+            name,
+            icon,
+            color
+          )
+        `)
+        .eq('user_id', user.id);
 
-      if (budgetError) throw budgetError;
-
-      // I-calculate ang sugod ug katapusan nga adlaw sa kasamtangang bulan para sa DATE ranges
-      // Pananglitan para sa Hunyo 2026: '2026-06-01' ug '2026-06-30'
-      const startDate = `${currentMonthYear}-01`;
-      const endDate = `${currentMonthYear}-30`; // Pwede ra '2026-06-31' pero kadaghanan sa DB mosugot ra og exact range filter
-
-      // 2. Fetch Paid Reminders (Expenses) gamit ang saktong DATE range indicators (.gte ug .lte)
-      const { data: reminderData, error: reminderError } = await supabase
-        .from('reminders')
-        .select('amount, category')
-        .eq('user_id', userId)
-        .eq('status', 'paid')
-        .gte('due_date', startDate)
-        .lte('due_date', endDate);
-
-      if (reminderError) throw reminderError;
-
-      // I-aggregate o i-sum ang expenses matag kategorya
-      const expenseMap: ExpenseSummary = { All: 0 };
-      reminderData?.forEach((rem) => {
-        const amt = parseFloat(rem.amount as any);
-        expenseMap[rem.category] = (expenseMap[rem.category] || 0) + amt;
-        expenseMap['All'] += amt;
-      });
-
-      setBudgets(budgetData || []);
-      setExpenses(expenseMap);
+      if (error) throw error;
+      
+      const validBudgets = (data || []).filter((b: any) => b.categories) as unknown as BudgetOption[];
+      setBudgets(validBudgets);
+      
+      // Auto-select initial item kon gikan sa scan sequence
+      if (validBudgets.length > 0 && (scannedAmount || scannedName) && !selectedBudget) {
+        setSelectedBudget(validBudgets[0]);
+      }
     } catch (error: any) {
-      console.error('Error loading budget data:', error.message);
+      console.error("Fetch Personal Budgets Error:", error.message);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
-  const handleSaveBudget = async () => {
-    if (!amount) {
-      Alert.alert('Oops!', 'Palihog butangi og kantidad.');
+  const handleLogExpense = async () => {
+    if (!selectedBudget) {
+      Alert.alert("Missing Sector", "Please select an active budget target category folder.");
       return;
     }
 
-    setFormLoading(true);
+    const expenseAmount = parseFloat(amount);
+    if (isNaN(expenseAmount) || expenseAmount <= 0) {
+      Alert.alert("Invalid Input", "Please input a positive dynamic spending currency metric.");
+      return;
+    }
+
+    if (expenseAmount > selectedBudget.remaining_amount) {
+      Alert.alert(
+        "Insufficient Budget ❌", 
+        `You cannot spend ₱${expenseAmount.toFixed(2)} because you only have ₱${selectedBudget.remaining_amount.toFixed(2)} remaining inside this structural folder.`
+      );
+      return;
+    }
+
     try {
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError || !session?.user) throw new Error('Walay active user session.');
+      setSubmitting(true);
+      
+      // 1. Insert and Record inside Expenses Database Ledger
+      const { error: insertError } = await supabase
+        .from('expenses')
+        .insert({
+          budget_id: selectedBudget.id,
+          amount: expenseAmount,
+          description: description.trim() || 'General Ledger Expense',
+          spent_at: new Date().toISOString()
+        });
 
-      const { error } = await supabase
+      if (insertError) throw insertError;
+
+      // 2. Perform Calculations to update structural balance variables
+      const newRemaining = selectedBudget.remaining_amount - expenseAmount;
+      const { error: updateError } = await supabase
         .from('budgets')
-        .upsert({
-          user_id: session.user.id,
-          category,
-          amount: parseFloat(amount),
-          month_year: currentMonthYear, // i-save gamit ang dynamic month string
-        }, { onConflict: 'user_id,category,month_year' });
+        .update({ remaining_amount: newRemaining })
+        .eq('id', selectedBudget.id);
 
-      if (error) throw error;
+      if (updateError) throw updateError;
 
-      Alert.alert('Success', 'Ang imong budget malampusong na-save!');
+      Alert.alert("Success 🎉", `Your transaction of ₱${expenseAmount.toFixed(2)} was securely captured.`);
+      
       setAmount('');
-      setCategory('All');
-      setIsModalVisible(false);
-      loadBudgetData(); // I-refresh dretso ang UI
+      setDescription('');
+      setIsModalOpen(false);
+      setSelectedBudget(null);
+      
+      setLoading(true);
+      await fetchActiveBudgets();
     } catch (error: any) {
-      Alert.alert('Error saving budget', error.message || 'Naay sayop nga nahitabo.');
+      Alert.alert("Transaction Aborted", error.message);
     } finally {
-      setFormLoading(false);
+      setSubmitting(false);
     }
   };
 
-  const mainBudgetEntry = budgets.find(b => b.category === 'All');
-  const totalAllocatedBudget = mainBudgetEntry ? mainBudgetEntry.amount : 0;
-  const totalSpent = expenses['All'] || 0;
-  const totalRemaining = totalAllocatedBudget - totalSpent;
-  const totalProgress = totalAllocatedBudget > 0 ? (totalSpent / totalAllocatedBudget) : 0;
+  useEffect(() => {
+    fetchActiveBudgets();
+  }, []);
+
+  const handleCardPress = (item: BudgetOption) => {
+    setSelectedBudget(item);
+    setIsModalOpen(true);
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchActiveBudgets();
+  };
+
+  if (loading && !refreshing) {
+    return (
+      <SafeAreaView style={[styles.container, styles.centeredContent]}>
+        <ActivityIndicator size="small" color="#0D9488" />
+      </SafeAreaView>
+    );
+  }
 
   return (
-    <View style={styles.screenContainer}>
+    <SafeAreaView style={styles.container}>
+      <ExpoStatusBar style="dark" />
       
-      {/* HEADER GROUP */}
-      <View style={styles.topHeaderGroup}>
-        <View>
-          <Text style={styles.mainHeading}>Dashboard</Text>
-          <Text style={styles.subHeadingText}>Bulan: {getReadableMonth()}</Text>
-        </View>
-        <TouchableOpacity style={styles.topAddButton} onPress={() => setIsModalVisible(true)}>
-          <Text style={styles.topAddButtonText}>+ Add Budget</Text>
-        </TouchableOpacity>
+      <View style={styles.cardSelectionHeader}>
+        <Text style={styles.cardSelectionTitle}>Select Folder</Text>
+        <Text style={styles.cardSelectionSubtitle}>{budgets.length} active allocation sectors</Text>
       </View>
 
-      {loading ? (
-        <ActivityIndicator size="large" color="#15803d" style={{ marginTop: 40 }} />
+      {budgets.length === 0 ? (
+        <View style={styles.emptyState}>
+          <View style={styles.emptyIconContainer}>
+            <Ionicons name="folder-open-outline" size={32} color="#94A3B8" />
+          </View>
+          <Text style={styles.emptyText}>No Active Sectors Found</Text>
+          <Text style={styles.emptySub}>
+            To populate tracking assets, log an active income flow and configure folder structural limits inside your Home panel first.
+          </Text>
+        </View>
       ) : (
-        <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollLayout}>
-          
-          {/* MAIN OVERVIEW CARD */}
-          <View style={styles.mainSummaryCard}>
-            <Text style={styles.cardHeaderLabel}>Kinatibuk-ang Budget ('All')</Text>
-            <Text style={styles.mainBudgetText}>₱{totalAllocatedBudget.toLocaleString(undefined, { minimumFractionDigits: 2 })}</Text>
-            
-            <View style={styles.progressBarBackground}>
-              <View style={[styles.progressBarFill, { width: `${Math.min(totalProgress * 100, 100)}%`, backgroundColor: totalProgress > 0.9 ? '#ef4444' : '#34d399' }]} />
-            </View>
-
-            <View style={styles.cardFooterGrid}>
-              <View>
-                <Text style={styles.footerLabel}>Nagasto (Paid)</Text>
-                <Text style={styles.footerValueSpent}>₱{totalSpent.toLocaleString(undefined, { minimumFractionDigits: 2 })}</Text>
+        <FlatList
+          data={budgets}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.verticalCardList}
+          showsVerticalScrollIndicator={false}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              activeOpacity={0.88}
+              onPress={() => handleCardPress(item)}
+              style={[
+                styles.modernFintechCard,
+                { backgroundColor: item.categories.color || '#0F766E' }
+              ]}
+            >
+              <View style={styles.modernCardHeaderRow}>
+                <View style={styles.modernCardBadgeIconWrapper}>
+                  {/* @ts-ignore */}
+                  <Ionicons name={item.categories.icon || 'wallet'} size={18} color={item.categories.color || '#0F766E'} />
+                </View>
+                <Text style={styles.modernCardCategoryText}>{item.categories.name}</Text>
+                <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.6)" style={{ marginLeft: 'auto' }} />
               </View>
-              <View style={{ alignItems: 'flex-end' }}>
-                <Text style={styles.footerLabel}>Nabilin (Remaining)</Text>
-                <Text style={[styles.footerValueLeft, totalRemaining < 0 && { color: '#f87171' }]}>
-                  ₱{totalRemaining.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              
+              <View style={styles.modernCardBalanceContainer}>
+                <Text style={styles.modernCardBalanceLabel}>REMAINING BALANCE</Text>
+                <Text style={styles.modernCardBalanceAmount}>
+                  ₱{item.remaining_amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                 </Text>
               </View>
-            </View>
-          </View>
-
-          {/* CATEGORIES BREAKDOWN SECTION */}
-          <Text style={styles.sectionTitle}>Breakdown Matag Kategorya</Text>
-          
-          {budgets.filter(b => b.category !== 'All').length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>Walay mga piho nga budget sa kategorya.</Text>
-            </View>
-          ) : (
-            budgets.filter(b => b.category !== 'All').map((item) => {
-              const catSpent = expenses[item.category] || 0;
-              const catProgress = item.amount > 0 ? (catSpent / item.amount) : 0;
-              return (
-                <View key={item.id} style={styles.categoryCard}>
-                  <View style={styles.categoryHeaderRow}>
-                    <Text style={styles.categoryCardName}>{item.category}</Text>
-                    <Text style={styles.categoryCardValues}>
-                      ₱{catSpent} / <Text style={{ fontWeight: 'bold' }}>₱{item.amount}</Text>
-                    </Text>
-                  </View>
-                  <View style={styles.progressBarBackgroundSmall}>
-                    <View style={[styles.progressBarFillSmall, { width: `${Math.min(catProgress * 100, 100)}%`, backgroundColor: catProgress > 0.9 ? '#ef4444' : '#10b981' }]} />
-                  </View>
-                </View>
-              );
-            })
+            </TouchableOpacity>
           )}
-        </ScrollView>
+        />
       )}
 
-      {/* CUSTOM FORM OVERLAY POPUP */}
-      {isModalVisible && (
-        <View style={styles.overlayContainer}>
-          <View style={styles.formContainer}>
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-              
-              <View style={styles.formHeader}>
-                <View>
-                  <Text style={styles.headerTitle}>I-set ang Limit sa Budget</Text>
-                  <Text style={styles.headerSubtitle}>Bulan: {currentMonthYear}</Text>
+      {/* MODAL SYSTEM: POP OVERLAY TRANSACTION ENTRY LOGGING FORM */}
+      <Modal
+        visible={isModalOpen}
+        animationType="slide"
+        transparent={true}
+        statusBarTranslucent
+        onRequestClose={() => {
+          setIsModalOpen(false);
+          setSelectedBudget(null);
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity 
+            style={StyleSheet.absoluteFillObject} 
+            activeOpacity={1} 
+            onPress={() => {
+              if (!submitting) {
+                setIsModalOpen(false);
+                setSelectedBudget(null);
+              }
+            }} 
+          />
+
+          <KeyboardAvoidingView 
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+            style={styles.modalContent}
+          >
+            <View style={styles.modalDragHandle} />
+
+            <View style={styles.header}>
+              <View style={styles.headerRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.headerTitle}>Deduct Expense</Text>
+                  {selectedBudget && (
+                    <View style={[styles.modernCategoryBadge, { backgroundColor: `${selectedBudget.categories.color}15` }]}>
+                      {/* @ts-ignore */}
+                      <Ionicons name={selectedBudget.categories.icon || 'folder'} size={13} color={selectedBudget.categories.color} />
+                      <Text style={[styles.modernCategoryBadgeText, { color: selectedBudget.categories.color }]}>
+                        {selectedBudget.categories.name}
+                      </Text>
+                    </View>
+                  )}
                 </View>
-                <TouchableOpacity onPress={() => setIsModalVisible(false)} style={styles.closeButton}>
-                  <Text style={styles.closeButtonText}>X</Text>
+                <TouchableOpacity 
+                  style={styles.closeModalHeaderIcon} 
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    setIsModalOpen(false);
+                    setSelectedBudget(null);
+                  }}
+                  disabled={submitting}
+                >
+                  <Ionicons name="close" size={20} color="#64748B" />
                 </TouchableOpacity>
               </View>
+            </View>
 
-              {/* Form Input: Category */}
-              <Text style={styles.inputLabel}>Pilia ang Kategorya</Text>
-              <View style={styles.categoryContainer}>
-                {['All', 'Utilities', 'Subscription', 'Loan', 'Food', 'Others'].map((cat) => {
-                  const isSelected = category === cat;
-                  return (
-                    <TouchableOpacity
-                      key={cat}
-                      onPress={() => setCategory(cat)}
-                      style={[styles.categoryBadge, isSelected ? styles.categoryBadgeActive : styles.categoryBadgeInactive]}
-                    >
-                      <Text style={[styles.categoryText, isSelected ? styles.categoryTextActive : styles.categoryTextInactive]}>
-                        {cat}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
+            <View style={styles.formContainer}>
+              <View style={styles.modernAmountContainer}>
+                <Text style={styles.modernAmountLabel}>AMOUNT OUTFLOW</Text>
+                <View style={styles.amountInputRow}>
+                  <Text style={styles.currencySymbol}>₱</Text>
+                  <TextInput
+                    style={styles.amountInput}
+                    placeholder="0.00"
+                    placeholderTextColor="#CBD5E1"
+                    keyboardType="numeric"
+                    value={amount}
+                    onChangeText={setAmount}
+                    editable={!submitting}
+                    autoFocus={!scannedAmount}
+                  />
+                </View>
+                {selectedBudget && (
+                  <View style={styles.remainingBalanceRow}>
+                    <Ionicons name="wallet-outline" size={13} color="#64748B" />
+                    <Text style={styles.remainingBalanceText}>
+                      Maximum Safe Draft: ₱{selectedBudget.remaining_amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    </Text>
+                  </View>
+                )}
               </View>
 
-              {/* Form Input: Amount Limit */}
-              <Text style={styles.inputLabel}>Kantidad Limit (₱)</Text>
-              <TextInput
-                value={amount}
-                onChangeText={setAmount}
-                placeholder="0.00"
-                placeholderTextColor="#a7f3d0"
-                keyboardType="numeric"
-                style={styles.textInput}
-              />
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Description / Reference Remarks</Text>
+                <View style={styles.textInputWrapper}>
+                  <Ionicons name="document-text-outline" size={18} color="#94A3B8" style={{ marginRight: 10 }} />
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder="e.g., Grocery Shopping, Lunch"
+                    placeholderTextColor="#94A3B8"
+                    value={description}
+                    onChangeText={setDescription}
+                    editable={!submitting}
+                  />
+                </View>
+              </View>
 
-              {/* Form Action Submit Button */}
               <TouchableOpacity
-                onPress={handleSaveBudget}
-                disabled={formLoading}
-                style={[styles.saveButton, formLoading && { opacity: 0.6 }]}
+                style={[styles.submitButton, submitting && styles.disabledButton]}
+                onPress={handleLogExpense}
+                disabled={submitting}
+                activeOpacity={0.82}
               >
-                <Text style={styles.saveButtonText}>
-                  {formLoading ? 'Gisave pa...' : 'I-save ang Setup'}
-                </Text>
+                {submitting ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <>
+                    <Text style={styles.submitButtonText}>Commit Reduction</Text>
+                    <Ionicons name="checkmark-circle-outline" size={18} color="#FFFFFF" />
+                  </>
+                )}
               </TouchableOpacity>
-
-            </ScrollView>
-          </View>
+            </View>
+          </KeyboardAvoidingView>
         </View>
-      )}
-    </View>
+      </Modal>
+    </SafeAreaView>
   );
 }
 
-// MANAGEMENT SA TANANG LAYOUT STYLES
 const styles = StyleSheet.create({
-  screenContainer: {
+  container: { flex: 1, backgroundColor: '#F8FAFC' },
+  centeredContent: { justifyContent: 'center', alignItems: 'center' },
+  
+  modalOverlay: {
     flex: 1,
-    backgroundColor: '#f8fafc',
-    padding: 16,
-  },
-  topHeaderGroup: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 24,
-    marginBottom: 10,
-  },
-  mainHeading: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1e293b',
-  },
-  subHeadingText: {
-    fontSize: 14,
-    color: '#64748b',
-    fontWeight: '500',
-    marginTop: 2,
-  },
-  topAddButton: {
-    backgroundColor: '#10b981',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 12,
-  },
-  topAddButtonText: {
-    color: '#022c22',
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
-  scrollLayout: {
-    flex: 1,
-  },
-  mainSummaryCard: {
-    backgroundColor: '#064e3b', 
-    borderRadius: 20,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-    marginBottom: 24,
-    marginTop: 10,
-  },
-  cardHeaderLabel: {
-    color: '#a7f3d0',
-    fontSize: 13,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-  },
-  mainBudgetText: {
-    color: '#ffffff',
-    fontSize: 32,
-    fontWeight: 'bold',
-    marginVertical: 10,
-  },
-  progressBarBackground: {
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    height: 10,
-    borderRadius: 5,
-    overflow: 'hidden',
-    marginVertical: 12,
-  },
-  progressBarFill: {
-    height: '100%',
-    borderRadius: 5,
-  },
-  cardFooterGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 8,
-  },
-  footerLabel: {
-    color: '#a7f3d0',
-    fontSize: 12,
-  },
-  footerValueSpent: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginTop: 2,
-  },
-  footerValueLeft: {
-    color: '#34d399',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginTop: 2,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#334155',
-    marginBottom: 12,
-  },
-  categoryCard: {
-    backgroundColor: '#ffffff',
-    padding: 16,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    marginBottom: 10,
-  },
-  categoryHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  categoryCardName: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    color: '#1e293b',
-  },
-  categoryCardValues: {
-    fontSize: 14,
-    color: '#64748b',
-  },
-  progressBarBackgroundSmall: {
-    backgroundColor: '#f1f5f9',
-    height: 6,
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  progressBarFillSmall: {
-    height: '100%',
-    borderRadius: 3,
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    padding: 24,
-  },
-  emptyText: {
-    color: '#94a3b8',
-    fontSize: 14,
-  },
-  overlayContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: 'rgba(15, 23, 42, 0.4)', 
     justifyContent: 'flex-end',
-    zIndex: 100, 
   },
-  formContainer: {
-    backgroundColor: '#022c22', 
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    height: '75%',
-    borderTopWidth: 1,
-    borderTopColor: '#064e3b',
-    overflow: 'hidden',
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    height: '65%', 
+    paddingTop: 14,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#0F172A',
+        shadowOffset: { width: 0, height: -10 },
+        shadowOpacity: 0.12,
+        shadowRadius: 16,
+      },
+      android: {
+        elevation: 24,
+      }
+    })
   },
-  scrollContent: {
-    flexGrow: 1,
-    padding: 24,
-    paddingBottom: 40,
+  modalDragHandle: {
+    width: 40,
+    height: 5,
+    backgroundColor: '#E2E8F0',
+    borderRadius: 10,
+    alignSelf: 'center',
+    marginBottom: 6,
   },
-  formHeader: {
+  closeModalHeaderIcon: {
+    backgroundColor: '#F1F5F9',
+    padding: 8,
+    borderRadius: 50,
+  },
+  modernCategoryBadge: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 24,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    marginTop: 6,
+    gap: 5,
   },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#ffffff',
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#34d399',
-    marginTop: 2,
-  },
-  closeButton: {
-    backgroundColor: '#064e3b',
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  closeButtonText: {
-    color: '#a7f3d0',
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#a7f3d0',
-    marginBottom: 10,
-  },
-  categoryContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 20,
-  },
-  categoryBadge: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 99,
-    borderWidth: 1,
-  },
-  categoryBadgeActive: {
-    backgroundColor: '#10b981',
-    borderColor: '#34d399',
-  },
-  categoryBadgeInactive: {
-    backgroundColor: '#064e3b',
-    borderColor: '#0f766e',
-  },
-  categoryText: {
-    fontWeight: '600',
-    fontSize: 13,
-  },
-  categoryTextActive: {
-    color: '#022c22',
-  },
-  categoryTextInactive: {
-    color: '#a7f3d0',
-  },
-  textInput: {
-    backgroundColor: '#064e3b',
-    color: '#ffffff',
+  modernCategoryBadgeText: { fontSize: 12, fontWeight: '700' },
+  header: { paddingHorizontal: 24, paddingTop: 10, paddingBottom: 14 },
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  headerTitle: { fontSize: 22, fontWeight: '700', color: '#0F172A', letterSpacing: -0.5 },
+  formContainer: { flex: 1, paddingHorizontal: 24, paddingTop: 4 },
+  
+  modernAmountContainer: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 20,
     padding: 16,
-    borderRadius: 14,
-    marginBottom: 24,
+    marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#0f766e',
-    fontSize: 16,
+    borderColor: '#E2E8F0',
   },
-  saveButton: {
-    backgroundColor: '#10b981',
-    paddingVertical: 16,
-    borderRadius: 14,
+  modernAmountLabel: { fontSize: 11, fontWeight: '700', color: '#64748B', letterSpacing: 0.5 },
+  amountInputRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4, borderBottomWidth: 1, borderBottomColor: '#E2E8F0', paddingBottom: 6 },
+  currencySymbol: { fontSize: 32, fontWeight: '700', color: '#0F172A', marginRight: 4 },
+  amountInput: { flex: 1, fontSize: 36, fontWeight: '700', color: '#0F172A', letterSpacing: -1 },
+  remainingBalanceRow: { flexDirection: 'row', alignItems: 'center', marginTop: 8, gap: 4 },
+  remainingBalanceText: { fontSize: 12, color: '#64748B', fontWeight: '500' },
+
+  inputGroup: { marginBottom: 24 },
+  label: { fontSize: 13, fontWeight: '600', color: '#334155', marginBottom: 8 },
+  textInputWrapper: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 14, paddingHorizontal: 14, height: 52 },
+  textInput: { flex: 1, fontSize: 14, color: '#0F172A', fontWeight: '500' },
+  
+  submitButton: { 
+    backgroundColor: '#0F766E', 
+    height: 54,
+    borderRadius: 16, 
+    flexDirection: 'row', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    gap: 6, 
+    marginTop: 'auto', 
+    marginBottom: Platform.OS === 'ios' ? 24 : 32,
+  },
+  disabledButton: { opacity: 0.6 },
+  submitButtonText: { color: '#FFFFFF', fontWeight: '600', fontSize: 16 },
+  
+  cardSelectionHeader: {
+    paddingHorizontal: 24,
+    paddingTop: Platform.OS === 'android' ? 24 : 16,
+    paddingBottom: 16
+  },
+  cardSelectionTitle: { fontSize: 24, fontWeight: '800', color: '#0F172A', letterSpacing: -0.5 },
+  cardSelectionSubtitle: { fontSize: 13, color: '#64748B', marginTop: 2, fontWeight: '500' },
+  verticalCardList: { paddingHorizontal: 24, gap: 14, paddingBottom: 32 },
+  
+  modernFintechCard: {
+    borderRadius: 22,
+    padding: 20,
+    height: 140,
+    justifyContent: 'space-between',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#0F172A',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 3,
+      }
+    })
+  },
+  modernCardHeaderRow: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 10,
+  },
+  modernCardBadgeIconWrapper: {
+    backgroundColor: '#FFFFFF',
+    padding: 8,
+    borderRadius: 12,
     justifyContent: 'center',
-    marginTop: 8,
+    alignItems: 'center',
   },
-  saveButtonText: {
-    color: '#022c22',
-    fontWeight: 'bold',
+  modernCardCategoryText: {
+    color: '#FFFFFF',
     fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: -0.2,
   },
+  modernCardBalanceContainer: {
+    marginTop: 'auto',
+  },
+  modernCardBalanceLabel: {
+    color: 'rgba(255,255,255,0.65)',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  modernCardBalanceAmount: {
+    color: '#FFFFFF',
+    fontSize: 26,
+    fontWeight: '800',
+    marginTop: 2,
+    letterSpacing: -0.5,
+  },
+
+  emptyState: { flex: 0.7, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 36, gap: 14 },
+  emptyIconContainer: { width: 64, height: 64, borderRadius: 20, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0' },
+  emptyText: { fontSize: 18, fontWeight: '700', color: '#1E293B', letterSpacing: -0.4 },
+  emptySub: { fontSize: 13, color: '#64748B', textAlign: 'center', lineHeight: 20, fontWeight: '400' }
 });

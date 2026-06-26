@@ -1,7 +1,8 @@
 import { Feather } from '@expo/vector-icons';
+import * as Linking from 'expo-linking';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { supabase } from '../../lib/supabase';
 
 export default function LoginScreen() {
@@ -9,8 +10,16 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
+  // 1. Login Flow Handler
   const handleLogin = async () => {
+    if (!email || !password) {
+      Alert.alert("Missing Fields", "Please enter both your email and password.");
+      return;
+    }
+
+    setLoading(true);
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -18,6 +27,7 @@ export default function LoginScreen() {
 
     if (authError) {
       Alert.alert("Authentication Failed", authError.message);
+      setLoading(false);
       return;
     }
 
@@ -27,6 +37,8 @@ export default function LoginScreen() {
       .eq('id', authData.user.id)
       .maybeSingle();
 
+    setLoading(false);
+
     if (profileError || !profile) {
       Alert.alert("Error", "Could not fetch user profile details.");
       return;
@@ -35,7 +47,6 @@ export default function LoginScreen() {
     const userRole = profile.role;
 
     if (!userRole) {
-      // Intercept users who haven't picked a role yet
       router.replace('/role-selection');
     } else if (userRole === 'Personal') {
       router.replace('/(personalTabs)/home');
@@ -43,83 +54,133 @@ export default function LoginScreen() {
       router.replace('/(spenderTabs)/home');
     } else if (userRole === 'Sponsor') {
       router.replace('/(sponsorTabs)/home');
+    } else {
+      Alert.alert("Error", "Unknown user role detected.");
+    }
+  };
+
+  // 2. Forgot Password Handler with dynamic Expo Go / Build deep linking support
+  const handleForgotPassword = async () => {
+    if (!email) {
+      Alert.alert(
+        "Email Required", 
+        "Please enter your email address in the input field first so we know where to send the link."
+      );
+      return;
+    }
+
+    setLoading(true);
+    
+    // Automatically generates exp://... inside Expo Go, or paytonexpo:// in native builds
+    const redirectUrl = Linking.createURL('reset-password');
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: redirectUrl, 
+    });
+
+    setLoading(false);
+
+    if (error) {
+      Alert.alert("Reset Failed", error.message);
+    } else {
+      Alert.alert(
+        "Email Sent", 
+        "A password reset link has been sent to your email address. Please check your inbox."
+      );
     }
   };
 
   return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: "white"}}>
-        <View style={styles.innerContainer}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "white"}}>
+      <View style={styles.innerContainer}>
+        
+        <View style={styles.headerContainer}>
+          <Text style={styles.title}>
+            Welcome to <Text style={styles.brandText}>Payton</Text>
+          </Text>
+          <Text style={styles.subtitle}>
+            Access your account using your email and password.
+          </Text>
+        </View>
+
+        <View style={styles.form}>
           
-          <View style={styles.headerContainer}>
-            <Text style={styles.title}>
-              Welcome to <Text style={styles.brandText}>Payton</Text>
-            </Text>
-            <Text style={styles.subtitle}>
-              Access your account using your email and password.
-            </Text>
+          <View style={styles.inputWrapper}>
+            <Feather name="mail" color="#085334" size={20} style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              placeholder="Email Address"
+              placeholderTextColor="#A0AEC0"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              editable={!loading}
+            />
           </View>
 
-          <View style={styles.form}>
-            
-            <View style={styles.inputWrapper}>
-              <Feather name="mail" color="#085334" size={20} style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Email Address"
-                placeholderTextColor="#A0AEC0"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-            </View>
+          <View style={styles.inputWrapper}>
+            <Feather name="lock" color="#085334" size={20} style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              placeholder="Password"
+              placeholderTextColor="#A0AEC0"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+              autoCapitalize="none"
+              editable={!loading}
+            />
 
-            <View style={styles.inputWrapper}>
-              <Feather name="lock" color="#085334" size={20} style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Password"
-                placeholderTextColor="#A0AEC0"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-              />
-
-              <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
-                <Feather name={showPassword ? 'eye-off' : 'eye'} color="#718096" size={20} />
-              </TouchableOpacity>
-            </View>
-
-            <Text style={styles.forgot} onPress={() => router.push('/forgot-password')}>Forgot Password?</Text>
-
-            <TouchableOpacity style={styles.primaryButton} onPress={handleLogin}>
-              <Text style={styles.buttonText}>Sign In</Text>
+            <TouchableOpacity 
+              onPress={() => setShowPassword(!showPassword)} 
+              style={styles.eyeIcon}
+              disabled={loading}
+            >
+              <Feather name={showPassword ? 'eye-off' : 'eye'} color="#718096" size={20} />
             </TouchableOpacity>
-            </View>
+          </View>
 
-            <View style={styles.dividerContainer}>
-              <Text style={styles.dividerText}>Or continue with</Text>
-            </View>
+          <TouchableOpacity onPress={handleForgotPassword} disabled={loading}>
+            <Text style={styles.forgot}>Forgot Password?</Text>
+          </TouchableOpacity>
 
-            <View style={styles.socialContainer}>
-              <TouchableOpacity style={styles.socialButton}>
-                <Text style={styles.socialButtonText}>Continue with Google</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity style={styles.socialButton}>
-                <Text style={styles.socialButtonText}>Continue with Facebook</Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.footer}>
-              <Text style={styles.footerText}>Don't have an account? </Text>
-              <TouchableOpacity onPress={() => router.push('/register')}>
-                <Text style={styles.linkText}>Sign Up</Text>
-              </TouchableOpacity>
-            </View>
-
+          <TouchableOpacity 
+            style={[styles.primaryButton, loading && { opacity: 0.8 }]} 
+            onPress={handleLogin}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#FFFFFF" size="small" />
+            ) : (
+              <Text style={styles.buttonText}>Sign In</Text>
+            )}
+          </TouchableOpacity>
         </View>
-      </SafeAreaView>
+
+        <View style={styles.dividerContainer}>
+          <Text style={styles.dividerText}>Or continue with</Text>
+        </View>
+
+        <View style={styles.socialContainer}>
+          <TouchableOpacity style={styles.socialButton} disabled={loading}>
+            <Text style={styles.socialButtonText}>Continue with Google</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={styles.socialButton} disabled={loading}>
+            <Text style={styles.socialButtonText}>Continue with Facebook</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>Don't have an account? </Text>
+          <TouchableOpacity onPress={() => router.push('/register')} disabled={loading}>
+            <Text style={styles.linkText}>Sign Up</Text>
+          </TouchableOpacity>
+        </View>
+
+      </View>
+    </SafeAreaView>
   );
 }
 
@@ -242,6 +303,7 @@ const styles = StyleSheet.create({
   forgot: {
     color: "#3f7c77",
     textAlign: "right",
-    marginBottom: 10,
+    marginBottom: 15,
+    paddingVertical: 4,
   }
 });
