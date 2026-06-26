@@ -8,7 +8,7 @@ export default function SpenderLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#0f6834',   // Premium Green/Dark Jade matching Spender UI
+        tabBarActiveTintColor: '#10B981',   // Modern Emerald Green matching Friends UI
         tabBarInactiveTintColor: '#94A3B8', // Slate clean gray
         tabBarShowLabel: true,
         tabBarLabelStyle: {
