@@ -2,20 +2,25 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Keyboard // Gi-import para sa pag-dismiss sa keyboard
+  ,
+
   KeyboardAvoidingView,
   Modal,
   StatusBar as NativeStatusBar,
   Platform,
   SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View
 } from 'react-native';
 import { supabase } from '../../lib/supabase';
@@ -47,13 +52,7 @@ export default function SpenderExpensesScreen() {
   
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  useEffect(() => {
-    if (scannedAmount) setAmount(scannedAmount);
-    if (scannedName) setDescription(`Scanned: ${scannedName}`);
-    if (scannedAmount || scannedName) setIsModalOpen(true);
-  }, [scannedAmount, scannedName]);
-
-  const fetchActiveBudgets = async () => {
+  const fetchActiveBudgets = useCallback(async (shouldAutoSelect = false) => {
     try {
       setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
@@ -79,7 +78,7 @@ export default function SpenderExpensesScreen() {
       const validBudgets = (data || []).filter((b: any) => b.categories) as unknown as BudgetOption[];
       setBudgets(validBudgets);
       
-      if (validBudgets.length > 0 && (scannedAmount || scannedName) && !selectedBudget) {
+      if (validBudgets.length > 0 && shouldAutoSelect) {
         setSelectedBudget(validBudgets[0]);
       }
     } catch (error: any) {
@@ -87,6 +86,29 @@ export default function SpenderExpensesScreen() {
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    const handleInitialSync = async () => {
+      const hasScanData = !!(scannedAmount || scannedName);
+      
+      if (scannedAmount) setAmount(scannedAmount);
+      if (scannedName) setDescription(`Scanned: ${scannedName}`);
+      
+      await fetchActiveBudgets(hasScanData);
+      
+      if (hasScanData) {
+        setIsModalOpen(true);
+      }
+    };
+
+    handleInitialSync();
+  }, [scannedAmount, scannedName, fetchActiveBudgets]);
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedBudget(null);
+    router.setParams({ scannedName: undefined, scannedAmount: undefined });
   };
 
   const handleLogExpense = async () => {
@@ -135,9 +157,8 @@ export default function SpenderExpensesScreen() {
       
       setAmount('');
       setDescription('');
-      setIsModalOpen(false);
-      setSelectedBudget(null);
-      await fetchActiveBudgets();
+      handleCloseModal();
+      await fetchActiveBudgets(false);
 
     } catch (error: any) {
       Alert.alert("Transaction Aborted", error.message);
@@ -146,16 +167,12 @@ export default function SpenderExpensesScreen() {
     }
   };
 
-  useEffect(() => {
-    fetchActiveBudgets();
-  }, []);
-
   const handleCardPress = (item: BudgetOption) => {
     setSelectedBudget(item);
     setIsModalOpen(true);
   };
 
-  if (loading) {
+  if (loading && budgets.length === 0) {
     return (
       <SafeAreaView style={[styles.container, styles.centeredContent]}>
         <StatusBar style="dark" />
@@ -182,9 +199,6 @@ export default function SpenderExpensesScreen() {
           <Text style={styles.emptySub}>To populate transactional items, configure and allocate capital tokens via your Home layout first.</Text>
         </View>
       ) : (
-        /* ========================================================= */
-        /* MODERN MINIMALIST FINTECH CARD LIST LAYOUT                */
-        /* ========================================================= */
         <FlatList
           data={budgets}
           keyExtractor={(item) => item.id}
@@ -199,7 +213,6 @@ export default function SpenderExpensesScreen() {
                 { backgroundColor: item.categories.color || '#1E293B' }
               ]}
             >
-              {/* Card Header: Icon and Category Name side-by-side */}
               <View style={styles.modernCardHeaderRow}>
                 <View style={styles.modernCardBadgeIconWrapper}>
                   {/* @ts-ignore */}
@@ -209,7 +222,6 @@ export default function SpenderExpensesScreen() {
                 <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.6)" style={{ marginLeft: 'auto' }} />
               </View>
               
-              {/* Card Body: Minimalist Balance Display */}
               <View style={styles.modernCardBalanceContainer}>
                 <Text style={styles.modernCardBalanceLabel}>AVAILABLE BALANCE</Text>
                 <Text style={styles.modernCardBalanceAmount}>
@@ -221,117 +233,117 @@ export default function SpenderExpensesScreen() {
         />
       )}
 
-      {/* MODAL VIEW - LOG NEW EXPENSE FORM */}
       <Modal
         visible={isModalOpen}
         animationType="slide"
         transparent={true}
         statusBarTranslucent
-        onRequestClose={() => {
-          setIsModalOpen(false);
-          setSelectedBudget(null);
-        }}
+        onRequestClose={handleCloseModal}
       >
         <View style={styles.modalOverlay}>
           <TouchableOpacity 
             style={StyleSheet.absoluteFillObject} 
             activeOpacity={1} 
-            onPress={() => {
-              setIsModalOpen(false);
-              setSelectedBudget(null);
-            }} 
+            onPress={handleCloseModal} 
           />
 
           <KeyboardAvoidingView 
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+            // Gi-optimize ang behavior depende sa platform
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
             style={styles.modalContent}
           >
-            <View style={styles.modalDragHandle} />
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+              <View style={{ flex: 1 }}>
+                <View style={styles.modalDragHandle} />
 
-            <View style={styles.header}>
-              <View style={styles.headerRow}>
-                <View>
-                  <Text style={styles.headerTitle}>Log New Expense</Text>
-                  {selectedBudget && (
-                    <View style={[styles.modernCategoryBadge, { backgroundColor: `${selectedBudget.categories.color}15` }]}>
-                      {/* @ts-ignore */}
-                      <Ionicons name={selectedBudget.categories.icon || 'folder-outline'} size={14} color={selectedBudget.categories.color} />
-                      <Text style={[styles.modernCategoryBadgeText, { color: selectedBudget.categories.color }]}>
-                        {selectedBudget.categories.name}
-                      </Text>
+                <View style={styles.header}>
+                  <View style={styles.headerRow}>
+                    <View>
+                      <Text style={styles.headerTitle}>Log New Expense</Text>
+                      {selectedBudget && (
+                        <View style={[styles.modernCategoryBadge, { backgroundColor: `${selectedBudget.categories.color}15` }]}>
+                          {/* @ts-ignore */}
+                          <Ionicons name={selectedBudget.categories.icon || 'folder-outline'} size={14} color={selectedBudget.categories.color} />
+                          <Text style={[styles.modernCategoryBadgeText, { color: selectedBudget.categories.color }]}>
+                            {selectedBudget.categories.name}
+                          </Text>
+                        </View>
+                      )}
                     </View>
-                  )}
-                </View>
-                <TouchableOpacity 
-                  style={styles.closeModalHeaderIcon} 
-                  activeOpacity={0.7}
-                  onPress={() => {
-                    setIsModalOpen(false);
-                    setSelectedBudget(null);
-                  }}
-                >
-                  <Ionicons name="close" size={20} color="#64748B" />
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <View style={styles.formContainer}>
-              <View style={styles.modernAmountContainer}>
-                <Text style={styles.modernAmountLabel}>AMOUNT SPENT</Text>
-                <View style={styles.amountInputRow}>
-                  <Text style={styles.currencySymbol}>₱</Text>
-                  <TextInput
-                    style={styles.amountInput}
-                    placeholder="0.00"
-                    placeholderTextColor="#CBD5E1"
-                    keyboardType="numeric"
-                    value={amount}
-                    onChangeText={setAmount}
-                    editable={!submitting}
-                    autoFocus
-                  />
-                </View>
-                {selectedBudget && (
-                  <View style={styles.remainingBalanceRow}>
-                    <Ionicons name="wallet-outline" size={13} color="#64748B" />
-                    <Text style={styles.remainingBalanceText}>
-                      Folder Limit: ₱{selectedBudget.remaining_amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                    </Text>
+                    <TouchableOpacity 
+                      style={styles.closeModalHeaderIcon} 
+                      activeOpacity={0.7}
+                      onPress={handleCloseModal}
+                    >
+                      <Ionicons name="close" size={20} color="#64748B" />
+                    </TouchableOpacity>
                   </View>
-                )}
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Description / Remarks</Text>
-                <View style={styles.textInputWrapper}>
-                  <Ionicons name="document-text-outline" size={18} color="#94A3B8" style={{ marginRight: 10 }} />
-                  <TextInput
-                    style={styles.textInput}
-                    placeholder="What did you purchase?"
-                    placeholderTextColor="#94A3B8"
-                    value={description}
-                    onChangeText={setDescription}
-                    editable={!submitting}
-                  />
                 </View>
-              </View>
 
-              <TouchableOpacity
-                style={[styles.submitButton, submitting && styles.disabledButton]}
-                onPress={handleLogExpense}
-                disabled={submitting}
-                activeOpacity={0.8}
-              >
-                {submitting ? (
-                  <ActivityIndicator color="#FFFFFF" size="small" />
-                ) : (
-                  <>
-                    <Text style={styles.submitButtonText}>Save Transaction</Text>
-                    <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
-                  </>
-                )}
-              </TouchableOpacity>
-            </View>
+                <ScrollView 
+                  style={{ flex: 1 }}
+                  contentContainerStyle={styles.formContainer}
+                  keyboardShouldPersistTaps="handled"
+                  showsVerticalScrollIndicator={false}
+                >
+                  <View style={styles.modernAmountContainer}>
+                    <Text style={styles.modernAmountLabel}>AMOUNT SPENT</Text>
+                    <View style={styles.amountInputRow}>
+                      <Text style={styles.currencySymbol}>₱</Text>
+                      <TextInput
+                        style={styles.amountInput}
+                        placeholder="0.00"
+                        placeholderTextColor="#CBD5E1"
+                        keyboardType="numeric"
+                        value={amount}
+                        onChangeText={setAmount}
+                        editable={!submitting}
+                        autoFocus
+                      />
+                    </View>
+                    {selectedBudget && (
+                      <View style={styles.remainingBalanceRow}>
+                        <Ionicons name="wallet-outline" size={13} color="#64748B" />
+                        <Text style={styles.remainingBalanceText}>
+                          Folder Limit: ₱{selectedBudget.remaining_amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Description / Remarks</Text>
+                    <View style={styles.textInputWrapper}>
+                      <Ionicons name="document-text-outline" size={18} color="#94A3B8" style={{ marginRight: 10 }} />
+                      <TextInput
+                        style={styles.textInput}
+                        placeholder="What did you purchase?"
+                        placeholderTextColor="#94A3B8"
+                        value={description}
+                        onChangeText={setDescription}
+                        editable={!submitting}
+                      />
+                    </View>
+                  </View>
+
+                  <TouchableOpacity
+                    style={[styles.submitButton, submitting && styles.disabledButton]}
+                    onPress={handleLogExpense}
+                    disabled={submitting}
+                    activeOpacity={0.8}
+                  >
+                    {submitting ? (
+                      <ActivityIndicator color="#FFFFFF" size="small" />
+                    ) : (
+                      <>
+                        <Text style={styles.submitButtonText}>Save Transaction</Text>
+                        <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </ScrollView>
+              </View>
+            </TouchableWithoutFeedback>
           </KeyboardAvoidingView>
         </View>
       </Modal>
@@ -343,8 +355,6 @@ export default function SpenderExpensesScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FAFBFD' },
   centeredContent: { justifyContent: 'center', alignItems: 'center' },
-  
-  // MODAL ARCHITECTURE STYLES
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(15, 23, 42, 0.6)', 
@@ -354,7 +364,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
-    height: '68%', 
+    height: '75%', // Gi-maximize gamay para mas dako og agianan ang porma
     paddingTop: 14,
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: -10 },
@@ -389,8 +399,7 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: 24, paddingTop: 10, paddingBottom: 14 },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   headerTitle: { fontSize: 22, fontWeight: '700', color: '#0F172A', letterSpacing: -0.5 },
-  formContainer: { flex: 1, paddingHorizontal: 24, paddingTop: 4 },
-  
+  formContainer: { paddingHorizontal: 24, paddingTop: 4, paddingBottom: Platform.OS === 'ios' ? 40 : 56 }, 
   modernAmountContainer: {
     backgroundColor: '#F8FAFC',
     borderRadius: 20,
@@ -405,12 +414,10 @@ const styles = StyleSheet.create({
   amountInput: { flex: 1, fontSize: 40, fontWeight: '700', color: '#0F172A', letterSpacing: -1 },
   remainingBalanceRow: { flexDirection: 'row', alignItems: 'center', marginTop: 8, gap: 4 },
   remainingBalanceText: { fontSize: 12, color: '#64748B', fontWeight: '500' },
-
-  inputGroup: { marginBottom: 20 },
+  inputGroup: { marginBottom: 24 },
   label: { fontSize: 13, fontWeight: '600', color: '#334155', marginBottom: 8 },
   textInputWrapper: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 14, paddingHorizontal: 14, height: 52 },
   textInput: { flex: 1, fontSize: 14, color: '#0F172A', fontWeight: '500' },
-  
   submitButton: { 
     backgroundColor: '#0F172A', 
     height: 54,
@@ -419,16 +426,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center', 
     alignItems: 'center', 
     gap: 6, 
-    marginTop: 'auto', 
-    marginBottom: Platform.OS === 'ios' ? 24 : 32, 
+    marginTop: 12,
     shadowColor: '#0F172A', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 5 
   },
   disabledButton: { opacity: 0.6 },
   submitButtonText: { color: '#FFFFFF', fontWeight: '600', fontSize: 16, letterSpacing: -0.2 },
-  
-  // =========================================================
-  // NEW ULTRA-MODERN FINTECH CARD LIST UI STYLES
-  // =========================================================
   cardSelectionHeader: {
     paddingHorizontal: 24,
     paddingTop: Platform.OS === 'android' ? (NativeStatusBar.currentHeight ? NativeStatusBar.currentHeight + 16 : 34) : 20,
@@ -437,11 +439,10 @@ const styles = StyleSheet.create({
   cardSelectionTitle: { fontSize: 24, fontWeight: '800', color: '#0F172A', letterSpacing: -0.5 },
   cardSelectionSubtitle: { fontSize: 13, color: '#64748B', marginTop: 2, fontWeight: '500' },
   verticalCardList: { paddingHorizontal: 24, gap: 16, paddingBottom: 40 },
-  
   modernFintechCard: {
     borderRadius: 20,
     padding: 20,
-    height: 136, // Saktong-sakto ang gidak-on, dili bug-at tan-awon
+    height: 136, 
     justifyContent: 'space-between',
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 6 },
@@ -483,7 +484,6 @@ const styles = StyleSheet.create({
     marginTop: 2,
     letterSpacing: -0.5,
   },
-
   emptyState: { flex: 0.7, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 36, gap: 14 },
   emptyIconContainer: { width: 64, height: 64, borderRadius: 20, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0' },
   emptyText: { fontSize: 18, fontWeight: '700', color: '#1E293B', letterSpacing: -0.4 },

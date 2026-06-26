@@ -3,18 +3,18 @@ import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    Modal,
-    StatusBar as NativeStatusBar,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Modal,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { supabase } from '../../lib/supabase';
 
@@ -60,17 +60,17 @@ export default function SplitExpenseScreen() {
   const [budgets, setBudgets] = useState<UserBudget[]>([]);
   const [activeSplits, setActiveSplits] = useState<ActiveSplit[]>([]);
   
-  // Transaction Context Capture States
+  // Transaction States
   const [description, setDescription] = useState('');
   const [totalAmount, setTotalAmount] = useState('');
   const [selectedBudgetId, setSelectedBudgetId] = useState('');
   const [selectedFriendIds, setSelectedFriendIds] = useState<string[]>([]);
 
-  // Settle Modal Interface Layers
+  // Settlement Modal States
   const [settleModalVisible, setSettleModalVisible] = useState(false);
   const [currentSplitToSettle, setCurrentSplitToSettle] = useState<ActiveSplit | null>(null);
 
-  // DATASET SYNCHRONIZATION MATRIX
+  // DATASET SYNCHRONIZATION
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -85,14 +85,14 @@ export default function SplitExpenseScreen() {
         .order('full_name', { ascending: true });
       if (friendsData) setFriends(friendsData);
 
-      // 2. Fetch Configured Allocations
+      // 2. Fetch Budgets
       const { data: budgetsData } = await supabase
         .from('budgets')
         .select(`id, allocated_amount, remaining_amount, categories ( name )`)
         .eq('user_id', user.id);
       if (budgetsData) setBudgets(budgetsData as any);
 
-      // 3. Fetch Historical Split Indexes
+      // 3. Fetch Active Splits
       const { data: splitsData } = await supabase
         .from('split_expenses')
         .select(`
@@ -105,7 +105,7 @@ export default function SplitExpenseScreen() {
       if (splitsData) setActiveSplits(splitsData as unknown as ActiveSplit[]);
 
     } catch (error: any) {
-      console.error('Error compiling asset metrics:', error.message);
+      console.error('Error compiling metrics:', error.message);
     } finally {
       setLoading(false);
     }
@@ -119,16 +119,16 @@ export default function SplitExpenseScreen() {
     }
   };
 
-  // EXECUTE TRANSACTION LEDGER ATOMIC WRITE OPERATIONS
+  // PROCESS NEW SPLIT
   const handleProcessSplit = async () => {
     const parsedTotal = parseFloat(totalAmount);
     if (!description.trim() || isNaN(parsedTotal) || parsedTotal <= 0 || !selectedBudgetId) {
-      Alert.alert('Validation Error', 'Please supply a transaction reason description, valid positive numeric sum value, and corresponding category folder target.');
+      Alert.alert('Validation Error', 'Please complete the description, amount, and budget category.');
       return;
     }
 
     if (selectedFriendIds.length === 0) {
-      Alert.alert('Missing Selection', 'Please isolate at least one connected connection friend registry entry node to initialize this ledger division split operation.');
+      Alert.alert('Missing Friends', 'Please select at least one friend to split this expense with.');
       return;
     }
 
@@ -137,7 +137,7 @@ export default function SplitExpenseScreen() {
 
     const selectedBudget = budgets.find(b => b.id === selectedBudgetId);
     if (!selectedBudget || Number(selectedBudget.remaining_amount) < shareAmount) {
-      Alert.alert('Insufficient Allocation', `Your personal obligation calculation totals ₱${shareAmount.toFixed(2)}, but the selected asset folder pool only holds a remaining balance margin of ₱${Number(selectedBudget?.remaining_amount || 0).toFixed(2)}.`);
+      Alert.alert('Insufficient Balance', `Your personal share is ₱${shareAmount.toFixed(2)}, but this budget only has ₱${Number(selectedBudget?.remaining_amount || 0).toFixed(2)} remaining.`);
       return;
     }
 
@@ -154,7 +154,7 @@ export default function SplitExpenseScreen() {
         .eq('id', selectedBudgetId);
       if (budgetError) throw budgetError;
 
-      // 2. Archive baseline single expense structural record
+      // 2. Insert Base Expense
       const { error: expenseError } = await supabase
         .from('expenses')
         .insert({
@@ -165,7 +165,7 @@ export default function SplitExpenseScreen() {
         });
       if (expenseError) throw expenseError;
 
-      // 3. Document shared anchor expense envelope record 
+      // 3. Insert Shared Split Group
       const { data: splitExpense, error: splitError } = await supabase
         .from('split_expenses')
         .insert({
@@ -192,7 +192,7 @@ export default function SplitExpenseScreen() {
         .insert(memberInserts);
       if (membersError) throw membersError;
 
-      Alert.alert('Success 🎉', `Shared transaction initialized successfully! Net share balances out to ₱${shareAmount.toFixed(2)} per node participant entry.`);
+      Alert.alert('Success 🎉', `Expense shared! Everyone owes ₱${shareAmount.toFixed(2)}.`);
       
       setDescription('');
       setTotalAmount('');
@@ -201,21 +201,21 @@ export default function SplitExpenseScreen() {
       fetchData();
 
     } catch (error: any) {
-      Alert.alert('Execution Terminated', error.message);
+      Alert.alert('Error processing split', error.message);
     } finally {
       setSubmitting(false);
     }
   };
 
-  // UPDATE STATUS RESOLUTION RECORD FLAGS
+  // SETTLE MEMBER BALANCES
   const handleSettleFriend = async (memberId: string, friendName: string, amount: number) => {
     Alert.alert(
-      'Payment Settlement Confirmation',
-      `Are you sure you want to settle the ₱${amount.toFixed(2)} contribution ledger flag for ${friendName}? Confirming means you have received the payment funds securely.`,
+      'Confirm Settlement',
+      `Has ${friendName} paid you ₱${amount.toFixed(2)}? This updates their status to paid.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Confirm Settlement',
+          text: 'Confirm',
           onPress: async () => {
             try {
               const { error } = await supabase
@@ -225,7 +225,7 @@ export default function SplitExpenseScreen() {
 
               if (error) throw error;
 
-              Alert.alert('Settled 🎉', `The transaction stream ledger balance for ${friendName} has been flagged as balanced.`);
+              Alert.alert('Settled 🎉', `${friendName}'s share has been paid.`);
               setSettleModalVisible(false);
               fetchData();
             } catch (error: any) {
@@ -250,27 +250,27 @@ export default function SplitExpenseScreen() {
   const previewShare = parseFloat(totalAmount) > 0 ? parseFloat(totalAmount) / previewTotalPeople : 0;
 
   return (
-    <View style={styles.container}>
-      <StatusBar style="light" />
+    <SafeAreaView style={styles.container}>
+      <StatusBar style="dark" />
       
-      {/* Immersive Slate Top Navigation Block Area */}
-      <View style={styles.headerBackground}>
+      {/* Header Block */}
+      <View style={styles.header}>
         <Text style={styles.headerTitle}>Split Expense</Text>
-        <Text style={styles.headerSubtext}>Divide group accounts, distribute costs, and coordinate structural repayment metrics among your collection peer network groups.</Text>
+        <Text style={styles.headerSubtext}>Divide balances and coordinate group payouts seamlessly.</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-        {/* Baseline Metadata Entry Component Frame */}
+        {/* Input Details */}
         <View style={styles.mainCard}>
-          <Text style={styles.sectionTitle}>Expense Particulars</Text>
+          <Text style={styles.sectionTitle}>Expense Details</Text>
           
-          <Text style={styles.label}>What is this expenditure for? (Description)</Text>
-          <TextInput style={styles.input} placeholder="e.g., Jollibee Dinner, Grab Bill Carpool" placeholderTextColor="#94A3B8" value={description} onChangeText={setDescription} />
+          <Text style={styles.label}>What is this for?</Text>
+          <TextInput style={styles.input} placeholder="e.g., Dinner, Grab ride, Groceries" placeholderTextColor="#94A3B8" value={description} onChangeText={setDescription} />
 
-          <Text style={styles.label}>Gross Invoice Billing Total (Total Amount ₱)</Text>
+          <Text style={styles.label}>Total Amount (₱)</Text>
           <TextInput style={styles.input} placeholder="0.00" placeholderTextColor="#94A3B8" keyboardType="numeric" value={totalAmount} onChangeText={setTotalAmount} />
 
-          <Text style={styles.label}>Fund Allocation Source Folder Account</Text>
+          <Text style={styles.label}>Source Wallet / Budget Allocation</Text>
           <View style={styles.categoryContainer}>
             {budgets.map((b) => (
               <TouchableOpacity
@@ -286,11 +286,11 @@ export default function SplitExpenseScreen() {
           </View>
         </View>
 
-        {/* Directory Network Selector Matrix Frame */}
-        <View style={styles.friendsCard}>
-          <Text style={styles.sectionTitle}>Select Shared Recipients</Text>
+        {/* Friends Selector */}
+        <View style={styles.mainCard}>
+          <Text style={styles.sectionTitle}>Split With</Text>
           {friends.length === 0 ? (
-            <Text style={styles.emptyFriendsText}>No registry items mapped. Connect friends via your main roster tabs first.</Text>
+            <Text style={styles.emptyText}>No friends linked yet. Link profiles in your Friends tab.</Text>
           ) : (
             friends.map((friend) => {
               const isSelected = selectedFriendIds.includes(friend.id);
@@ -308,35 +308,37 @@ export default function SplitExpenseScreen() {
           )}
         </View>
 
-        {/* Predictive Computational Ledger Division Preview Container */}
+        {/* Dynamic Calculation Preview Banner */}
         {previewShare > 0 && (
           <View style={styles.previewBanner}>
-            <Ionicons name="calculator-outline" size={18} color="#1E293B" />
-            <Text style={styles.previewText}>Calculated Target: ₱{previewShare.toFixed(2)} per user node ({previewTotalPeople} total active connections combined).</Text>
+            <Ionicons name="calculator-outline" size={18} color="#10B981" />
+            <Text style={styles.previewText}>
+              Calculation: <Text style={{fontWeight: '700'}}>₱{previewShare.toFixed(2)}</Text> each split across {previewTotalPeople} people.
+            </Text>
           </View>
         )}
 
-        <TouchableOpacity style={styles.submitBtn} onPress={handleProcessSplit} disabled={submitting} activeOpacity={0.85}>
+        <TouchableOpacity style={styles.submitBtn} onPress={handleProcessSplit} disabled={submitting} activeOpacity={0.8}>
           {submitting ? (
             <ActivityIndicator color="#FFFFFF" size="small" />
           ) : (
             <>
-              <Ionicons name="pie-chart" size={16} color="#FFFFFF" />
-              <Text style={styles.submitBtnText}>Execute Account Division</Text>
+              <Ionicons name="pie-chart-outline" size={16} color="#FFFFFF" />
+              <Text style={styles.submitBtnText}>Complete Split Setup</Text>
             </>
           )}
         </TouchableOpacity>
 
-        {/* Historical Split Tracking Stream Ledger Node Row Mapping Layer */}
-        <View style={{ marginTop: 28, marginBottom: 16 }}>
-          <Text style={styles.sectionTitle}>Shared Ledger Allocation Streams</Text>
+        {/* Active Streams History List */}
+        <View style={{ marginTop: 32, marginBottom: 16 }}>
+          <Text style={styles.sectionTitle}>Active Shared Streams</Text>
           
           {loading ? (
             <View style={{ paddingVertical: 20, alignItems: 'center' }}>
               <ActivityIndicator size="small" color="#10B981" />
             </View>
           ) : activeSplits.length === 0 ? (
-            <Text style={styles.emptyHistoryText}>No historical shared transaction matrix balances captured.</Text>
+            <Text style={styles.emptyText}>No active or past expense splits logged.</Text>
           ) : (
             activeSplits.map((split) => {
               const unpaidCount = split.split_members.filter(m => m.status === 'unpaid').length;
@@ -346,17 +348,17 @@ export default function SplitExpenseScreen() {
                   <View style={styles.historyTop}>
                     <View style={{ flex: 1, paddingRight: 12 }}>
                       <Text style={styles.historyDesc} numberOfLines={1}>{split.description}</Text>
-                      <Text style={styles.historyMeta}>Total: ₱{split.total_amount.toFixed(0)} • Personal Share: ₱{split.personal_share.toFixed(0)}</Text>
+                      <Text style={styles.historyMeta}>Total: ₱{split.total_amount.toFixed(0)} • Your Share: ₱{split.personal_share.toFixed(0)}</Text>
                     </View>
                     
                     {unpaidCount > 0 ? (
-                      <TouchableOpacity style={styles.settleOpenBtn} onPress={() => openSettleModal(split)} activeOpacity={0.85}>
+                      <TouchableOpacity style={styles.settleOpenBtn} onPress={() => openSettleModal(split)} activeOpacity={0.8}>
                         <Text style={styles.settleOpenBtnText}>Settle ({unpaidCount})</Text>
                       </TouchableOpacity>
                     ) : (
                       <View style={styles.fullySettledBadge}>
                         <Ionicons name="checkmark-circle" size={16} color="#10B981" />
-                        <Text style={styles.fullySettledText}>Balanced</Text>
+                        <Text style={styles.fullySettledText}>Settled</Text>
                       </View>
                     )}
                   </View>
@@ -367,18 +369,18 @@ export default function SplitExpenseScreen() {
         </View>
       </ScrollView>
 
-      {/* Repayment Settlement Flow Management Modal Overlay Control Layer */}
+      {/* Settle Management Drawer Modal */}
       <Modal animationType="slide" transparent={true} visible={settleModalVisible} onRequestClose={() => setSettleModalVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle} numberOfLines={1}>Settle: {currentSplitToSettle?.description}</Text>
-              <TouchableOpacity onPress={() => setSettleModalVisible(false)} style={styles.closeModalTargetBox}>
-                <Ionicons name="close" size={22} color="#1E293B" />
+              <TouchableOpacity onPress={() => setSettleModalVisible(false)}>
+                <Ionicons name="close" size={24} color="#0F172A" />
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.modalSub}>Isolate and identify the specific contact registry row that has cleared their corresponding calculated cash obligation balance:</Text>
+            <Text style={styles.modalSub}>Select a member who has completed their cash transfer to settle their tab:</Text>
 
             <FlatList
               data={currentSplitToSettle?.split_members}
@@ -388,7 +390,7 @@ export default function SplitExpenseScreen() {
                 <View style={styles.settleMemberRow}>
                   <View style={{ flex: 1, paddingRight: 10 }}>
                     <Text style={styles.settleMemberName} numberOfLines={1}>{item.friends?.full_name}</Text>
-                    <Text style={styles.settleMemberAmount}>Calculated Due: ₱{item.owed_amount.toFixed(2)}</Text>
+                    <Text style={styles.settleMemberAmount}>Owes: ₱{item.owed_amount.toFixed(2)}</Text>
                   </View>
 
                   {item.status === 'unpaid' ? (
@@ -397,8 +399,8 @@ export default function SplitExpenseScreen() {
                     </TouchableOpacity>
                   ) : (
                     <View style={styles.memberPaidBadge}>
-                      <Ionicons name="checkmark" size={12} color="#10B981" />
-                      <Text style={styles.memberPaidText}>Balanced</Text>
+                      <Ionicons name="checkmark" size={14} color="#10B981" />
+                      <Text style={styles.memberPaidText}>Paid</Text>
                     </View>
                   )}
                 </View>
@@ -407,75 +409,290 @@ export default function SplitExpenseScreen() {
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#1E293B' }, // Set to deep slate to cleanly absorb system navbar margins
-  
-  // Custom Safe Boundary Platform Dynamic Paddings
-  headerBackground: { 
-    backgroundColor: '#1E293B', 
-    paddingHorizontal: 22, 
-    paddingTop: Platform.OS === 'android' ? (NativeStatusBar.currentHeight ? NativeStatusBar.currentHeight + 14 : 45) : 16, 
-    paddingBottom: 28, 
-    borderBottomLeftRadius: 28, 
-    borderBottomRightRadius: 28 
+  container: { 
+    flex: 1, 
+    backgroundColor: '#F8FAFC' 
   },
-  headerTitle: { fontSize: 22, fontWeight: '700', color: '#FFFFFF', letterSpacing: -0.5 },
-  headerSubtext: { fontSize: 13, color: '#94A3B8', marginTop: 6, lineHeight: 18, fontWeight: '500' },
-  
-  // Flexible Elastic Layout Grid Components 
-  scrollContent: { paddingBottom: 40, paddingHorizontal: 22, paddingTop: 20, backgroundColor: '#FAFBFD' },
-  mainCard: { backgroundColor: '#FFFFFF', padding: 18, borderRadius: 22, borderWidth: 1, borderColor: '#F1F5F9', marginBottom: 16 },
-  sectionTitle: { fontSize: 15, fontWeight: '700', color: '#1E293B', marginBottom: 12, letterSpacing: -0.2 },
-  label: { fontSize: 12, fontWeight: '600', color: '#64748B', marginTop: 12, marginBottom: 6 },
-  input: { borderWidth: 1, borderColor: '#E2E8F0', padding: 12, borderRadius: 14, backgroundColor: '#FAFBFD', fontSize: 14, color: '#1E293B', fontWeight: '500' },
-  
-  categoryContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 6 },
-  budgetChip: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: 20, backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#E2E8F0' },
-  budgetChipSelected: { backgroundColor: '#1E293B', borderColor: '#1E293B' },
-  chipText: { fontSize: 12, color: '#475569', fontWeight: '500' },
-  chipTextSelected: { color: '#FFFFFF', fontWeight: '600' },
-  
-  friendsCard: { backgroundColor: '#FFFFFF', padding: 18, borderRadius: 22, borderWidth: 1, borderColor: '#F1F5F9', marginBottom: 16 },
-  emptyFriendsText: { color: '#64748B', fontSize: 13, textAlign: 'center', paddingVertical: 12 },
-  friendRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, paddingHorizontal: 8 },
-  friendRowSelected: { backgroundColor: '#F1F5F9', borderRadius: 12 },
-  friendLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
-  checkbox: { width: 18, height: 18, borderRadius: 6, borderWidth: 1.5, borderColor: '#94A3B8', justifyContent: 'center', alignItems: 'center' },
-  checkboxChecked: { backgroundColor: '#1E293B', borderColor: '#1E293B' },
-  friendName: { fontSize: 14, fontWeight: '600', color: '#1E293B', flex: 1 },
-  
-  previewBanner: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F1F5F9', padding: 14, borderRadius: 14, gap: 10, marginBottom: 16, borderWidth: 1, borderColor: '#E2E8F0' },
-  previewText: { fontSize: 12, color: '#1E293B', flex: 1, fontWeight: '500' },
-  submitBtn: { backgroundColor: '#1E293B', padding: 16, borderRadius: 16, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 },
-  submitBtnText: { color: '#FFFFFF', fontSize: 15, fontWeight: '600' },
-
-  // History Non-Overlapping Feed Component Rows
-  emptyHistoryText: { color: '#64748B', fontSize: 13, textAlign: 'center', marginTop: 16 },
-  historyCard: { backgroundColor: '#FFFFFF', padding: 16, borderRadius: 22, borderWidth: 1, borderColor: '#F1F5F9', marginBottom: 10 },
-  historyTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  historyDesc: { fontSize: 14, fontWeight: '700', color: '#1E293B', letterSpacing: -0.1 },
-  historyMeta: { fontSize: 11, color: '#64748B', marginTop: 4, fontWeight: '500' },
-  settleOpenBtn: { backgroundColor: '#1E293B', paddingVertical: 8, paddingHorizontal: 14, borderRadius: 10 },
-  settleOpenBtnText: { color: '#FFFFFF', fontSize: 11, fontWeight: '600' },
-  fullySettledBadge: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  fullySettledText: { color: '#10B981', fontSize: 12, fontWeight: '600' },
-
-  // Bottom Fixed Sheet Settle Modal Structural Style Configurations
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.4)', justifyContent: 'flex-end' },
-  modalContainer: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, maxHeight: '60%' },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  closeModalTargetBox: { padding: 4 },
-  modalTitle: { fontSize: 16, fontWeight: '700', color: '#1E293B', flex: 1, marginRight: 8 },
-  modalSub: { fontSize: 13, color: '#64748B', marginBottom: 18, lineHeight: 18, fontWeight: '500' },
-  settleMemberRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#FAFBFD' },
-  settleMemberName: { fontSize: 14, fontWeight: '600', color: '#1E293B' },
-  settleMemberAmount: { fontSize: 12, color: '#64748B', marginTop: 3, fontWeight: '500' },
-  settleActionBtn: { backgroundColor: '#1E293B', paddingVertical: 8, paddingHorizontal: 14, borderRadius: 10 },
-  settleActionBtnText: { color: '#FFFFFF', fontSize: 11, fontWeight: '600' },
-  memberPaidBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 6 },
-  memberPaidText: { color: '#10B981', fontSize: 12, fontWeight: '600' }
+  header: { 
+    paddingHorizontal: 24, 
+    paddingTop: Platform.OS === 'android' ? 40 : 16,
+    paddingBottom: 8 
+  },
+  headerTitle: { 
+    fontSize: 32, 
+    fontWeight: '800', 
+    color: '#0F172A', 
+    letterSpacing: -0.75 
+  },
+  headerSubtext: { 
+    fontSize: 14, 
+    color: '#64748B', 
+    marginTop: 4, 
+    fontWeight: '400' 
+  },
+  scrollContent: { 
+    paddingBottom: 40, 
+    paddingHorizontal: 24, 
+    paddingTop: 16 
+  },
+  mainCard: { 
+    backgroundColor: '#FFFFFF', 
+    padding: 20, 
+    borderRadius: 20, 
+    borderWidth: 1, 
+    borderColor: '#E2E8F0', 
+    marginBottom: 16,
+    shadowColor: '#0F172A', 
+    shadowOffset: { width: 0, height: 2 }, 
+    shadowOpacity: 0.02, 
+    shadowRadius: 12, 
+    
+  },
+  sectionTitle: { 
+    fontSize: 16, 
+    fontWeight: '700', 
+    color: '#0F172A', 
+    marginBottom: 4, 
+    letterSpacing: -0.3 
+  },
+  label: { 
+    fontSize: 13, 
+    fontWeight: '600', 
+    color: '#64748B', 
+    marginTop: 14, 
+    marginBottom: 6 
+  },
+  input: { 
+    borderWidth: 1, 
+    borderColor: '#E2E8F0', 
+    padding: 12, 
+    borderRadius: 12, 
+    backgroundColor: '#F8FAFC', 
+    fontSize: 15, 
+    color: '#0F172A' 
+  },
+  categoryContainer: { 
+    flexDirection: 'row', 
+    flexWrap: 'wrap', 
+    gap: 8, 
+    marginTop: 6 
+  },
+  budgetChip: { 
+    paddingVertical: 8, 
+    paddingHorizontal: 14, 
+    borderRadius: 20, 
+    backgroundColor: '#F1F5F9', 
+    borderWidth: 1, 
+    borderColor: '#E2E8F0' 
+  },
+  budgetChipSelected: { 
+    backgroundColor: '#E6F4EA', 
+    borderColor: '#10B981' 
+  },
+  chipText: { 
+    fontSize: 12, 
+    color: '#475569', 
+    fontWeight: '500' 
+  },
+  chipTextSelected: { 
+    color: '#10B981', 
+    fontWeight: '700' 
+  },
+  emptyText: { 
+    color: '#94A3B8', 
+    fontSize: 14, 
+    textAlign: 'center', 
+    paddingVertical: 16 
+  },
+  friendRow: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    paddingVertical: 10, 
+    paddingHorizontal: 8 
+  },
+  friendRowSelected: { 
+    backgroundColor: '#F8FAFC', 
+    borderRadius: 12 
+  },
+  friendLeft: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: 12, 
+    flex: 1 
+  },
+  checkbox: { 
+    width: 20, 
+    height: 20, 
+    borderRadius: 6, 
+    borderWidth: 2, 
+    borderColor: '#CBD5E1', 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+  checkboxChecked: { 
+    backgroundColor: '#10B981', 
+    borderColor: '#10B981' 
+  },
+  friendName: { 
+    fontSize: 15, 
+    fontWeight: '600', 
+    color: '#0F172A', 
+    flex: 1 
+  },
+  previewBanner: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    backgroundColor: '#E6F4EA', 
+    padding: 14, 
+    borderRadius: 12, 
+    gap: 10, 
+    marginBottom: 16, 
+    borderWidth: 1, 
+    borderColor: '#A7F3D0' 
+  },
+  previewText: { 
+    fontSize: 14, 
+    color: '#065F46', 
+    flex: 1 
+  },
+  submitBtn: { 
+    backgroundColor: '#10B981', 
+    padding: 16, 
+    borderRadius: 14, 
+    flexDirection: 'row', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    gap: 8,
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    
+  },
+  submitBtnText: { 
+    color: '#FFFFFF', 
+    fontSize: 16, 
+    fontWeight: '600' 
+  },
+  historyCard: { 
+    backgroundColor: '#FFFFFF', 
+    padding: 16, 
+    borderRadius: 16, 
+    borderWidth: 1, 
+    borderColor: '#E2E8F0', 
+    marginBottom: 10 
+  },
+  historyTop: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center' 
+  },
+  historyDesc: { 
+    fontSize: 15, 
+    fontWeight: '700', 
+    color: '#0F172A', 
+    letterSpacing: -0.1 
+  },
+  historyMeta: { 
+    fontSize: 12, 
+    color: '#64748B', 
+    marginTop: 4 
+  },
+  settleOpenBtn: { 
+    backgroundColor: '#10B981', 
+    paddingVertical: 8, 
+    paddingHorizontal: 14, 
+    borderRadius: 10 
+  },
+  settleOpenBtnText: { 
+    color: '#FFFFFF', 
+    fontSize: 12, 
+    fontWeight: '600' 
+  },
+  fullySettledBadge: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: 4 
+  },
+  fullySettledText: { 
+    color: '#10B981', 
+    fontSize: 13, 
+    fontWeight: '600' 
+  },
+  modalOverlay: { 
+    flex: 1, 
+    backgroundColor: 'rgba(15, 23, 42, 0.3)', 
+    justifyContent: 'flex-end' 
+  },
+  modalContainer: { 
+    backgroundColor: '#FFFFFF', 
+    borderTopLeftRadius: 24, 
+    borderTopRightRadius: 24, 
+    padding: 24, 
+    maxHeight: '60%' 
+  },
+  modalHeader: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    marginBottom: 8 
+  },
+  modalTitle: { 
+    fontSize: 18, 
+    fontWeight: '800', 
+    color: '#0F172A', 
+    flex: 1, 
+    marginRight: 8,
+    letterSpacing: -0.4
+  },
+  modalSub: { 
+    fontSize: 14, 
+    color: '#64748B', 
+    marginBottom: 16, 
+    lineHeight: 20 
+  },
+  settleMemberRow: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    paddingVertical: 14, 
+    borderBottomWidth: 1, 
+    borderBottomColor: '#F1F5F9' 
+  },
+  settleMemberName: { 
+    fontSize: 15, 
+    fontWeight: '600', 
+    color: '#0F172A' 
+  },
+  settleMemberAmount: { 
+    fontSize: 13, 
+    color: '#64748B', 
+    marginTop: 2 
+  },
+  settleActionBtn: { 
+    backgroundColor: '#10B981', 
+    paddingVertical: 8, 
+    paddingHorizontal: 14, 
+    borderRadius: 10 
+  },
+  settleActionBtnText: { 
+    color: '#FFFFFF', 
+    fontSize: 12, 
+    fontWeight: '600' 
+  },
+  memberPaidBadge: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: 4 
+  },
+  memberPaidText: { 
+    color: '#10B981', 
+    fontSize: 13, 
+    fontWeight: '600' 
+  }
 });
