@@ -337,6 +337,7 @@ export default function MonitoringScreen() {
 
                       <View style={styles.ccChipContainer}>
                         <View style={styles.ccChip} />
+                        
                       </View>
 
                       <View style={styles.ccMetricsContainer}>
@@ -422,7 +423,7 @@ const styles = StyleSheet.create({
   ccChip: {
     width: 38,
     height: 28,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: '#ffd900',
     borderRadius: 6,
     opacity: 0.85,
     borderWidth: 1,
