@@ -1,5 +1,5 @@
-// app/(spenderTabs)/reminders.tsx
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router'; // Gidugang para sa navigation back to home
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
 import {
@@ -38,6 +38,7 @@ interface CategorySelect {
 }
 
 export default function RemindersScreen() {
+  const router = useRouter(); // Initialize ang router engine
   const [loading, setLoading] = useState(true);
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [categories, setCategories] = useState<CategorySelect[]>([]);
@@ -253,9 +254,14 @@ export default function RemindersScreen() {
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
       
-      {/* Clean Modern Header Section */}
+      {/* Clean Modern Header Section with Back Button */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Reminders</Text>
+        <View style={styles.headerTopRow}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={22} color="#0F172A" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Reminders</Text>
+        </View>
         <Text style={styles.headerSubtext}>Tap any calendar date to schedule an upcoming payment or bill.</Text>
       </View>
 
@@ -357,8 +363,24 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === 'android' ? 40 : 16,
     paddingBottom: 16 
   },
+  headerTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginLeft: -4 // I-align og gamay sa padding sa container
+  },
+  backButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   headerTitle: { 
-    fontSize: 32, 
+    fontSize: 28, // Gi-adjust gamay gikan sa 32 para balance sa back button
     fontWeight: '800', 
     color: '#0F172A', 
     letterSpacing: -0.75 
@@ -366,7 +388,7 @@ const styles = StyleSheet.create({
   headerSubtext: { 
     fontSize: 14, 
     color: '#64748B', 
-    marginTop: 4, 
+    marginTop: 8, 
     fontWeight: '400' 
   },
   calendarWrapper: { 
@@ -380,7 +402,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 }, 
     shadowOpacity: 0.02, 
     shadowRadius: 12, 
-
   },
   feedWrapper: { 
     flex: 1, 
@@ -556,7 +577,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 10,
-
   },
   saveBtnText: { 
     color: '#FFFFFF', 

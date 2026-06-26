@@ -1,5 +1,5 @@
-// app/(spenderTabs)/home.tsx
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router'; // Gidugang para sa navigation
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -7,6 +7,7 @@ import {
   Alert,
   Dimensions,
   FlatList,
+  Image, // Gidugang para sa pag-display sa avatar picture
   Modal,
   StatusBar as NativeStatusBar,
   Platform,
@@ -53,9 +54,11 @@ interface RecentExpense {
 }
 
 export default function SpenderHomeScreen() {
+  const router = useRouter(); // Initialize ang router engine
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [spenderName, setSpenderName] = useState('Spender');
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null); // State para sa avatar picture
   
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [categories, setCategories] = useState<DynamicCategory[]>([]);
@@ -70,7 +73,7 @@ export default function SpenderHomeScreen() {
   const [allocateAmount, setAllocateAmount] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  // References para sa FlatList ug Auto-Scroll interval timer (Safe sa Live Share environment errors)
+  // References para sa FlatList ug Auto-Scroll interval timer
   const flatListRef = useRef<FlatList>(null);
   const autoScrollTimer = useRef<any>(null);
 
@@ -80,13 +83,15 @@ export default function SpenderHomeScreen() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Gi-update aron i-fetch apil ang avatar_url
       const { data: profileData } = await supabase
         .from('profiles')
-        .select('full_name')
+        .select('full_name, avatar_url')
         .eq('id', user.id)
         .single();
       
       if (profileData?.full_name) setSpenderName(profileData.full_name);
+      if (profileData?.avatar_url) setAvatarUrl(profileData.avatar_url); // Gi-save ang avatar url
 
       const { data: allCategoriesData, error: catError } = await supabase
         .from('categories')
@@ -101,7 +106,7 @@ export default function SpenderHomeScreen() {
           id: cat.id,
           name: cat.name,
           icon: cat.icon || 'options',
-          color: cat.color || '#1E463A', // Default background fallback color
+          color: cat.color || '#1E463A', 
           totalSpent: 0,
           allocatedAmount: 0,
           remainingAmount: 0 
@@ -277,9 +282,8 @@ export default function SpenderHomeScreen() {
     setModalVisible(true);
   };
 
-  // Engine para sa Automatic Auto-Swipe/Auto-Scroll rotation logic (Standard cross-env setup)
   const startAutoScrollEngine = () => {
-    stopAutoScrollEngine(); // Limpyohan una ang daan nga timer aron dili mag-overlap
+    stopAutoScrollEngine(); 
     
     if (categories.length <= 1) return;
 
@@ -294,7 +298,7 @@ export default function SpenderHomeScreen() {
 
         return nextIndex;
       });
-    }, 3500); // Motalikod/Mabalhin matag 3.5 ka segundo
+    }, 3500); 
   };
 
   const stopAutoScrollEngine = () => {
@@ -306,7 +310,7 @@ export default function SpenderHomeScreen() {
 
   useEffect(() => {
     fetchDashboardData();
-    return () => stopAutoScrollEngine(); // I-clear ang timer kung mo-leave sa screen
+    return () => stopAutoScrollEngine(); 
   }, []);
 
   useEffect(() => {
@@ -320,14 +324,12 @@ export default function SpenderHomeScreen() {
     fetchDashboardData();
   };
 
-  // Mo-update sa index tracker dots kung ang manual interaction mahitabo
   const onScrollMomentumEnd = (event: any) => {
     const offsetX = event.nativeEvent.contentOffset.x;
     const index = Math.round(offsetX / SNAP_INTERVAL);
     if (index >= 0 && index < categories.length) {
       setCurrentCardIndex(index);
     }
-    // I-restart ang auto scroll pagkahuman sa manual gesture interaction
     startAutoScrollEngine();
   };
 
@@ -355,17 +357,27 @@ export default function SpenderHomeScreen() {
         <View style={styles.headerBackground}>
           <View style={styles.welcomeRow}>
             <View style={styles.avatarRow}>
-              <View style={styles.avatarPlaceholder}>
-                <Ionicons name="person" size={15} color="#FFFFFF" />
-              </View>
+              {/* Gi-update: I-check kung naay avatarUrl, kung naa maoay i-display gamit ang Image component */}
+              {avatarUrl ? (
+                <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+              ) : (
+                <View style={styles.avatarPlaceholder}>
+                  <Ionicons name="person" size={15} color="#FFFFFF" />
+                </View>
+              )}
               <View>
                 <Text style={styles.welcomeSubtext}>Hello, {spenderName}</Text>
                 <Text style={styles.welcomeText}>Welcome Back</Text>
               </View>
             </View>
-            <TouchableOpacity style={styles.bellIconBox}>
-              <Ionicons name="notifications-outline" size={20} color="#FFFFFF" />
-              <View style={styles.bellDot} />
+
+            {/* Gi-update: Gihimong calendar icon ug nagdugang og routing padulong sa reminders */}
+            <TouchableOpacity 
+              style={styles.calendarIconBox} 
+              onPress={() => router.push('/reminders')} // E-adjust ang path base sa imong folder setup (e.g., '/(spenderTabs)/reminders')
+            >
+              <Ionicons name="calendar-outline" size={20} color="#FFFFFF" />
+              <View style={styles.calendarDot} />
             </TouchableOpacity>
           </View>
           
@@ -389,7 +401,7 @@ export default function SpenderHomeScreen() {
           )}
         </View>
 
-        {/* Stable Auto-Scrolling Dynamic Category Cards Carousel */}
+        {/* Carousel Section */}
         <View style={styles.cardsSectionContainer}>
           <FlatList
             ref={flatListRef}
@@ -400,7 +412,7 @@ export default function SpenderHomeScreen() {
             snapToAlignment="center"
             showsHorizontalScrollIndicator={false}
             onMomentumScrollEnd={onScrollMomentumEnd}
-            onScrollBeginDrag={stopAutoScrollEngine} // Undangon una samtang ginahikap sa user
+            onScrollBeginDrag={stopAutoScrollEngine} 
             contentContainerStyle={{
               paddingHorizontal: (width - CARD_WIDTH) / 2 - CARD_MARGIN
             }}
@@ -449,7 +461,6 @@ export default function SpenderHomeScreen() {
             }}
           />
 
-          {/* Dots Indicator sa ubos sa carousel */}
           {categories.length > 0 && (
             <View style={styles.dotsRowContainer}>
               {categories.map((_, dotIndex) => (
@@ -545,12 +556,14 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 32 
   },
   welcomeRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
+  navigatorRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   avatarRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   avatarPlaceholder: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center' },
+  avatarImage: { width: 40, height: 40, borderRadius: 20, resizeMode: 'cover' }, // Style para sa tinuod nga hulagway
   welcomeSubtext: { fontSize: 13, color: '#A3B8B0' },
   welcomeText: { fontSize: 16, fontWeight: '700', color: '#FFFFFF', marginTop: 1 },
-  bellIconBox: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.08)', justifyContent: 'center', alignItems: 'center', position: 'relative' },
-  bellDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#C5FF42', position: 'absolute', top: 11, right: 11, borderWidth: 1.5, borderColor: '#06261D' },
+  calendarIconBox: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.08)', justifyContent: 'center', alignItems: 'center', position: 'relative' },
+  calendarDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#C5FF42', position: 'absolute', top: 11, right: 11, borderWidth: 1.5, borderColor: '#06261D' },
   balanceContainer: { alignItems: 'center', marginTop: 8 },
   balanceLabel: { fontSize: 13, color: '#A3B8B0', fontWeight: '500', marginBottom: 6 },
   mainBalance: { fontSize: 36, fontWeight: '700', color: '#FFFFFF', letterSpacing: -0.5 },
@@ -561,10 +574,8 @@ const styles = StyleSheet.create({
   headerMetricsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   headerMetricText: { color: '#A3B8B0', fontSize: 11, fontWeight: '500' },
 
-  // Carousel Layout Container
   cardsSectionContainer: { marginTop: -45, marginBottom: 15, width: '100%' },
   
-  // Imong Original Flat-styled Solid Card Structure (Walay Credit Card Lines/Emblems)
   originalCategoryCard: {
     width: CARD_WIDTH,
     height: 175,
@@ -594,7 +605,6 @@ const styles = StyleSheet.create({
   originalCardMetricsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   originalFooterMetaText: { color: 'rgba(255,255,255,0.75)', fontSize: 11, fontWeight: '500' },
 
-  // Carousel Dots Indicator Setup
   dotsRowContainer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 14, gap: 6 },
   indicatorDot: { height: 6, borderRadius: 3 },
   activeDot: { width: 14, backgroundColor: '#06261D' },
