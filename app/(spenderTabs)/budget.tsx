@@ -1,4 +1,4 @@
-// app/(spenderTabs)/expenses.tsx
+// app/(spenderTabs)/budget.tsx
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -7,9 +7,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
-  Keyboard // Gi-import para sa pag-dismiss sa keyboard
-  ,
-
+  Keyboard,
   KeyboardAvoidingView,
   Modal,
   StatusBar as NativeStatusBar,
@@ -204,32 +202,53 @@ export default function SpenderExpensesScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.verticalCardList}
           showsVerticalScrollIndicator={false}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              activeOpacity={0.85}
-              onPress={() => handleCardPress(item)}
-              style={[
-                styles.modernFintechCard,
-                { backgroundColor: item.categories.color || '#1E293B' }
-              ]}
-            >
-              <View style={styles.modernCardHeaderRow}>
-                <View style={styles.modernCardBadgeIconWrapper}>
-                  {/* @ts-ignore */}
-                  <Ionicons name={item.categories.icon || 'wallet-outline'} size={18} color={item.categories.color || '#1E293B'} />
+          renderItem={({ item }) => {
+            // PROGRESS BAR ADDITION: Kalkulahon ang nahabilin nga porsyento sa kwarta
+            const total = item.allocated_amount || 1; // Likayan ang division by zero
+            const remainingPercent = Math.max(0, Math.min(100, (item.remaining_amount / total) * 100));
+
+            return (
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={() => handleCardPress(item)}
+                style={[
+                  styles.modernFintechCard,
+                  { backgroundColor: item.categories.color || '#1E293B' }
+                ]}
+              >
+                <View style={styles.modernCardHeaderRow}>
+                  <View style={styles.modernCardBadgeIconWrapper}>
+                    {/* @ts-ignore */}
+                    <Ionicons name={item.categories.icon || 'wallet-outline'} size={18} color={item.categories.color || '#1E293B'} />
+                  </View>
+                  <Text style={styles.modernCardCategoryText}>{item.categories.name}</Text>
+                  <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.6)" style={{ marginLeft: 'auto' }} />
                 </View>
-                <Text style={styles.modernCardCategoryText}>{item.categories.name}</Text>
-                <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.6)" style={{ marginLeft: 'auto' }} />
-              </View>
-              
-              <View style={styles.modernCardBalanceContainer}>
-                <Text style={styles.modernCardBalanceLabel}>AVAILABLE BALANCE</Text>
-                <Text style={styles.modernCardBalanceAmount}>
-                  ₱{item.remaining_amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          )}
+                
+                {/* PROGRESS BAR ADDITION: Ang Track ug Fill sa Bar */}
+                <View style={styles.progressBarContainer}>
+                  <View style={styles.progressBarTrack}>
+                    <View style={[styles.progressBarFill, { width: `${remainingPercent}%` }]} />
+                  </View>
+                  <View style={styles.progressBarLabelRow}>
+                    <Text style={styles.progressBarLeftText}>
+                      ₱{item.remaining_amount.toLocaleString(undefined, { maximumFractionDigits: 0 })} left
+                    </Text>
+                    <Text style={styles.progressBarRightText}>
+                      of ₱{item.allocated_amount.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.modernCardBalanceContainer}>
+                  <Text style={styles.modernCardBalanceLabel}>AVAILABLE BALANCE</Text>
+                  <Text style={styles.modernCardBalanceAmount}>
+                    ₱{item.remaining_amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            );
+          }}
         />
       )}
 
@@ -248,7 +267,6 @@ export default function SpenderExpensesScreen() {
           />
 
           <KeyboardAvoidingView 
-            // Gi-optimize ang behavior depende sa platform
             behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
             style={styles.modalContent}
           >
@@ -364,7 +382,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
-    height: '75%', // Gi-maximize gamay para mas dako og agianan ang porma
+    height: '75%', 
     paddingTop: 14,
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: -10 },
@@ -439,10 +457,12 @@ const styles = StyleSheet.create({
   cardSelectionTitle: { fontSize: 24, fontWeight: '800', color: '#0F172A', letterSpacing: -0.5 },
   cardSelectionSubtitle: { fontSize: 13, color: '#64748B', marginTop: 2, fontWeight: '500' },
   verticalCardList: { paddingHorizontal: 24, gap: 16, paddingBottom: 40 },
+  
+  // GI-MODIFIED: Gidugangan gamay ang height gikan 136 ngadto sa 165 para masulod ang progress bar
   modernFintechCard: {
     borderRadius: 20,
     padding: 20,
-    height: 136, 
+    height: 165, 
     justifyContent: 'space-between',
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 6 },
@@ -468,6 +488,39 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: -0.2,
   },
+  
+  // PROGRESS BAR STYLES
+  progressBarContainer: {
+    marginTop: 10,
+    width: '100%',
+  },
+  progressBarTrack: {
+    height: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)', // Semi-transparent white track
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: '#FFFFFF', // Solid white loader line
+    borderRadius: 3,
+  },
+  progressBarLabelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 4,
+  },
+  progressBarLeftText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  progressBarRightText: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 11,
+    fontWeight: '400',
+  },
+
   modernCardBalanceContainer: {
     marginTop: 'auto',
   },

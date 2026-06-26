@@ -43,9 +43,19 @@ export default function SpenderLayout() {
       />
       
       <Tabs.Screen 
-        name="expenses" 
+        name="budget" 
         options={{ 
-          title: 'Expenses', 
+          title: 'Budgets', 
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? "wallet" : "wallet-outline"} size={22} color={color} />
+          ) 
+        }} 
+      />
+
+      <Tabs.Screen 
+        name="transaction" 
+        options={{ 
+          title: 'Transactions', 
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? "wallet" : "wallet-outline"} size={22} color={color} />
           ) 

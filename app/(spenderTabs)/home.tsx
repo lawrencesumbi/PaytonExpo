@@ -477,7 +477,9 @@ export default function SpenderHomeScreen() {
         <View style={styles.contentBody}>
           <View style={styles.recentSectionHeader}>
             <Text style={styles.sectionTitle}>Recent Transaction</Text>
-            <TouchableOpacity><Text style={styles.seeAllText}>See all</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push('/transaction')}>
+              <Text style={styles.seeAllText}>See all</Text>
+            </TouchableOpacity>
           </View>
 
           {recentExpenses.length === 0 ? (
@@ -548,7 +550,7 @@ const styles = StyleSheet.create({
   scrollContent: { paddingBottom: 40 },
   
   headerBackground: { 
-    backgroundColor: '#06261D', 
+    backgroundColor: '#0f684f', 
     paddingHorizontal: 24, 
     paddingTop: Platform.OS === 'android' ? (NativeStatusBar.currentHeight ? NativeStatusBar.currentHeight + 14 : 45) : 16, 
     paddingBottom: 64, 
@@ -618,7 +620,7 @@ const styles = StyleSheet.create({
   recentSectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
   seeAllText: { fontSize: 13, color: '#718096', fontWeight: '600' },
   
-  recentListContainer: { backgroundColor: '#FFFFFF', borderRadius: 20, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.03, shadowRadius: 6, elevation: 1 },
+  recentListContainer: { backgroundColor: '#FFFFFF', borderRadius: 20, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.03, shadowRadius: 6 },
   recentItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#F7F9FA' },
   recentLeft: { flexDirection: 'row', alignItems: 'center', gap: 14, flex: 0.75 },
   iconBox: { width: 40, height: 40, borderRadius: 14, backgroundColor: '#F0F4F2', justifyContent: 'center', alignItems: 'center' },
