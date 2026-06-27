@@ -1,7 +1,7 @@
 // app/(spenderTabs)/_layout.tsx
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
-import { Platform } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 
 export default function SpenderLayout() {
   return (
@@ -26,12 +26,13 @@ export default function SpenderLayout() {
           // Subtle standard shadow para dili flat kaayo ang transition gikan sa content
           shadowColor: '#0F172A',
           shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: 0.02,
+          shadowOpacity: 0.05,
           shadowRadius: 4,
           elevation: 3, 
         },
       }}
     >
+      {/* ----------------- MAKITA SA UBOS ----------------- */}
       <Tabs.Screen 
         name="home" 
         options={{ 
@@ -52,32 +53,25 @@ export default function SpenderLayout() {
         }} 
       />
 
-      <Tabs.Screen 
-        name="transaction" 
-        options={{ 
-          title: 'Transactions', 
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? "wallet" : "wallet-outline"} size={22} color={color} />
-          ) 
-        }} 
-      />
-      
-      <Tabs.Screen 
-        name="reminders" 
-        options={{ 
-          title: 'Reminders', 
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? "calendar" : "calendar-outline"} size={22} color={color} />
-          ) 
-        }} 
-      />
-      
+      {/* FLOATING SCAN TAB */}
       <Tabs.Screen 
         name="scan" 
         options={{ 
           title: 'Scan', 
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? "qr-code" : "qr-code-outline"} size={22} color={color} />
+          tabBarLabelStyle: {
+            // Gi-adjust ang label sa scan para dili matabunan sa floating button
+            marginBottom: Platform.OS === 'ios' ? -5 : 4,
+            fontSize: 11,
+            fontWeight: '600',
+          },
+          tabBarIcon: ({ focused }) => (
+            <View style={[styles.floatingButton, focused && styles.floatingButtonActive]}>
+              <Ionicons 
+                name={focused ? "camera" : "camera-outline"} 
+                size={24} 
+                color="#FFFFFF" // Puti ang icon para nindot tan-awon sa green background
+              />
+            </View>
           ) 
         }} 
       />
@@ -93,26 +87,6 @@ export default function SpenderLayout() {
       />
 
       <Tabs.Screen 
-        name="friends" 
-        options={{ 
-          title: 'Friends', 
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? "people" : "people-outline"} size={22} color={color} />
-          ) 
-        }} 
-      />
-      
-      <Tabs.Screen 
-        name="invitations" 
-        options={{ 
-          title: 'Invites', 
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? "people" : "people-outline"} size={22} color={color} />
-          ) 
-        }} 
-      />
-      
-      <Tabs.Screen 
         name="profile" 
         options={{ 
           title: 'Profile', 
@@ -121,6 +95,36 @@ export default function SpenderLayout() {
           ) 
         }} 
       />
+
+      {/* ----------------- NAKATAGO (HIDDEN TABS) ----------------- */}
+      <Tabs.Screen name="transaction" options={{ href: null }} />
+      <Tabs.Screen name="reminders" options={{ href: null }} />
+      <Tabs.Screen name="friends" options={{ href: null }} />
+      <Tabs.Screen name="invitations" options={{ href: null }} />
     </Tabs>
   );
 }
+
+// Gidugang nga Styles para sa Floating Effect
+const styles = StyleSheet.create({
+  floatingButton: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: '#10B981', // Gi-match sa imong Emerald Green
+    justifyContent: 'center',
+    alignItems: 'center',
+    top: -12, // Mao ni ang nagpalutaw niya pataas
+    
+    // Shadow para sa floating effect
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 5,
+  },
+  floatingButtonActive: {
+    backgroundColor: '#059669', // Medyo mas mongitngit gamay nga green kung gi-click/active
+    transform: [{ scale: 1.05 }], // Mo dako gamay para responsive feel
+  },
+});
