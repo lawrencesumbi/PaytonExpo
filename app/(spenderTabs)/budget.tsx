@@ -1,5 +1,6 @@
 // app/(spenderTabs)/budget.tsx
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useCallback, useEffect, useState } from 'react';
@@ -19,9 +20,10 @@ import {
   TextInput,
   TouchableOpacity,
   TouchableWithoutFeedback,
-  View
+  View,
 } from 'react-native';
 import { supabase } from '../../lib/supabase';
+
 
 interface BudgetOption {
   id: string;
@@ -179,10 +181,15 @@ export default function SpenderExpensesScreen() {
     );
   }
 
+  
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
-      
+      <LinearGradient colors = {['#e5f1d2','#aaf0d5','#68eee3','#ffffff']}
+                    start={{x: 0.10, y: 1}}
+                    end={{x: 0.20, y: .10}}
+                    style = {styles.gradient}
+    >
       <View style={styles.cardSelectionHeader}>
         <Text style={styles.cardSelectionTitle}>Select Wallet</Text>
         <Text style={styles.cardSelectionSubtitle}>{budgets.length} active folders</Text>
@@ -365,13 +372,14 @@ export default function SpenderExpensesScreen() {
           </KeyboardAvoidingView>
         </View>
       </Modal>
-
+     </LinearGradient>               
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FAFBFD' },
+  gradient: {flex: 1},
   centeredContent: { justifyContent: 'center', alignItems: 'center' },
   modalOverlay: {
     flex: 1,

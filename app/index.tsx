@@ -26,7 +26,7 @@ export default function WelcomeScreen() {
     ]).start();
 
     const timer = setTimeout(() => {
-      router.replace("/login"); 
+     router.replace("/(auth)/getting-started");
     }, 2000); 
 
     return () => clearTimeout(timer);
@@ -36,9 +36,8 @@ export default function WelcomeScreen() {
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
       <View style={styles.contentContainer}>
-        {/* 3. Apply both opacity and transform scale */}
         <Animated.Image 
-          source={require('../assets/images/logo-light.png')} 
+          source={require('../assets/images/logo-light1.png')} 
           style={[
             styles.logo, 
             { 

@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router'; // Siguradoon nato nga na-import ni og tarong
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useRef, useState } from 'react';
@@ -341,11 +342,15 @@ export default function SpenderHomeScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
+      <LinearGradient colors = {['#e5f1d2','#aaf0d5','#68eee3','#ffffff']}
+                    start={{x: 0.10, y: 1}}
+                    end={{x: 0.20, y: .10}}
+                    style = {styles.gradient}
+    >
       <ScrollView 
         contentContainerStyle={styles.scrollContent}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#C5FF42']} />}
       >
-        {/* Emerald Header Section */}
         <View style={styles.headerBackground}>
           <View style={styles.welcomeRow}>
             <View style={styles.avatarRow}>
@@ -542,22 +547,25 @@ export default function SpenderHomeScreen() {
           </View>
         </View>
       </Modal>
+      </LinearGradient>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8F9FA' },
+  gradient: {flex: 1},
   centeredLoading: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#06261D' },
   scrollContent: { paddingBottom: 40 },
   
   headerBackground: { 
-    backgroundColor: '#0f684f', 
+    backgroundColor: '#ffffff', 
     paddingHorizontal: 24, 
     paddingTop: Platform.OS === 'android' ? (NativeStatusBar.currentHeight ? NativeStatusBar.currentHeight + 14 : 45) : 16, 
     paddingBottom: 64, 
-    borderBottomLeftRadius: 32, 
-    borderBottomRightRadius: 32 
+    borderBottomColor: '#000000',
+    borderBottomLeftRadius: 50, 
+    borderBottomRightRadius: 50
   },
   welcomeRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
   navigatorRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
@@ -565,7 +573,7 @@ const styles = StyleSheet.create({
   avatarPlaceholder: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center' },
   avatarImage: { width: 40, height: 40, borderRadius: 20, resizeMode: 'cover' }, 
   welcomeSubtext: { fontSize: 13, color: '#A3B8B0' },
-  welcomeText: { fontSize: 16, fontWeight: '700', color: '#FFFFFF', marginTop: 1 },
+  welcomeText: { fontSize: 16, fontWeight: '700', color: '#000000', marginTop: 1 },
   
   // Bag-ong style para sa duha ka icons sa taas
   iconGroupRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },

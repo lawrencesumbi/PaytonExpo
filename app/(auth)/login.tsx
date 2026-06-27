@@ -12,7 +12,6 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // 1. Login Flow Handler
   const handleLogin = async () => {
     if (!email || !password) {
       Alert.alert("Missing Fields", "Please enter both your email and password.");
@@ -208,7 +207,7 @@ const styles = StyleSheet.create({
   },
   subtitle: { 
     fontSize: 13, 
-    color: '#0e9b59',
+    color: '#000000',
     lineHeight: 18,
   },
   form: { 
@@ -272,7 +271,7 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   socialButton: {
-    backgroundColor: '#f3fdec',
+    backgroundColor: '#ffffff',
     borderRadius: 30,
     height: 54,
     flexDirection: 'row',
@@ -292,7 +291,7 @@ const styles = StyleSheet.create({
     alignItems: 'center' 
   },
   footerText: { 
-    color: '#3e973b', 
+    color: '#000000', 
     fontSize: 14 
   },
   linkText: { 
