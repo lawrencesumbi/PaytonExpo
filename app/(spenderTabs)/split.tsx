@@ -1,5 +1,6 @@
 // app/(spenderTabs)/split.tsx
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router'; // 1. Gidugang para sa navigation
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
 import {
@@ -53,6 +54,7 @@ interface ActiveSplit {
 }
 
 export default function SplitExpenseScreen() {
+  const router = useRouter(); // 2. Gi-initialize ang router
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   
@@ -253,9 +255,21 @@ export default function SplitExpenseScreen() {
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
       
-      {/* Header Block */}
+      {/* Header Block with Friends Button */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Split Expense</Text>
+        <View style={styles.headerMainRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.headerTitle}>Split Expense</Text>
+          </View>
+          {/* 3. Friends Icon Button */}
+          <TouchableOpacity 
+            style={styles.friendsBtn} 
+            onPress={() => router.push('/friends')} // i-adjust ang path depende sa exact location sa imong friends.tsx (e.g., '../friends' o '/(spenderTabs)/friends')
+            activeOpacity={0.7}
+          >
+            <Ionicons name="people-outline" size={22} color="#10B981" />
+          </TouchableOpacity>
+        </View>
         <Text style={styles.headerSubtext}>Divide balances and coordinate group payouts seamlessly.</Text>
       </View>
 
@@ -423,6 +437,18 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === 'android' ? 40 : 16,
     paddingBottom: 8 
   },
+  headerMainRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  friendsBtn: {
+    padding: 8,
+    backgroundColor: '#E6F4EA',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+  },
   headerTitle: { 
     fontSize: 32, 
     fontWeight: '800', 
@@ -432,7 +458,7 @@ const styles = StyleSheet.create({
   headerSubtext: { 
     fontSize: 14, 
     color: '#64748B', 
-    marginTop: 4, 
+    marginTop: 6, 
     fontWeight: '400' 
   },
   scrollContent: { 

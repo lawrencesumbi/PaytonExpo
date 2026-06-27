@@ -1,5 +1,6 @@
 // app/(spenderTabs)/friends.tsx
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router'; // 1. Gi-import ang useRouter
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
 import {
@@ -25,6 +26,7 @@ interface Friend {
 }
 
 export default function FriendsScreen() {
+  const router = useRouter(); // 2. Gi-initialize ang router
   const [loading, setLoading] = useState(true);
   const [friends, setFriends] = useState<Friend[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -131,9 +133,19 @@ export default function FriendsScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
         style={{ flex: 1 }}
       >
-        {/* Header Block */}
+        {/* Header Block with Back Button */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Friends</Text>
+          <View style={styles.headerTopRow}>
+            {/* 3. Back Button */}
+            <TouchableOpacity 
+              style={styles.backBtn} 
+              onPress={() => router.push('/split')} // Modiretso sa split.tsx
+              activeOpacity={0.7}
+            >
+              <Ionicons name="arrow-back" size={22} color="#0F172A" />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Friends</Text>
+          </View>
           <Text style={styles.headerSubtext}>Manage your split-expense squad.</Text>
         </View>
 
@@ -247,17 +259,30 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === 'android' ? 40 : 16,
     paddingBottom: 16 
   },
+  headerTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12, // Gintang-an og space ang back button ug ang titulo
+    marginBottom: 4,
+  },
+  backBtn: {
+    padding: 6,
+    borderRadius: 50,
+    backgroundColor: '#F1F5F9', // Light gray background para dali mapislit
+  },
   headerTitle: { 
     fontSize: 32, 
     fontWeight: '800', 
     color: '#0F172A', 
-    letterSpacing: -0.75 
+    letterSpacing: -0.75,
+    flex: 1,
   },
   headerSubtext: { 
     fontSize: 14, 
     color: '#64748B', 
     marginTop: 4, 
-    fontWeight: '400' 
+    fontWeight: '400',
+    paddingLeft: 40, // Gi-align nato sa ilawom sa Friends nga text para nindot tan-awon
   },
   formContainer: { 
     backgroundColor: '#FFFFFF', 
