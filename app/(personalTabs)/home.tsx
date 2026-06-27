@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from 'expo-router';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -7,6 +7,7 @@ import {
   Alert,
   Dimensions,
   FlatList,
+  Image,
   Modal,
   Platform,
   RefreshControl,
@@ -22,8 +23,8 @@ import {
 import { supabase } from '../../lib/supabase';
 
 const { width } = Dimensions.get('window');
-const CARD_WIDTH = 170; // Gi-adjust para sa nindot nga horizontal category look
-const CARD_MARGIN = 8;
+const CARD_WIDTH = width * 0.84;
+const CARD_MARGIN = 10;
 const SNAP_INTERVAL = CARD_WIDTH + (CARD_MARGIN * 2);
 
 interface IncomeSummary {
@@ -54,6 +55,7 @@ interface RecentActivity {
 }
 
 export default function PersonalHomeScreen() {
+  const router = useRouter(); 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [userName, setUserName] = useState('User');
@@ -62,17 +64,14 @@ export default function PersonalHomeScreen() {
   const [categories, setCategories] = useState<DynamicCategory[]>([]);
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
 
-  // Carousels control
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
   const autoScrollTimer = useRef<any>(null);
 
-  // Modal Allocation States
   const [allocateModalVisible, setAllocateModalVisible] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<DynamicCategory | null>(null);
   const [allocateAmount, setAllocateAmount] = useState('');
 
-  // Modal Add Income States
   const [incomeModalVisible, setIncomeModalVisible] = useState(false);
   const [incomeName, setIncomeName] = useState('');
   const [incomeAmount, setIncomeAmount] = useState('');
@@ -82,21 +81,18 @@ export default function PersonalHomeScreen() {
 
   const [submitting, setSubmitting] = useState(false);
 
-  // FETCH ALL DATASETS FROM DATABASE
   const fetchDashboardData = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Profile Lookup
       const { data: profileData } = await supabase
         .from('profiles')
         .select('full_name')
         .eq('id', user.id)
         .single();
-      if (profileData?.full_name) setUserName(profileData.full_name.split(' ')[0]);
+      if (profileData?.full_name) setUserName(profileData.full_name);
 
-      // Category Map Generation
       const { data: allCategoriesData, error: catError } = await supabase
         .from('categories')
         .select('id, name, icon, color')
@@ -109,14 +105,13 @@ export default function PersonalHomeScreen() {
           id: cat.id,
           name: cat.name,
           icon: cat.icon || 'options',
-          color: cat.color || '#0F766E',
+          color: cat.color || '#1E463A',
           totalSpent: 0,
           allocatedAmount: 0,
           remainingAmount: 0
         };
       });
 
-      // Income Layer Retrieval (Latest Entry)
       const { data: incomeData, error: incomeError } = await supabase
         .from('income')
         .select('id, source_name, amount, description, start_date, end_date')
@@ -140,7 +135,6 @@ export default function PersonalHomeScreen() {
           endDate: activeIncome.end_date
         });
 
-        // Budgets and Nested Expenses mapping
         const { data: budgetsData, error: budgetsError } = await supabase
           .from('budgets')
           .select(`
@@ -175,7 +169,7 @@ export default function PersonalHomeScreen() {
                 name: exp.description || 'General Expense',
                 amount: Number(exp.amount),
                 category: categoryMap[catId].name,
-                dateString: dateObj.toLocaleDateString('en-US', { day: 'numeric', month: 'short' }) + `, ` + dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+                dateString: dateObj.toLocaleDateString('en-US', { day: 'numeric', month: 'short' })
               });
             }
           });
@@ -197,51 +191,12 @@ export default function PersonalHomeScreen() {
     }
   };
 
-  // HANDLERS FOR ACTIONS
-  const handleAddIncome = async () => {
-    const parsedAmount = parseFloat(incomeAmount);
-    if (!incomeName || isNaN(parsedAmount) || parsedAmount <= 0) {
-      Alert.alert("Error", "Please input a valid source title and dynamic amount configuration.");
-      return;
-    }
-
-    try {
-      setSubmitting(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { error } = await supabase
-        .from('income')
-        .insert({
-          user_id: user.id,
-          source_name: incomeName,
-          amount: parsedAmount,
-          description: incomeDesc,
-          start_date: incomeStart,
-          end_date: incomeEnd
-        });
-
-      if (error) throw error;
-
-      Alert.alert("Success 🎉", "Income statement completely logged into ledger account.");
-      setIncomeModalVisible(false);
-      setIncomeName('');
-      setIncomeAmount('');
-      setIncomeDesc('');
-      fetchDashboardData();
-    } catch (error: any) {
-      Alert.alert("Execution Refused", error.message);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   const handleAllocateBudget = async () => {
     if (!selectedCategory || !income) return;
     const amountToAllocate = parseFloat(allocateAmount);
 
     if (isNaN(amountToAllocate) || amountToAllocate <= 0) {
-      Alert.alert("Invalid Input", "Please map a standard positive value.");
+      Alert.alert("Invalid Input", "Please enter a positive numeric value to allocate capital.");
       return;
     }
 
@@ -249,7 +204,7 @@ export default function PersonalHomeScreen() {
     const unallocatedPool = income.amount - totalCurrentAllocated;
 
     if (amountToAllocate > unallocatedPool) {
-      Alert.alert("Allocation Denied", `Insufficient unallocated resources remaining. Available asset pool: ₱${unallocatedPool.toFixed(2)}`);
+      Alert.alert("Allocation Denied", `Insufficient unallocated resources. Available: ₱${unallocatedPool.toFixed(2)}`);
       return;
     }
 
@@ -288,18 +243,55 @@ export default function PersonalHomeScreen() {
         if (insertError) throw insertError;
       }
 
-      Alert.alert("Injected 🎉", `₱${amountToAllocate.toFixed(2)} securely moved into ${selectedCategory.name}.`);
+      Alert.alert("Allocation Success 🎉", `Successfully injected ₱${amountToAllocate.toFixed(2)} into ${selectedCategory.name}.`);
       setAllocateModalVisible(false);
       setAllocateAmount('');
       fetchDashboardData();
     } catch (error: any) {
-      Alert.alert("Failure", error.message);
+      Alert.alert("Process Aborted", error.message);
     } finally {
       setSubmitting(false);
     }
   };
 
-  // ENGINE AUTO ROTATION CAROUSEL FOR CATEGORIES
+  const handleAddIncome = async () => {
+    const parsedAmount = parseFloat(incomeAmount);
+    if (!incomeName || isNaN(parsedAmount) || parsedAmount <= 0) {
+      Alert.alert("Error", "Please input a valid source title and amount.");
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { error } = await supabase
+        .from('income')
+        .insert({
+          user_id: user.id,
+          source_name: incomeName,
+          amount: parsedAmount,
+          description: incomeDesc,
+          start_date: incomeStart,
+          end_date: incomeEnd
+        });
+
+      if (error) throw error;
+
+      Alert.alert("Success 🎉", "Income statement completely logged.");
+      setIncomeModalVisible(false);
+      setIncomeName('');
+      setIncomeAmount('');
+      setIncomeDesc('');
+      fetchDashboardData();
+    } catch (error: any) {
+      Alert.alert("Error", error.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const startAutoScrollEngine = () => {
     stopAutoScrollEngine();
     if (categories.length <= 1) return;
@@ -307,12 +299,12 @@ export default function PersonalHomeScreen() {
       setCurrentCardIndex((prevIndex) => {
         const nextIndex = prevIndex >= categories.length - 1 ? 0 : prevIndex + 1;
         flatListRef.current?.scrollToOffset({
-          offset: nextIndex * (CARD_WIDTH + CARD_MARGIN),
+          offset: nextIndex * SNAP_INTERVAL,
           animated: true
         });
         return nextIndex;
       });
-    }, 4000);
+    }, 3500);
   };
 
   const stopAutoScrollEngine = () => {
@@ -336,280 +328,232 @@ export default function PersonalHomeScreen() {
     fetchDashboardData();
   };
 
+  const onScrollMomentumEnd = (event: any) => {
+    const offsetX = event.nativeEvent.contentOffset.x;
+    const index = Math.round(offsetX / SNAP_INTERVAL);
+    if (index >= 0 && index < categories.length) {
+      setCurrentCardIndex(index);
+    }
+    startAutoScrollEngine();
+  };
+
   if (loading) {
     return (
-      <SafeAreaView style={[styles.safeArea, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="small" color="#0D9488" />
+      <SafeAreaView style={[styles.container, styles.centeredLoading]}>
+        <ExpoStatusBar style="light" />
+        <ActivityIndicator size="small" color="#C5FF42" />
       </SafeAreaView>
     );
   }
 
-  // CALCULATING REVENUE AND SPENDING METRICS
   const totalAllocatedBudgetPool = categories.reduce((sum, c) => sum + c.allocatedAmount, 0);
   const totalSpentAcrossSystem = categories.reduce((sum, c) => sum + c.totalSpent, 0);
-  const availableLiquidity = income ? income.amount - totalSpentAcrossSystem : 0;
+  const unallocatedBalance = income ? income.amount - totalAllocatedBudgetPool : 0;
   
-  const budgetAllocationPercentage = income && income.amount > 0
-    ? Math.min((totalAllocatedBudgetPool / income.amount) * 100, 100)
+  const globalSpentPercentage = income && income.amount > 0
+    ? Math.min((totalSpentAcrossSystem / income.amount) * 100, 100)
     : 0;
 
-  // FORMAT DATE RANGES FOR CARD DISPLAY
-  const formatDateRange = () => {
-    if (!income) return "No active framework tracked";
-    const startStr = new Date(income.startDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
-    const endStr = new Date(income.endDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-    return `${startStr} - ${endStr}`;
-  };
-
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ExpoStatusBar style="dark" />
-      <StatusBar barStyle="dark-content" />
-
-      <ScrollView
-        style={styles.container}
+    <SafeAreaView style={styles.container}>
+      <ExpoStatusBar style="light" />
+      <ScrollView 
         contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#0D9488']} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#C5FF42']} />}
       >
-        {/* Header Block Section */}
-        <View style={styles.headerRow}>
-          <View style={styles.headerLeft}>
-            <Text style={styles.welcomeText}>Hello, {userName}👋</Text>
-            <Text style={styles.nameText}>Spender Overview</Text>
-          </View>
-          <View style={styles.searchRow}>
-            <TouchableOpacity onPress={() => setIncomeModalVisible(true)}>
-              <LinearGradient
-                colors={["#c5dbd0", "#92bba7"]}
-                start={{ x: 0.0, y: 0.0 }}
-                end={{ x: 1.0, y: 1.0 }}
-                style={styles.searchIconBg}
-              >
-                <Ionicons name="add" size={20} color="#000000" />
-              </LinearGradient>
-            </TouchableOpacity>
-            <Ionicons name="calendar-clear" size={26} color="#64748B" />
-          </View>
-        </View>
-
-        {/* Main LinearGradient Wallet Display Context */}
-        <TouchableOpacity activeOpacity={0.95} onPress={() => setIncomeModalVisible(true)}>
-          <LinearGradient
-            colors={['#79b5c7', '#ccf3d7']}
-            start={{ x: 0.0, y: 0.0 }}
-            end={{ x: 1.1, y: 1.0 }}
-            style={styles.gradient1}
-          >
-            <View style={styles.allowanceFullWidth}>
-              <Text style={styles.cardLabelLight}>Total Budget (Income: {income?.sourceName || 'None'})</Text>
-
-              <View style={styles.amountRow}>
-                <Text style={styles.allowanceText}>₱ {totalAllocatedBudgetPool.toLocaleString('en-US', { minimumFractionDigits: 2 })}/</Text>
-                <Text style={styles.totalLimitText}>₱{income ? income.amount.toLocaleString() : '0'}</Text>
-              </View>
-
-              <Text style={styles.dateText}>{formatDateRange()}</Text>
-
-              <View style={styles.progressBarContainer}>
-                <LinearGradient
-                  colors={['#38BDF8', '#166534']}
-                  start={{ x: 0.0, y: 0.5 }}
-                  end={{ x: 1.0, y: 0.5 }}
-                  style={[styles.progressBarFill, { width: `${budgetAllocationPercentage}%` }]}
-                />
-                <Text style={styles.progressText}>{budgetAllocationPercentage.toFixed(0)}% Allocated</Text>
+        {/* Emerald Header Section */}
+        <View style={styles.headerBackground}>
+          <View style={styles.welcomeRow}>
+            <View style={styles.avatarRow}>
+              <Image 
+                source={{ uri: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop' }} 
+                style={styles.avatarImage} 
+              />
+              <View>
+                <Text style={styles.welcomeSubtext}>Hello, {userName}</Text>
+                <Text style={styles.welcomeText}>Welcome Back</Text>
               </View>
             </View>
-          </LinearGradient>
-        </TouchableOpacity>
 
-        {/* Sub-Metric System Grid */}
-        <View style={styles.statsRow}>
-          <View style={styles.subCard}>
-            <Text style={styles.cardLabelDark}>Total Spent</Text>
-            <Text style={styles.statsAmount}>₱ {totalSpentAcrossSystem.toLocaleString('en-US', { minimumFractionDigits: 2 })}</Text>
-          </View>
-          <View style={styles.subCard}>
-            <Text style={styles.cardLabelDark}>Available Cash</Text>
-            <Text style={styles.statsAmount}>₱ {availableLiquidity.toLocaleString('en-US', { minimumFractionDigits: 2 })}</Text>
-          </View>
-        </View>
-
-        {/* Categories Structural Slider System */}
-        <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionTitle}>Budget Sectors Folder</Text>
-          <Text style={styles.seeAllText}>Swipe to View</Text>
-        </View>
-
-        <FlatList
-          ref={flatListRef}
-          data={categories}
-          horizontal
-          decelerationRate="fast"
-          snapToInterval={SNAP_INTERVAL}
-          showsHorizontalScrollIndicator={false}
-          onScrollBeginDrag={stopAutoScrollEngine}
-          style={styles.horizontalScroll}
-          contentContainerStyle={styles.horizontalScrollContent}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item: cat }) => {
-            const progressRatio = cat.allocatedAmount > 0
-              ? Math.min((cat.remainingAmount / cat.allocatedAmount) * 100, 100)
-              : 0;
-
-            return (
-              <TouchableOpacity
-                activeOpacity={0.9}
-                onPress={() => {
-                  setSelectedCategory(cat);
-                  setAllocateModalVisible(true);
-                }}
-                style={[styles.paymentCard, { backgroundColor: '#FFFFFF' }]}
-              >
-                <View style={styles.paymentCardHeader}>
-                  <View style={[styles.brandIconPlaceholder, { backgroundColor: cat.color || '#0F766E', justifyContent: 'center', alignItems: 'center' }]}>
-                    {/* @ts-ignore */}
-                    <Ionicons name={cat.icon} size={14} color="#FFFFFF" />
-                  </View>
-                  <Text style={[styles.dotsText, { color: cat.color }]}>●</Text>
-                </View>
-                <Text style={styles.paymentCardTitle} numberOfLines={1}>{cat.name}</Text>
-                <Text style={styles.paymentCardPrice}>₱{cat.remainingAmount.toLocaleString()}</Text>
-                
-                {/* Sector Micro ProgressBar Indicators */}
-                <View style={{ height: 4, backgroundColor: '#E2E8F0', borderRadius: 2, marginTop: 4, overflow: 'hidden' }}>
-                  <View style={{ width: `${progressRatio}%`, height: '100%', backgroundColor: cat.color || '#0F766E' }} />
-                </View>
-                <Text style={styles.paymentCardDays}>{progressRatio.toFixed(0)}% Left</Text>
+            <View style={styles.iconGroupRow}>
+              <TouchableOpacity style={styles.iconBoxTop} onPress={() => router.push('/invitations')}>
+                <Ionicons name="mail-outline" size={20} color="#FFFFFF" />
               </TouchableOpacity>
-            );
-          }}
-        />
 
-        {/* Recent Activities Dataset View */}
-        <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionTitle}>Recent Activities</Text>
-          <TouchableOpacity onPress={fetchDashboardData}><Text style={styles.seeAllText}>Refresh</Text></TouchableOpacity>
+              <TouchableOpacity style={styles.iconBoxTop} onPress={() => router.push('/reminders')}>
+                <Ionicons name="calendar-outline" size={20} color="#FFFFFF" />
+                <View style={styles.calendarDot} />
+              </TouchableOpacity>
+            </View>
+          </View>
+          
+          <TouchableOpacity activeOpacity={0.9} onPress={() => setIncomeModalVisible(true)} style={styles.balanceContainer}>
+            <Text style={styles.balanceLabel}>Total Remaining Balance (Unallocated)</Text>
+            <Text style={styles.mainBalance}>
+              ₱{unallocatedBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+            </Text>
+          </TouchableOpacity>
+
+          <View style={styles.headerMetricsWrapper}>
+            <View style={styles.headerProgressBarBg}>
+              <View style={[styles.headerProgressBarFill, { width: `${globalSpentPercentage}%` }]} />
+            </View>
+            <View style={styles.headerMetricsRow}>
+              <Text style={styles.headerMetricText}>Overall Allowance: ₱{income ? income.amount.toLocaleString() : '0'}</Text>
+              <Text style={styles.headerMetricText}>Total Spent: ₱{totalSpentAcrossSystem.toLocaleString()}</Text>
+            </View>
+          </View>
         </View>
 
-        <View style={styles.activitiesContainer}>
+        {/* Carousel Section (FIXED INTERVAL SNAPPING SYSTEM) */}
+        <View style={styles.cardsSectionContainer}>
+          <FlatList
+            ref={flatListRef}
+            data={categories}
+            horizontal
+            decelerationRate="fast"
+            snapToInterval={SNAP_INTERVAL}
+            snapToAlignment="center"
+            showsHorizontalScrollIndicator={false}
+            onMomentumScrollEnd={onScrollMomentumEnd}
+            onScrollBeginDrag={stopAutoScrollEngine} 
+            contentContainerStyle={{
+              paddingHorizontal: (width - CARD_WIDTH) / 2 - CARD_MARGIN
+            }}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item: cat }) => {
+              const remainingPercentage = cat.allocatedAmount > 0 
+                ? Math.min((cat.remainingAmount / cat.allocatedAmount) * 100, 100) 
+                : 0;
+
+              return (
+                <TouchableOpacity 
+                  activeOpacity={0.9}
+                  onPress={() => {
+                    setSelectedCategory(cat);
+                    setAllocateModalVisible(true);
+                  }}
+                  style={[styles.originalCategoryCard, { backgroundColor: cat.color || '#1E463A' }]}
+                >
+                  <View style={styles.cardMainHeader}>
+                    <View style={styles.cardTitleCluster}>
+                      <View style={styles.originalIconCircle}>
+                        <Ionicons name={cat.icon as any} size={18} color={cat.color || '#1E463A'} />
+                      </View>
+                      <Text style={styles.originalCardName} numberOfLines={1}>{cat.name}</Text>
+                    </View>
+                    <View style={styles.remainingBadge}>
+                      <Text style={styles.remainingBadgeText}>Remaining</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.originalCardMiddleBody}>
+                    <Text style={styles.originalRemainingAmount}>
+                      ₱{cat.remainingAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    </Text>
+                  </View>
+
+                  <View style={styles.originalCardBottomFooter}>
+                    <View style={styles.originalProgressBackground}>
+                      <View style={[styles.originalProgressFill, { width: `${remainingPercentage}%` }]} />
+                    </View>
+                    <View style={styles.originalCardMetricsRow}>
+                      <Text style={styles.originalFooterMetaText}>Budget: ₱{cat.allocatedAmount.toLocaleString()}</Text>
+                      <Text style={styles.originalFooterMetaText}>Spent: ₱{cat.totalSpent.toLocaleString()}</Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              );
+            }}
+          />
+
+          {categories.length > 0 && (
+            <View style={styles.dotsRowContainer}>
+              {categories.map((_, dotIndex) => (
+                <View 
+                  key={dotIndex} 
+                  style={[styles.indicatorDot, currentCardIndex === dotIndex ? styles.activeDot : styles.inactiveDot]} 
+                />
+              ))}
+            </View>
+          )}
+        </View>
+
+        {/* Recent Transactions List Layout */}
+        <View style={styles.contentBody}>
+          <View style={styles.recentSectionHeader}>
+            <Text style={styles.sectionTitle}>Recent Transaction</Text>
+            <TouchableOpacity onPress={() => router.push('/transaction')}>
+              <Text style={styles.seeAllText}>See all</Text>
+            </TouchableOpacity>
+          </View>
+
           {recentActivities.length === 0 ? (
-            <View style={{ padding: 24, alignItems: 'center' }}>
-              <Text style={{ fontSize: 13, color: '#94A3B8' }}>No recorded transactions found across budget segments.</Text>
+            <View style={styles.noRecentBox}>
+              <Text style={styles.noRecentText}>No captured transaction entries found.</Text>
             </View>
           ) : (
-            recentActivities.map((activity) => (
-              <View key={activity.id} style={styles.activityItem}>
-                <View style={styles.activityLeft}>
-                  <View style={styles.activityIconPlaceholder}>
-                    <Ionicons name="card" size={16} color="#64748B" />
+            <View style={styles.recentListContainer}>
+              {recentActivities.map((activity) => (
+                <View key={activity.id} style={styles.recentItem}>
+                  <View style={styles.recentLeft}>
+                    <View style={styles.iconBox}>
+                      <Ionicons name="fast-food-outline" size={16} color="#06261D" />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.recentName} numberOfLines={1}>{activity.name}</Text>
+                      <Text style={styles.recentCategory}>{activity.category}</Text>
+                    </View>
                   </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.activityName} numberOfLines={1}>{activity.name}</Text>
-                    <Text style={styles.activityDate}>{activity.dateString} • {activity.category}</Text>
-                  </View>
+                  <Text style={styles.recentAmount}>-₱{activity.amount.toFixed(2)}</Text>
                 </View>
-                <Text style={styles.activityAmountNegative}>-₱ {activity.amount.toFixed(2)}</Text>
-              </View>
-            ))
+              ))}
+            </View>
           )}
         </View>
       </ScrollView>
 
-      {/* MODAL SYSTEM 1: FUND INJECTION OVERLAY FLOW */}
-      <Modal animationType="slide" transparent={true} visible={allocateModalVisible} onRequestClose={() => setAllocateModalVisible(false)}>
+      {/* MODAL 1: FUND ALLOCATION OVERLAY */}
+      <Modal animationType="fade" transparent={true} visible={allocateModalVisible} onRequestClose={() => setAllocateModalVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>Allocate Capital Pool</Text>
-            <Text style={styles.modalSubText}>Distribute available revenue resources directly into your dynamic segment folder: <Text style={{fontWeight: '700', color: '#0F172A'}}>{selectedCategory?.name}</Text></Text>
-
-            <TextInput
-              style={styles.modalInput}
-              placeholder="₱0.00"
+            <Text style={styles.modalTitle}>Fund Allocation Folder</Text>
+            <Text style={styles.modalSubText}>Inject unallocated allowance pool assets directly into this designated expense folder stream.</Text>
+            <TextInput 
+              style={styles.modalInput} 
+              placeholder="₱0.00" 
               placeholderTextColor="#94A3B8"
-              keyboardType="numeric"
-              value={allocateAmount}
-              onChangeText={setAllocateAmount}
+              keyboardType="numeric" 
+              value={allocateAmount} 
+              onChangeText={setAllocateAmount} 
               editable={!submitting}
             />
-
             <View style={styles.modalButtonsRow}>
               <TouchableOpacity style={[styles.modalButton, styles.cancelBtn]} onPress={() => setAllocateModalVisible(false)} disabled={submitting}>
                 <Text style={styles.cancelBtnText}>Dismiss</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.modalButton, styles.confirmBtn]} onPress={handleAllocateBudget} disabled={submitting}>
-                {submitting ? <ActivityIndicator color="#FFFFFF" size="small" /> : <Text style={styles.confirmBtnText}>Inject Funds</Text>}
+                {submitting ? <ActivityIndicator color="#FFFFFF" size="small" /> : <Text style={styles.confirmBtnText}>Confirm Fund</Text>}
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
 
-      {/* MODAL SYSTEM 2: COMPREHENSIVE ADD NEW INCOME SYSTEM */}
+      {/* MODAL 2: INCOME STATEMENT SETTINGS PROMPT */}
       <Modal animationType="slide" transparent={true} visible={incomeModalVisible} onRequestClose={() => setIncomeModalVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>Establish Revenue Statement</Text>
-            <Text style={styles.modalSubText}>Input active incoming payroll, gifts, or contracts metrics.</Text>
-
-            <TextInput
-              style={[styles.modalInput, { marginBottom: 12, fontSize: 14, fontWeight: 'normal' }]}
-              placeholder="Source Name (e.g., Monthly Salary)"
-              placeholderTextColor="#94A3B8"
-              value={incomeName}
-              onChangeText={setIncomeName}
-              editable={!submitting}
-            />
-
-            <TextInput
-              style={[styles.modalInput, { marginBottom: 12, fontSize: 14, fontWeight: 'normal' }]}
-              placeholder="Amount (₱)"
-              placeholderTextColor="#94A3B8"
-              keyboardType="numeric"
-              value={incomeAmount}
-              onChangeText={setIncomeAmount}
-              editable={!submitting}
-            />
-
-            <TextInput
-              style={[styles.modalInput, { marginBottom: 12, fontSize: 14, fontWeight: 'normal' }]}
-              placeholder="Description (Optional)"
-              placeholderTextColor="#94A3B8"
-              value={incomeDesc}
-              onChangeText={setIncomeDesc}
-              editable={!submitting}
-            />
-
-            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 11, color: '#64748B', marginBottom: 4 }}>Start Date</Text>
-                <TextInput
-                  style={[styles.modalInput, { fontSize: 12, padding: 8, fontWeight: 'normal' }]}
-                  placeholder="YYYY-MM-DD"
-                  value={incomeStart}
-                  onChangeText={setIncomeStart}
-                  editable={!submitting}
-                />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 11, color: '#64748B', marginBottom: 4 }}>End Date</Text>
-                <TextInput
-                  style={[styles.modalInput, { fontSize: 12, padding: 8, fontWeight: 'normal' }]}
-                  placeholder="YYYY-MM-DD"
-                  value={incomeEnd}
-                  onChangeText={setIncomeEnd}
-                  editable={!submitting}
-                />
-              </View>
-            </View>
-
+            <Text style={styles.modalTitle}>Update Income Statement</Text>
+            <Text style={styles.modalSubText}>Set up your newest income deployment baseline pool below.</Text>
+            <TextInput style={styles.modalInput} placeholder="Allowance Name (e.g., Monthly)" value={incomeName} onChangeText={setIncomeName} placeholderTextColor="#94A3B8" />
+            <TextInput style={styles.modalInput} placeholder="Total Amount (₱)" keyboardType="numeric" value={incomeAmount} onChangeText={setIncomeAmount} placeholderTextColor="#94A3B8" />
             <View style={styles.modalButtonsRow}>
-              <TouchableOpacity style={[styles.modalButton, styles.cancelBtn]} onPress={() => setIncomeModalVisible(false)} disabled={submitting}>
-                <Text style={styles.cancelBtnText}>Close</Text>
+              <TouchableOpacity style={[styles.modalButton, styles.cancelBtn]} onPress={() => setIncomeModalVisible(false)}>
+                <Text style={styles.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.modalButton, styles.confirmBtn]} onPress={handleAddIncome} disabled={submitting}>
-                {submitting ? <ActivityIndicator color="#FFFFFF" size="small" /> : <Text style={styles.confirmBtnText}>Save Income</Text>}
+                {submitting ? <ActivityIndicator color="#FFFFFF" size="small" /> : <Text style={styles.confirmBtnText}>Save Pool</Text>}
               </TouchableOpacity>
             </View>
           </View>
@@ -620,321 +564,98 @@ export default function PersonalHomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#F8FAFC",
-    paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
+  container: { flex: 1, backgroundColor: '#F8F9FA' },
+  centeredLoading: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#06261D' },
+  scrollContent: { paddingBottom: 40 },
+  
+  headerBackground: { 
+    backgroundColor: '#0F684F', 
+    paddingHorizontal: 24, 
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight ? StatusBar.currentHeight + 14 : 45) : 16, 
+    paddingBottom: 64, 
+    borderBottomLeftRadius: 32, 
+    borderBottomRightRadius: 32 
   },
-  container: {
-    flex: 1,
-    backgroundColor: "#F8FAFC",
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: Platform.OS === "ios" ? 110 : 90,
-  },
-  headerRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 24,
-  },
-  headerLeft: {
-    flexDirection: "column",
-  },
-  welcomeText: {
-    color: "#0F172A",
-    fontSize: 22,
-    fontWeight: "600",
-  },
-  nameText: {
-    fontSize: 14,
-    color: '#64748B',
-    fontWeight: "bold",
-    marginTop: -2,
-  },
-  searchRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  searchIconBg: {
-    padding: 8,
-    borderRadius: 99,
-    justifyContent: 'center',
-    alignItems: 'center'
-  },
-  gradient1: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 22,
-    borderRadius: 24,
-    marginBottom: 16,
-    ...Platform.select({
-      ios: {
-        shadowColor: "#14B8A6",
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.2,
-        shadowRadius: 10,
-      },
-      android: {
-        elevation: 4,
-      },
-    }),
-  },
-  cardLabelLight: {
-    color: "#094b3d",
-    fontSize: 13,
-    fontWeight: "600",
-    marginBottom: 4,
-  },
-  allowanceText: {
-    fontSize: 26,
-    color: "#ffffff",
-    fontWeight: "bold",
-  },
-  statsRow: {
-    flexDirection: "row",
-    gap: 12,
-    marginBottom: 28,
-  },
-  subCard: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-  cardLabelDark: {
-    color: "#0F766E",
-    fontSize: 12,
-    fontWeight: "600",
-    marginBottom: 6,
-  },
-  statsAmount: {
-    color: "#0F172A",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  sectionHeaderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    color: "#0F172A",
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  seeAllText: {
-    color: "#0D9488",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  horizontalScroll: {
-    marginBottom: 28,
-    marginHorizontal: -20,
-  },
-  horizontalScrollContent: {
-    paddingHorizontal: 20,
-    gap: 12,
-  },
-  paymentCard: {
+  welcomeRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
+  avatarRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  avatarImage: { width: 40, height: 40, borderRadius: 20, resizeMode: 'cover' }, 
+  welcomeSubtext: { fontSize: 13, color: '#A3B8B0' },
+  welcomeText: { fontSize: 16, fontWeight: '700', color: '#FFFFFF', marginTop: 1 },
+  
+  iconGroupRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  iconBoxTop: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.08)', justifyContent: 'center', alignItems: 'center', position: 'relative' },
+  calendarDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#C5FF42', position: 'absolute', top: 11, right: 11, borderWidth: 1.5, borderColor: '#06261D' },
+  
+  balanceContainer: { alignItems: 'center', marginTop: 8 },
+  balanceLabel: { fontSize: 13, color: '#A3B8B0', fontWeight: '500', marginBottom: 6 },
+  mainBalance: { fontSize: 36, fontWeight: '700', color: '#FFFFFF', letterSpacing: -0.5 },
+  
+  headerMetricsWrapper: { marginTop: 20, paddingTop: 14, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.08)' },
+  headerProgressBarBg: { height: 5, backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 10, overflow: 'hidden', marginBottom: 8 },
+  headerProgressBarFill: { height: '100%', backgroundColor: '#C5FF42', borderRadius: 10 },
+  headerMetricsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  headerMetricText: { color: '#A3B8B0', fontSize: 11, fontWeight: '500' },
+
+  cardsSectionContainer: { marginTop: -45, marginBottom: 15, width: '100%' },
+  
+  originalCategoryCard: {
     width: CARD_WIDTH,
-    padding: 16,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    marginRight: CARD_MARGIN
-  },
-  paymentCardHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  brandIconPlaceholder: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-  },
-  dotsText: {
-    fontSize: 14,
-    fontWeight: "bold",
-  },
-  paymentCardTitle: {
-    color: "#1E293B",
-    fontSize: 14,
-    fontWeight: "600",
-    marginBottom: 2,
-  },
-  paymentCardPrice: {
-    color: "#475569",
-    fontSize: 13,
-    fontWeight: '700',
-    marginBottom: 6,
-  },
-  paymentCardDays: {
-    color: "#0F766E",
-    fontSize: 11,
-    fontWeight: "600",
-    marginTop: 4
-  },
-  activitiesContainer: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-  activityItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F1F5F9",
-  },
-  activityLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    flex: 0.75
-  },
-  activityIconPlaceholder: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "#F1F5F9",
-    justifyContent: 'center',
-    alignItems: 'center'
-  },
-  activityName: {
-    color: "#1E293B",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  activityDate: {
-    color: "#94A3B8",
-    fontSize: 11,
-    marginTop: 2,
-  },
-  activityAmountNegative: {
-    color: "#EF4444",
-    fontSize: 14,
-    fontWeight: "bold",
-  },
-  allowanceFullWidth: {
-    width: '100%',
-    flexDirection: 'column',
-  },
-  amountRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    marginBottom: 4,
-  },
-  totalLimitText: {
-    fontSize: 14,
-    color: "#334155",
-    fontWeight: "700",
-    marginLeft: 4,
-  },
-  dateText: {
-    fontSize: 12,
-    color: "#0F766E",
-    fontWeight: '600',
-    marginBottom: 10,
-  },
-  progressBarContainer: {
-    width: '100%',
-    height: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.5)',
-    borderRadius: 16,
-    overflow: 'hidden',
-    position: 'relative',
-    justifyContent: 'center',
-    marginTop: 6,
-  },
-  progressBarFill: {
-    height: '100%',
-    borderRadius: 16,
-    position: 'absolute',
-    left: 0,
-    top: 0,
-  },
-  progressText: {
-    alignSelf: 'center',
-    fontSize: 11,
-    fontWeight: 'bold',
-    color: '#0F172A',
-    zIndex: 1,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.3)',
-    justifyContent: 'center',
-    alignItems: 'center'
-  },
-  modalContainer: {
-    backgroundColor: '#FFFFFF',
-    width: '88%',
-    padding: 24,
+    height: 175,
+    marginHorizontal: CARD_MARGIN,
     borderRadius: 24,
-    elevation: 10
+    padding: 20,
+    justifyContent: 'space-between',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 6
   },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#0F172A'
-  },
-  modalSubText: {
-    fontSize: 13,
-    color: '#64748B',
-    marginTop: 4,
-    marginBottom: 16,
-    lineHeight: 18
-  },
-  modalInput: {
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    padding: 12,
-    borderRadius: 12,
-    fontSize: 16,
-    color: '#0F172A',
-    backgroundColor: '#F8FAFC'
-  },
-  modalButtonsRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 10,
-    marginTop: 10
-  },
-  modalButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center'
-  },
-  cancelBtn: {
-    backgroundColor: '#F1F5F9'
-  },
-  cancelBtnText: {
-    color: '#475569',
-    fontWeight: '600'
-  },
-  confirmBtn: {
-    backgroundColor: '#0F766E',
-    minWidth: 100
-  },
-  confirmBtnText: {
-    color: '#FFFFFF',
-    fontWeight: '600'
-  }
+  cardMainHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  cardTitleCluster: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 0.75 },
+  originalIconCircle: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center' },
+  originalCardName: { color: '#FFFFFF', fontSize: 16, fontWeight: '700', letterSpacing: -0.2 },
+  remainingBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.14)' },
+  remainingBadgeText: { color: '#FFFFFF', fontSize: 10, fontWeight: '600', textTransform: 'uppercase' },
+  
+  originalCardMiddleBody: { marginVertical: 4 },
+  originalRemainingAmount: { color: '#FFFFFF', fontSize: 28, fontWeight: '700', letterSpacing: -0.5 },
+  
+  originalCardBottomFooter: { gap: 8 },
+  originalProgressBackground: { height: 5, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 3, overflow: 'hidden' },
+  originalProgressFill: { height: '100%', backgroundColor: '#FFFFFF', borderRadius: 3 },
+  originalCardMetricsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  originalFooterMetaText: { color: 'rgba(255,255,255,0.75)', fontSize: 11, fontWeight: '500' },
+
+  dotsRowContainer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 14, gap: 6 },
+  indicatorDot: { height: 6, borderRadius: 3 },
+  activeDot: { width: 14, backgroundColor: '#06261D' },
+  inactiveDot: { width: 6, backgroundColor: '#CBD5E1' },
+
+  contentBody: { paddingHorizontal: 24, marginTop: 10 },
+  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#06261D', letterSpacing: -0.2 },
+  recentSectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
+  seeAllText: { fontSize: 13, color: '#718096', fontWeight: '600' },
+  
+  recentListContainer: { backgroundColor: '#FFFFFF', borderRadius: 20, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.03, shadowRadius: 6 },
+  recentItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#F7F9FA' },
+  recentLeft: { flexDirection: 'row', alignItems: 'center', gap: 14, flex: 0.75 },
+  iconBox: { width: 40, height: 40, borderRadius: 14, backgroundColor: '#F0F4F2', justifyContent: 'center', alignItems: 'center' },
+  recentName: { fontSize: 14, fontWeight: '600', color: '#06261D' },
+  recentCategory: { fontSize: 11, color: '#718096', marginTop: 1 },
+  recentAmount: { fontSize: 14, fontWeight: '700', color: '#06261D' },
+  noRecentBox: { padding: 32, backgroundColor: '#FFFFFF', borderRadius: 20, alignItems: 'center' },
+  noRecentText: { fontSize: 13, color: '#718096' },
+  
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(6, 38, 29, 0.4)', justifyContent: 'center', alignItems: 'center' },
+  modalContainer: { backgroundColor: '#FFFFFF', width: '88%', padding: 24, borderRadius: 24, shadowColor: '#06261D', shadowOpacity: 0.15, shadowRadius: 12, elevation: 8 },
+  modalTitle: { fontSize: 18, fontWeight: '700', color: '#06261D' },
+  modalSubText: { fontSize: 13, color: '#718096', marginTop: 4, marginBottom: 18, lineHeight: 18 },
+  modalInput: { borderWidth: 1, borderColor: '#E2E8F0', padding: 14, borderRadius: 14, marginBottom: 20, fontSize: 18, fontWeight: '600', color: '#06261D', backgroundColor: '#F8F9FA' },
+  modalButtonsRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10 },
+  modalButton: { paddingVertical: 12, paddingHorizontal: 18, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+  cancelBtn: { backgroundColor: '#F1F5F9' },
+  cancelBtnText: { color: '#475569', fontWeight: '600', fontSize: 14 },
+  confirmBtn: { backgroundColor: '#06261D', minWidth: 110 },
+  confirmBtnText: { color: '#FFFFFF', fontWeight: '600', fontSize: 14 }
 });

@@ -14,64 +14,78 @@ export default function PersonalLayout() {
         tabBarStyle: styles.floatingTabBar,
       }}
     >
-      <Tabs.Screen 
-        name="home" 
-        options={{ 
-          tabBarIcon: ({ color, focused }) => (
-            <View style={focused ? styles.activeTabCircle : styles.inactiveIconWrapper}>
-              <Ionicons name={focused ? "home" : "home-outline"} size={22} color={focused ? "#005B60" : color} />
-            </View>
-          ) 
-        }} 
-      />
-
-      <Tabs.Screen 
-        name="budget" 
-        options={{ 
-          tabBarIcon: ({ color, focused }) => (
-            <View style={focused ? styles.activeTabCircle : styles.inactiveIconWrapper}>
-              <Ionicons name={focused ? "wallet" : "wallet-outline"} size={22} color={focused ? "#005B60" : color} />
-            </View>
-          ) 
-        }} 
-      />
-
-      {/* CENTER SCANNER BUTTON WITH SMOOTH BORDER COUNTER-CUT */}
-      <Tabs.Screen 
-        name="reminders" 
-        options={{ 
-          tabBarIcon: ({ color, focused }) => (
-            <View style={focused ? styles.activeTabCircle : styles.inactiveIconWrapper}>
-              <Ionicons name={focused ? "calendar" : "calendar-outline"} size={22} color={focused ? "#005B60" : color} />
-            </View>
-          ) 
-        }} 
-      />
-
-      <Tabs.Screen 
-        name="split" 
-        options={{ 
-          tabBarIcon: ({ color, focused }) => (
-            <View style={focused ? styles.activeTabCircle : styles.inactiveIconWrapper}>
-              <Ionicons name={focused ? "layers" : "layers-outline"} size={22} color={focused ? "#005B60" : color} />
-            </View>
-          ) 
-        }} 
-      />
-
-      <Tabs.Screen 
-        name="profile" 
-        options={{ 
-          tabBarIcon: ({ color, focused }) => (
-            <View style={focused ? styles.activeTabCircle : styles.inactiveIconWrapper}>
-              <Ionicons name={focused ? "person" : "person-outline"} size={22} color={focused ? "#005B60" : color} />
-            </View>
-          ) 
-        }} 
-      />
-    </Tabs>
-  );
-}
+      {/* ----------------- MAKITA SA UBOS ----------------- */}
+            <Tabs.Screen 
+              name="home" 
+              options={{ 
+                title: 'Home', 
+                tabBarIcon: ({ color, focused }) => (
+                  <Ionicons name={focused ? "home" : "home-outline"} size={22} color={color} />
+                ) 
+              }} 
+            />
+            
+            <Tabs.Screen 
+              name="budget" 
+              options={{ 
+                title: 'Budgets', 
+                tabBarIcon: ({ color, focused }) => (
+                  <Ionicons name={focused ? "wallet" : "wallet-outline"} size={22} color={color} />
+                ) 
+              }} 
+            />
+      
+            {/* FLOATING SCAN TAB */}
+            <Tabs.Screen 
+              name="scan" 
+              options={{ 
+                title: 'Scan', 
+                tabBarLabelStyle: {
+                  // Gi-adjust ang label sa scan para dili matabunan sa floating button
+                  marginBottom: Platform.OS === 'ios' ? -5 : 4,
+                  fontSize: 11,
+                  fontWeight: '600',
+                },
+                tabBarIcon: ({ focused }) => (
+                  <View style={[styles.floatingButton, focused && styles.floatingButtonActive]}>
+                    <Ionicons 
+                      name={focused ? "camera" : "camera-outline"} 
+                      size={24} 
+                      color="#FFFFFF" // Puti ang icon para nindot tan-awon sa green background
+                    />
+                  </View>
+                ) 
+              }} 
+            />
+      
+            <Tabs.Screen 
+              name="split" 
+              options={{ 
+                title: 'Split', 
+                tabBarIcon: ({ color, focused }) => (
+                  <Ionicons name={focused ? "share-social" : "share-social-outline"} size={22} color={color} />
+                ) 
+              }} 
+            />
+      
+            <Tabs.Screen 
+              name="profile" 
+              options={{ 
+                title: 'Profile', 
+                tabBarIcon: ({ color, focused }) => (
+                  <Ionicons name={focused ? "person" : "person-outline"} size={22} color={color} />
+                ) 
+              }} 
+            />
+      
+            {/* ----------------- NAKATAGO (HIDDEN TABS) ----------------- */}
+            <Tabs.Screen name="transaction" options={{ href: null }} />
+            <Tabs.Screen name="reminders" options={{ href: null }} />
+            <Tabs.Screen name="friends" options={{ href: null }} />
+            <Tabs.Screen name="invitations" options={{ href: null }} />
+          </Tabs>
+        );
+      }
 
 const styles = StyleSheet.create({
   floatingTabBar: {
@@ -132,5 +146,25 @@ const styles = StyleSheet.create({
       },
       android: { elevation: 4 },
     }),
+  },
+  floatingButton: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: '#10B981', // Gi-match sa imong Emerald Green
+    justifyContent: 'center',
+    alignItems: 'center',
+    top: -12, // Mao ni ang nagpalutaw niya pataas
+    
+    // Shadow para sa floating effect
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 5,
+  },
+  floatingButtonActive: {
+    backgroundColor: '#059669', // Medyo mas mongitngit gamay nga green kung gi-click/active
+    transform: [{ scale: 1.05 }], // Mo dako gamay para responsive feel
   },
 });
