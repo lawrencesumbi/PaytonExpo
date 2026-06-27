@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router'; // Gidugang para sa navigation
+import { useRouter } from 'expo-router'; // Siguradoon nato nga na-import ni og tarong
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -7,7 +7,7 @@ import {
   Alert,
   Dimensions,
   FlatList,
-  Image, // Gidugang para sa pag-display sa avatar picture
+  Image,
   Modal,
   StatusBar as NativeStatusBar,
   Platform,
@@ -58,32 +58,27 @@ export default function SpenderHomeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [spenderName, setSpenderName] = useState('Spender');
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null); // State para sa avatar picture
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null); 
   
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [categories, setCategories] = useState<DynamicCategory[]>([]);
   const [recentExpenses, setRecentExpenses] = useState<RecentExpense[]>([]);
 
-  // Tracker para sa Dots indicator
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
 
-  // Modal Allocation Layer States
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<DynamicCategory | null>(null);
   const [allocateAmount, setAllocateAmount] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  // References para sa FlatList ug Auto-Scroll interval timer
   const flatListRef = useRef<FlatList>(null);
   const autoScrollTimer = useRef<any>(null);
 
-  // FETCH INTEGRATED LEDGER DASHBOARD DATA DATASETS
   const fetchDashboardData = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Gi-update aron i-fetch apil ang avatar_url
       const { data: profileData } = await supabase
         .from('profiles')
         .select('full_name, avatar_url')
@@ -91,7 +86,7 @@ export default function SpenderHomeScreen() {
         .single();
       
       if (profileData?.full_name) setSpenderName(profileData.full_name);
-      if (profileData?.avatar_url) setAvatarUrl(profileData.avatar_url); // Gi-save ang avatar url
+      if (profileData?.avatar_url) setAvatarUrl(profileData.avatar_url); 
 
       const { data: allCategoriesData, error: catError } = await supabase
         .from('categories')
@@ -284,18 +279,15 @@ export default function SpenderHomeScreen() {
 
   const startAutoScrollEngine = () => {
     stopAutoScrollEngine(); 
-    
     if (categories.length <= 1) return;
 
     autoScrollTimer.current = window.setInterval(() => {
       setCurrentCardIndex((prevIndex) => {
         const nextIndex = prevIndex >= categories.length - 1 ? 0 : prevIndex + 1;
-        
         flatListRef.current?.scrollToOffset({
           offset: nextIndex * SNAP_INTERVAL,
           animated: true
         });
-
         return nextIndex;
       });
     }, 3500); 
@@ -357,7 +349,6 @@ export default function SpenderHomeScreen() {
         <View style={styles.headerBackground}>
           <View style={styles.welcomeRow}>
             <View style={styles.avatarRow}>
-              {/* Gi-update: I-check kung naay avatarUrl, kung naa maoay i-display gamit ang Image component */}
               {avatarUrl ? (
                 <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
               ) : (
@@ -371,18 +362,29 @@ export default function SpenderHomeScreen() {
               </View>
             </View>
 
-            {/* Gi-update: Gihimong calendar icon ug nagdugang og routing padulong sa reminders */}
-            <TouchableOpacity 
-              style={styles.calendarIconBox} 
-              onPress={() => router.push('/reminders')} // E-adjust ang path base sa imong folder setup (e.g., '/(spenderTabs)/reminders')
-            >
-              <Ionicons name="calendar-outline" size={20} color="#FFFFFF" />
-              <View style={styles.calendarDot} />
-            </TouchableOpacity>
+            {/* Gitapok nako ang Mail ug Calendar Icons para nindot ang pagka-align */}
+            <View style={styles.iconGroupRow}>
+              {/* Mail / Invitations Icon */}
+              <TouchableOpacity 
+                style={styles.iconBoxTop} 
+                onPress={() => router.push('/invitations')}
+              >
+                <Ionicons name="mail-outline" size={20} color="#FFFFFF" />
+              </TouchableOpacity>
+
+              {/* Calendar Icon */}
+              <TouchableOpacity 
+                style={styles.iconBoxTop} 
+                onPress={() => router.push('/reminders')} 
+              >
+                <Ionicons name="calendar-outline" size={20} color="#FFFFFF" />
+                <View style={styles.calendarDot} />
+              </TouchableOpacity>
+            </View>
           </View>
           
           <View style={styles.balanceContainer}>
-            <Text style={styles.balanceLabel}>Total Balance</Text>
+            <Text style={styles.balanceLabel}>Total Remaining Balance (Unallocated)</Text>
             <Text style={styles.mainBalance}>
               ₱{summary ? summary.remaining.toLocaleString('en-US', { minimumFractionDigits: 2 }) : "0.00"}
             </Text>
@@ -394,7 +396,7 @@ export default function SpenderHomeScreen() {
                 <View style={[styles.headerProgressBarFill, { width: `${globalSpentPercentage}%` }]} />
               </View>
               <View style={styles.headerMetricsRow}>
-                <Text style={styles.headerMetricText}>Total Allowance: ₱{summary.totalAllowance.toLocaleString()}</Text>
+                <Text style={styles.headerMetricText}>Overall Allowance: ₱{summary.totalAllowance.toLocaleString()}</Text>
                 <Text style={styles.headerMetricText}>Total Spent: ₱{summary.totalSpent.toLocaleString()}</Text>
               </View>
             </View>
@@ -561,10 +563,14 @@ const styles = StyleSheet.create({
   navigatorRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   avatarRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   avatarPlaceholder: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center' },
-  avatarImage: { width: 40, height: 40, borderRadius: 20, resizeMode: 'cover' }, // Style para sa tinuod nga hulagway
+  avatarImage: { width: 40, height: 40, borderRadius: 20, resizeMode: 'cover' }, 
   welcomeSubtext: { fontSize: 13, color: '#A3B8B0' },
   welcomeText: { fontSize: 16, fontWeight: '700', color: '#FFFFFF', marginTop: 1 },
-  calendarIconBox: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.08)', justifyContent: 'center', alignItems: 'center', position: 'relative' },
+  
+  // Bag-ong style para sa duha ka icons sa taas
+  iconGroupRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  iconBoxTop: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.08)', justifyContent: 'center', alignItems: 'center', position: 'relative' },
+  
   calendarDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#C5FF42', position: 'absolute', top: 11, right: 11, borderWidth: 1.5, borderColor: '#06261D' },
   balanceContainer: { alignItems: 'center', marginTop: 8 },
   balanceLabel: { fontSize: 13, color: '#A3B8B0', fontWeight: '500', marginBottom: 6 },

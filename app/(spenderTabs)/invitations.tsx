@@ -1,5 +1,6 @@
 // app/(spenderTabs)/invitations.tsx
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router'; // Gidugang para sa navigation
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
 import {
@@ -23,6 +24,7 @@ interface Invitation {
 }
 
 export default function InvitationsScreen() {
+  const router = useRouter(); // Initialize ang router engine
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -121,6 +123,14 @@ export default function InvitationsScreen() {
       <StatusBar style="dark" />
       <View style={styles.contentContainer}>
         
+        {/* Back Button Container */}
+        <TouchableOpacity 
+          style={styles.backButton} 
+          onPress={() => router.back()} // Pwede sad router.push('/home') depende sa imong routing setup
+        >
+          <Ionicons name="arrow-back" size={24} color="#1E293B" />
+        </TouchableOpacity>
+
         {/* Modern Clean Header Section */}
         <View style={styles.headerSection}>
           <Text style={styles.headerTitle}>Invitations</Text>
@@ -190,13 +200,31 @@ export default function InvitationsScreen() {
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: '#FAFBFD', // Modern light slate soft background look
+    backgroundColor: '#FAFBFD', 
     paddingTop: Platform.OS === 'android' ? NativeStatusBar.currentHeight : 0 
   },
   contentContainer: { flex: 1, paddingHorizontal: 20 },
   
+  // Gidugang nga style para sa Back Button
+  backButton: {
+    marginTop: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.02,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+
   // Header Formatting
-  headerSection: { marginTop: 20, marginBottom: 24 },
+  headerSection: { marginTop: 14, marginBottom: 24 },
   headerTitle: { fontSize: 28, fontWeight: '700', color: '#1E293B', letterSpacing: -0.6 },
   headerSubtitle: { fontSize: 14, color: '#64748B', marginTop: 6, lineHeight: 20, fontWeight: '400' },
   
@@ -212,8 +240,6 @@ const styles = StyleSheet.create({
     marginBottom: 12, 
     borderWidth: 1, 
     borderColor: '#F1F5F9',
-    
-    // Smooth Micro Shadow Effects
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.03,
@@ -246,9 +272,9 @@ const styles = StyleSheet.create({
     minWidth: 95,
     paddingHorizontal: 16
   },
-  acceptActionBtn: { backgroundColor: '#10B981' }, // Clean Emerald/Mint modern success accent
+  acceptActionBtn: { backgroundColor: '#10B981' }, 
   acceptBtnText: { color: '#FFFFFF', fontWeight: '600', fontSize: 13 },
-  declineActionBtn: { backgroundColor: '#F1F5F9' }, // Subtle light neutral styling
+  declineActionBtn: { backgroundColor: '#F1F5F9' }, 
   declineBtnText: { color: '#64748B', fontWeight: '600', fontSize: 13 },
   
   // Empty UI States
