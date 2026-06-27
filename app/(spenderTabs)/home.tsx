@@ -342,7 +342,7 @@ export default function SpenderHomeScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
-      <LinearGradient colors = {['#e5f1d2','#aaf0d5','#68eee3','#ffffff']}
+      <LinearGradient colors = {['#cfcfce','#ccf8fa']}
                     start={{x: 0.10, y: 1}}
                     end={{x: 0.20, y: .10}}
                     style = {styles.gradient}
@@ -358,12 +358,12 @@ export default function SpenderHomeScreen() {
                 <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
               ) : (
                 <View style={styles.avatarPlaceholder}>
-                  <Ionicons name="person" size={15} color="#FFFFFF" />
+                  <Ionicons name="person" size={15} color="#000000" />
                 </View>
               )}
               <View>
-                <Text style={styles.welcomeSubtext}>Hello, {spenderName}</Text>
-                <Text style={styles.welcomeText}>Welcome Back</Text>
+                <Text style={styles.welcomeSubtext}>Hello, Welcome Back</Text>
+                <Text style={styles.welcomeText}>{spenderName}</Text>
               </View>
             </View>
 
@@ -374,7 +374,7 @@ export default function SpenderHomeScreen() {
                 style={styles.iconBoxTop} 
                 onPress={() => router.push('/invitations')}
               >
-                <Ionicons name="mail-outline" size={20} color="#FFFFFF" />
+                <Ionicons name="mail-outline" size={20} color="#000000" />
               </TouchableOpacity>
 
               {/* Calendar Icon */}
@@ -382,14 +382,14 @@ export default function SpenderHomeScreen() {
                 style={styles.iconBoxTop} 
                 onPress={() => router.push('/reminders')} 
               >
-                <Ionicons name="calendar-outline" size={20} color="#FFFFFF" />
+                <Ionicons name="calendar-outline" size={20} color="#000000" />
                 <View style={styles.calendarDot} />
               </TouchableOpacity>
             </View>
           </View>
           
           <View style={styles.balanceContainer}>
-            <Text style={styles.balanceLabel}>Total Remaining Balance (Unallocated)</Text>
+            <Text style={styles.balanceLabel}>Total Remaining Balance</Text>
             <Text style={styles.mainBalance}>
               ₱{summary ? summary.remaining.toLocaleString('en-US', { minimumFractionDigits: 2 }) : "0.00"}
             </Text>
@@ -559,20 +559,21 @@ const styles = StyleSheet.create({
   scrollContent: { paddingBottom: 40 },
   
   headerBackground: { 
-    backgroundColor: '#ffffff', 
+    backgroundColor: '#ffffffff', 
     paddingHorizontal: 24, 
     paddingTop: Platform.OS === 'android' ? (NativeStatusBar.currentHeight ? NativeStatusBar.currentHeight + 14 : 45) : 16, 
     paddingBottom: 64, 
     borderBottomColor: '#000000',
     borderBottomLeftRadius: 50, 
-    borderBottomRightRadius: 50
+    borderBottomRightRadius: 50,
+    elevation: 10,
   },
   welcomeRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
   navigatorRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   avatarRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   avatarPlaceholder: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center' },
-  avatarImage: { width: 40, height: 40, borderRadius: 20, resizeMode: 'cover' }, 
-  welcomeSubtext: { fontSize: 13, color: '#A3B8B0' },
+  avatarImage: { width: 40, height: 40, borderRadius: 20, resizeMode: 'cover', }, 
+  welcomeSubtext: { fontSize: 13, color: '#426658' },
   welcomeText: { fontSize: 16, fontWeight: '700', color: '#000000', marginTop: 1 },
   
   // Bag-ong style para sa duha ka icons sa taas
@@ -581,8 +582,8 @@ const styles = StyleSheet.create({
   
   calendarDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#C5FF42', position: 'absolute', top: 11, right: 11, borderWidth: 1.5, borderColor: '#06261D' },
   balanceContainer: { alignItems: 'center', marginTop: 8 },
-  balanceLabel: { fontSize: 13, color: '#A3B8B0', fontWeight: '500', marginBottom: 6 },
-  mainBalance: { fontSize: 36, fontWeight: '700', color: '#FFFFFF', letterSpacing: -0.5 },
+  balanceLabel: { fontSize: 13, color: '#2b614c', fontWeight: '500', marginBottom: 6 },
+  mainBalance: { fontSize: 36, fontWeight: '700', color: '#000000', letterSpacing: -0.5, },
   
   headerMetricsWrapper: { marginTop: 20, paddingTop: 14, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.08)' },
   headerProgressBarBg: { height: 5, backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 10, overflow: 'hidden', marginBottom: 8 },
@@ -608,7 +609,7 @@ const styles = StyleSheet.create({
   cardMainHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   cardTitleCluster: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 0.75 },
   originalIconCircle: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center' },
-  originalCardName: { color: '#FFFFFF', fontSize: 16, fontWeight: '700', letterSpacing: -0.2 },
+  originalCardName: { color: '#000000', fontSize: 16, fontWeight: '700', letterSpacing: -0.2 },
   remainingBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.14)' },
   remainingBadgeText: { color: '#FFFFFF', fontSize: 10, fontWeight: '600', textTransform: 'uppercase' },
   
