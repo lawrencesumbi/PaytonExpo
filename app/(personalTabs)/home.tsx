@@ -59,6 +59,7 @@ export default function PersonalHomeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [userName, setUserName] = useState('User');
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null); // State para sa hulagway ni user
 
   const [income, setIncome] = useState<IncomeSummary | null>(null);
   const [categories, setCategories] = useState<DynamicCategory[]>([]);
@@ -86,12 +87,15 @@ export default function PersonalHomeScreen() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Giapil na pag-fetch ang avatar_url gikan sa profiles table
       const { data: profileData } = await supabase
         .from('profiles')
-        .select('full_name')
+        .select('full_name, avatar_url')
         .eq('id', user.id)
         .single();
+        
       if (profileData?.full_name) setUserName(profileData.full_name);
+      if (profileData?.avatar_url) setAvatarUrl(profileData.avatar_url);
 
       const { data: allCategoriesData, error: catError } = await supabase
         .from('categories')
@@ -365,10 +369,14 @@ export default function PersonalHomeScreen() {
         <View style={styles.headerBackground}>
           <View style={styles.welcomeRow}>
             <View style={styles.avatarRow}>
-              <Image 
-                source={{ uri: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop' }} 
-                style={styles.avatarImage} 
-              />
+              {/* Conditional Rendering para sa profile image kundi fallback icon */}
+              {avatarUrl ? (
+                <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+              ) : (
+                <View style={styles.avatarPlaceholder}>
+                  <Ionicons name="person" size={15} color="#FFFFFF" />
+                </View>
+              )}
               <View>
                 <Text style={styles.welcomeSubtext}>Hello, {userName}</Text>
                 <Text style={styles.welcomeText}>Welcome Back</Text>
@@ -376,10 +384,6 @@ export default function PersonalHomeScreen() {
             </View>
 
             <View style={styles.iconGroupRow}>
-              <TouchableOpacity style={styles.iconBoxTop} onPress={() => router.push('/invitations')}>
-                <Ionicons name="mail-outline" size={20} color="#FFFFFF" />
-              </TouchableOpacity>
-
               <TouchableOpacity style={styles.iconBoxTop} onPress={() => router.push('/reminders')}>
                 <Ionicons name="calendar-outline" size={20} color="#FFFFFF" />
                 <View style={styles.calendarDot} />
@@ -388,7 +392,7 @@ export default function PersonalHomeScreen() {
           </View>
           
           <TouchableOpacity activeOpacity={0.9} onPress={() => setIncomeModalVisible(true)} style={styles.balanceContainer}>
-            <Text style={styles.balanceLabel}>Total Remaining Balance (Unallocated)</Text>
+            <Text style={styles.balanceLabel}>Remaining Balance (Unallocated)</Text>
             <Text style={styles.mainBalance}>
               ₱{unallocatedBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
             </Text>
@@ -399,13 +403,13 @@ export default function PersonalHomeScreen() {
               <View style={[styles.headerProgressBarFill, { width: `${globalSpentPercentage}%` }]} />
             </View>
             <View style={styles.headerMetricsRow}>
-              <Text style={styles.headerMetricText}>Overall Allowance: ₱{income ? income.amount.toLocaleString() : '0'}</Text>
+              <Text style={styles.headerMetricText}>Overall Income: ₱{income ? income.amount.toLocaleString() : '0'}</Text>
               <Text style={styles.headerMetricText}>Total Spent: ₱{totalSpentAcrossSystem.toLocaleString()}</Text>
             </View>
           </View>
         </View>
 
-        {/* Carousel Section (FIXED INTERVAL SNAPPING SYSTEM) */}
+        {/* Carousel Section */}
         <View style={styles.cardsSectionContainer}>
           <FlatList
             ref={flatListRef}
@@ -479,7 +483,7 @@ export default function PersonalHomeScreen() {
           )}
         </View>
 
-        {/* Recent Transactions List Layout */}
+        {/* Recent Transactions List */}
         <View style={styles.contentBody}>
           <View style={styles.recentSectionHeader}>
             <Text style={styles.sectionTitle}>Recent Transaction</Text>
@@ -513,7 +517,7 @@ export default function PersonalHomeScreen() {
         </View>
       </ScrollView>
 
-      {/* MODAL 1: FUND ALLOCATION OVERLAY */}
+      {/* MODAL 1: FUND ALLOCATION */}
       <Modal animationType="fade" transparent={true} visible={allocateModalVisible} onRequestClose={() => setAllocateModalVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
@@ -540,7 +544,7 @@ export default function PersonalHomeScreen() {
         </View>
       </Modal>
 
-      {/* MODAL 2: INCOME STATEMENT SETTINGS PROMPT */}
+      {/* MODAL 2: UPDATE INCOME */}
       <Modal animationType="slide" transparent={true} visible={incomeModalVisible} onRequestClose={() => setIncomeModalVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
@@ -579,6 +583,7 @@ const styles = StyleSheet.create({
   welcomeRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
   avatarRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   avatarImage: { width: 40, height: 40, borderRadius: 20, resizeMode: 'cover' }, 
+  avatarPlaceholder: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center' },
   welcomeSubtext: { fontSize: 13, color: '#A3B8B0' },
   welcomeText: { fontSize: 16, fontWeight: '700', color: '#FFFFFF', marginTop: 1 },
   
