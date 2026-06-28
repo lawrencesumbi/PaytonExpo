@@ -184,9 +184,28 @@ export default function SpenderExpensesScreen() {
       <StatusBar style="dark" />
       
       <View style={styles.cardSelectionHeader}>
-        <Text style={styles.cardSelectionTitle}>Select Wallet</Text>
-        <Text style={styles.cardSelectionSubtitle}>{budgets.length} active folders</Text>
-      </View>
+  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+    <View>
+      <Text style={styles.cardSelectionTitle}>Select Wallet</Text>
+      <Text style={styles.cardSelectionSubtitle}>{budgets.length} active folders</Text>
+    </View>
+    
+    {/* BAG-ONG GIDUGANG: Statistics Nav Button */}
+    <TouchableOpacity 
+      activeOpacity={0.7}
+      onPress={() => router.push('/(personalTabs)/statistics')}
+      style={{
+        backgroundColor: '#F1F5F9',
+        padding: 10,
+        borderRadius: 50,
+        borderWidth: 1,
+        borderColor: '#E2E8F0'
+      }}
+    >
+      <Ionicons name="bar-chart-outline" size={20} color="#0F172A" />
+    </TouchableOpacity>
+  </View>
+</View>
 
       {budgets.length === 0 ? (
         <View style={styles.emptyState}>
