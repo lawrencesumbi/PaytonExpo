@@ -216,7 +216,7 @@ export default function LoginScreen() {
                 <View style={styles.socialContainer}>
                   <TouchableOpacity style={styles.socialButton} onPress={handleGoogleLogin}>
                     <GoogleIcon size={16} />
-                    <Text style={styles.socialButtonText}>Google</Text>
+                    <Text style={styles.socialButtonText}>  Google</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.socialButton} onPress={handleFacebookLogin}>
                     <FontAwesome name="facebook-official" color="#1877F2" size={16} style={styles.socialIcon} /><Text style={styles.socialButtonText}>Facebook</Text>

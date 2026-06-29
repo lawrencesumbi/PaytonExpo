@@ -3,17 +3,17 @@ import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    ImageBackground,
-    StatusBar as NativeStatusBar,
-    Platform,
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  ImageBackground,
+  StatusBar as NativeStatusBar,
+  Platform,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { supabase } from '../../lib/supabase';
 
@@ -28,6 +28,33 @@ export default function InvitationsScreen() {
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  
+  // 1. Naghimo og state para sa realtime nga oras ug petsa
+  const [currentDateTime, setCurrentDateTime] = useState('');
+
+  // 2. Function para i-format ang petsa ug oras parehas sa imong gusto nga layout
+  const formatRealTime = () => {
+    const now = new Date();
+    
+    // Format sa Petsa: Monday, October 19, 2020
+    const dateOptions: Intl.DateTimeFormatOptions = {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    };
+    const formattedDate = now.toLocaleDateString('en-US', dateOptions);
+
+    // Format sa Oras: 10:00 PM
+    const timeOptions: Intl.DateTimeFormatOptions = {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    };
+    const formattedTime = now.toLocaleTimeString('en-US', timeOptions);
+
+    setCurrentDateTime(`${formattedDate} • ${formattedTime}`);
+  };
 
   const fetchInvitations = async () => {
     try {
@@ -67,6 +94,12 @@ export default function InvitationsScreen() {
 
   useEffect(() => {
     fetchInvitations();
+
+    // 3. Paandaron ang clock in real-time inig mount sa screen
+    formatRealTime(); // Tawgon dayon diretso para dili mag-blangko sa sugod
+    const timer = setInterval(formatRealTime, 1000); // Mo-update matag segundo
+
+    return () => clearInterval(timer); // Limpyohan ang timer inig biya sa screen
   }, []);
 
   const handleAccept = async (id: string, sponsorName: string) => {
@@ -127,7 +160,8 @@ export default function InvitationsScreen() {
         {/* Clean Minimalist Header */}
         <View style={styles.headerSection}>
           <Text style={styles.headerTitle}>Notifications </Text>
-          <Text style={styles.headerSubtitle}>Monday, October 19, 2020 • 10:00 PM</Text>
+          {/* 4. Gi-puli diri ang state sa dynamic date/time */}
+          <Text style={styles.headerSubtitle}>{currentDateTime}</Text>
         </View>
 
         {/* Dynamic List Render Blocks */}
