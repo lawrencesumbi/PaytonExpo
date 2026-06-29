@@ -1,4 +1,3 @@
-// app/(spenderTabs)/budget.tsx
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -184,28 +183,27 @@ export default function SpenderExpensesScreen() {
       <StatusBar style="dark" />
       
       <View style={styles.cardSelectionHeader}>
-  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-    <View>
-      <Text style={styles.cardSelectionTitle}>Select Wallet</Text>
-      <Text style={styles.cardSelectionSubtitle}>{budgets.length} active folders</Text>
-    </View>
-    
-    {/* BAG-ONG GIDUGANG: Statistics Nav Button */}
-    <TouchableOpacity 
-      activeOpacity={0.7}
-      onPress={() => router.push('/(spenderTabs)/statistics')}
-      style={{
-        backgroundColor: '#F1F5F9',
-        padding: 10,
-        borderRadius: 50,
-        borderWidth: 1,
-        borderColor: '#E2E8F0'
-      }}
-    >
-      <Ionicons name="bar-chart-outline" size={20} color="#0F172A" />
-    </TouchableOpacity>
-  </View>
-</View>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <View>
+            <Text style={styles.cardSelectionTitle}>Select Wallet</Text>
+            <Text style={styles.cardSelectionSubtitle}>{budgets.length} active folders</Text>
+          </View>
+          
+          <TouchableOpacity 
+            activeOpacity={0.7}
+            onPress={() => router.push('/(spenderTabs)/statistics')}
+            style={{
+              backgroundColor: '#F1F5F9',
+              padding: 10,
+              borderRadius: 50,
+              borderWidth: 1,
+              borderColor: '#E2E8F0'
+            }}
+          >
+            <Ionicons name="bar-chart-outline" size={20} color="#0F172A" />
+          </TouchableOpacity>
+        </View>
+      </View>
 
       {budgets.length === 0 ? (
         <View style={styles.emptyState}>
@@ -221,47 +219,69 @@ export default function SpenderExpensesScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.verticalCardList}
           showsVerticalScrollIndicator={false}
-          renderItem={({ item }) => {
-            // PROGRESS BAR ADDITION: Kalkulahon ang nahabilin nga porsyento sa kwarta
-            const total = item.allocated_amount || 1; // Likayan ang division by zero
+          
+          snapToInterval={80} 
+          snapToAlignment="start"
+          decelerationRate="fast"
+          pagingEnabled={false}
+          renderItem={({ item, index }) => {
+            const total = item.allocated_amount || 1; 
             const remainingPercent = Math.max(0, Math.min(100, (item.remaining_amount / total) * 100));
+
+            // KANING BAHINA: Imong dynamic custom themes array para mag-usab usab ang kolor
+            const themeColors = [
+              { bg: '#0F172A', text: '#FFFFFF', subText: 'rgba(255,255,255,0.6)', barTrack: 'rgba(255,255,255,0.2)' }, 
+              { bg: '#087996', text: '#FFFFFF', subText: '#d5edf3', barTrack: 'rgba(255,255,255,0.25)' },         
+              { bg: '#035c43', text: '#FFFFFF', subText: '#ECFDF5', barTrack: 'rgba(255,255,255,0.25)' },          
+              { bg: '#1E3A8A', text: '#FFFFFF', subText: '#E0E7FF', barTrack: 'rgba(255,255,255,0.25)' },          
+              { bg: '#2150b6', text: '#FFFFFF', subText: '#F5F3FF', barTrack: 'rgba(255,255,255,0.25)' },         
+            ];
+            
+            const currentTheme = themeColors[index % themeColors.length];
 
             return (
               <TouchableOpacity
-                activeOpacity={0.85}
+                activeOpacity={0.9}
                 onPress={() => handleCardPress(item)}
                 style={[
                   styles.modernFintechCard,
-                  { backgroundColor: item.categories.color || '#1E293B' }
+                  { 
+                    backgroundColor: currentTheme.bg, // Gigamit ang dynamic bg color
+                    marginTop: index === 0 ? 0 : -100, // Stack effect padding
+                    zIndex: index + 1,
+                    elevation: index + 1,
+                  }
                 ]}
               >
                 <View style={styles.modernCardHeaderRow}>
                   <View style={styles.modernCardBadgeIconWrapper}>
+                    {/* Gi-force og ngitngit ang icon color para makita sa white background badge */}
                     {/* @ts-ignore */}
-                    <Ionicons name={item.categories.icon || 'wallet-outline'} size={18} color={item.categories.color || '#1E293B'} />
+                    <Ionicons name={item.categories.icon || 'wallet-outline'} size={18} color={currentTheme.bg} />
                   </View>
-                  <Text style={styles.modernCardCategoryText}>{item.categories.name}</Text>
-                  <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.6)" style={{ marginLeft: 'auto' }} />
+                  <Text style={[styles.modernCardCategoryText, { color: currentTheme.text }]}>
+                    {item.categories.name}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={16} color={currentTheme.subText} style={{ marginLeft: 'auto' }} />
                 </View>
                 
-                {/* PROGRESS BAR ADDITION: Ang Track ug Fill sa Bar */}
                 <View style={styles.progressBarContainer}>
-                  <View style={styles.progressBarTrack}>
+                  <View style={[styles.progressBarTrack, { backgroundColor: currentTheme.barTrack }]}>
                     <View style={[styles.progressBarFill, { width: `${remainingPercent}%` }]} />
                   </View>
                   <View style={styles.progressBarLabelRow}>
-                    <Text style={styles.progressBarLeftText}>
+                    <Text style={[styles.progressBarLeftText, { color: currentTheme.text }]}>
                       ₱{item.remaining_amount.toLocaleString(undefined, { maximumFractionDigits: 0 })} left
                     </Text>
-                    <Text style={styles.progressBarRightText}>
+                    <Text style={[styles.progressBarRightText, { color: currentTheme.subText }]}>
                       of ₱{item.allocated_amount.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                     </Text>
                   </View>
                 </View>
 
                 <View style={styles.modernCardBalanceContainer}>
-                  <Text style={styles.modernCardBalanceLabel}>AVAILABLE BALANCE</Text>
-                  <Text style={styles.modernCardBalanceAmount}>
+                  <Text style={[styles.modernCardBalanceLabel, { color: currentTheme.subText }]}>AVAILABLE BALANCE</Text>
+                  <Text style={[styles.modernCardBalanceAmount, { color: currentTheme.text }]}>
                     ₱{item.remaining_amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </Text>
                 </View>
@@ -271,6 +291,7 @@ export default function SpenderExpensesScreen() {
         />
       )}
 
+      {/* Expense Modal (Pabilin ang orihinal nga code) */}
       <Modal
         visible={isModalOpen}
         animationType="slide"
@@ -475,19 +496,26 @@ const styles = StyleSheet.create({
   },
   cardSelectionTitle: { fontSize: 24, fontWeight: '800', color: '#0F172A', letterSpacing: -0.5 },
   cardSelectionSubtitle: { fontSize: 13, color: '#64748B', marginTop: 2, fontWeight: '500' },
-  verticalCardList: { paddingHorizontal: 24, gap: 16, paddingBottom: 40 },
   
-  // GI-MODIFIED: Gidugangan gamay ang height gikan 136 ngadto sa 165 para masulod ang progress bar
+  // GI-UPDATE: Gidugangan og paddingBottom para dili maputol ang pinakaubos nga card tungod sa stack overflow
+  verticalCardList: { 
+    paddingHorizontal: 24, 
+    paddingTop: 10,
+    paddingBottom: 150, 
+    elevation: 10,
+  },
+  
   modernFintechCard: {
-    borderRadius: 20,
-    padding: 20,
-    height: 165, 
+    borderRadius: 24,
+    padding: 22,
+    height: 180, 
     justifyContent: 'space-between',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.12,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 0.15,
     shadowRadius: 10,
-    elevation: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
   },
   modernCardHeaderRow: {
     flexDirection: 'row',
@@ -507,21 +535,19 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: -0.2,
   },
-  
-  // PROGRESS BAR STYLES
   progressBarContainer: {
-    marginTop: 10,
+    marginTop: 6,
     width: '100%',
   },
   progressBarTrack: {
     height: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.25)', // Semi-transparent white track
+    backgroundColor: 'rgba(255, 255, 255, 0.25)', 
     borderRadius: 3,
     overflow: 'hidden',
   },
   progressBarFill: {
     height: '100%',
-    backgroundColor: '#FFFFFF', // Solid white loader line
+    backgroundColor: '#FFFFFF', 
     borderRadius: 3,
   },
   progressBarLabelRow: {
@@ -539,7 +565,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '400',
   },
-
   modernCardBalanceContainer: {
     marginTop: 'auto',
   },

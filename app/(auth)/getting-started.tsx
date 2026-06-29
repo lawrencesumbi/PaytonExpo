@@ -98,7 +98,7 @@ export default function GettingStartedScreen() {
             scrollEnabled={false} 
             showsVerticalScrollIndicator={false}
           >
-            {/* Dynamic spacing placeholder element (Gipamub-an para mapaduol ang text) */}
+            {/* FIX 1: Gihimo na natong 0 ang static spacer height aron dili moduso paubos */}
             <View style={styles.layoutPhoneSpacer} />
 
             {/* Message Block */}
@@ -315,16 +315,12 @@ const styles = StyleSheet.create({
   },
   scrollContainer: {
     flexGrow: 1,
-    justifyContent: 'flex-start',
+    justifyContent: 'flex-end', // FIX 2: Gi-force nato pa-itaas ang flex elements aron mo-dock dapit sa hardware bounds
   },
-  
-  // FIX 1: Gipa-mub-an ngadto sa 60px para mosaka ang title/description ug mosikit sa CP
   layoutPhoneSpacer: {
-    height: 60, 
+    height: 0, // FIX 3: Gi-tangtang na gyud ang spacer height aron mawala ang gap sa tunga
     width: '100%',
   },
-  
-  // FIX 2: Gipaubos ang cellphone frame (gikan sa -395, gihimo natong -330)
   absolutePhoneWrapper: {
     position: 'absolute',
     top: (height * 0.58) - 330, 
@@ -533,7 +529,9 @@ const styles = StyleSheet.create({
   textContainer: { 
     width: '100%', 
     alignItems: 'center',
-    marginTop: 10, 
+    // FIX 4: Gi-lock nato ang top container distance ngadto sa eksaktong 105px aron pilit kaayo sa mockup border
+    marginTop: 105, 
+    marginBottom: 10,
   },
   heading: { 
     color: DESIGN_COLORS.textDark, 

@@ -156,10 +156,10 @@ export default function InvitationsScreen() {
             renderItem={({ item, index }) => {
               // Dynamic Premium Pastel Array to match the reference card system styling
               const premiumPastels = [
-                { bg: '#d5edf3', accent: '#97e6fa', text: '#087996' }, 
-                { bg: '#ECFDF5', accent: '#7cfcd1', text: '#035c43' }, 
-                { bg: '#FFF5F5', accent: '#d6f7b8', text: '#254b05' }, 
-                { bg: '#FFFBEB', accent: '#b1e4fc', text: '#09445f' }, 
+                { bg: '#d5edf3', accent: '#63d6f3', text: '#087996' }, 
+                { bg: '#ECFDF5', accent: '#59f5c1', text: '#035c43' }, 
+                { bg: '#FFF5F5', accent: '#abf566', text: '#254b05' }, 
+                { bg: '#FFFBEB', accent: '#6bcffd', text: '#09445f' }, 
               ];
               const theme = premiumPastels[index % premiumPastels.length];
 

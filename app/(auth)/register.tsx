@@ -1,4 +1,5 @@
-import { Feather, FontAwesome } from '@expo/vector-icons';
+ import { Feather, FontAwesome } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Linking from 'expo-linking';
 import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
@@ -90,72 +91,75 @@ export default function RegisterScreen() {
     };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-        <View style={styles.headerContainer}>
-          <Text style={styles.title}>Create Account</Text>
-          <Text style={styles.subtitle}>Start your journey with us today.</Text>
-        </View>
+    <LinearGradient colors={['#ffffff', '#dcfce7']} style={styles.container}>
+      <SafeAreaView style={styles.safeArea}>
+        <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+          <View style={styles.headerContainer}>
+            <Text style={styles.title}>Create Account</Text>
+            <Text style={styles.subtitle}>Start your journey with us today.</Text>
+          </View>
 
-        {/* The Card Layout */}
-        <View style={styles.card}>
-          <View style={styles.form}>
-            {[
-              { icon: 'user', placeholder: 'Full Name', value: fullName, setter: setFullName, type: 'words' },
-              { icon: 'mail', placeholder: 'Email Address', value: email, setter: setEmail, type: 'none', keyboard: 'email-address' },
-              { icon: 'lock', placeholder: 'Password', value: password, setter: setPassword, secure: true },
-              { icon: 'lock', placeholder: 'Confirm Password', value: confirmPassword, setter: setConfirmPassword, secure: true },
-            ].map((item, index) => (
-              <View key={index} style={styles.inputWrapper}>
-                <Feather name={item.icon as any} color="#64748B" size={18} style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder={item.placeholder}
-                  placeholderTextColor="#94A3B8"
-                  value={item.value}
-                  onChangeText={item.setter}
-                  secureTextEntry={item.secure && !showPassword}
-                  autoCapitalize={item.type as any || 'none'}
-                  keyboardType={item.keyboard as any || 'default'}
-                />
-                {item.secure && (
-                  <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                    <Feather name={showPassword ? 'eye-off' : 'eye'} color="#94A3B8" size={18} />
-                  </TouchableOpacity>
-                )}
-              </View>
-            ))}
+          {/* The Card Layout */}
+          <View style={styles.card}>
+            <View style={styles.form}>
+              {[
+                { icon: 'user', placeholder: 'Full Name', value: fullName, setter: setFullName, type: 'words' },
+                { icon: 'mail', placeholder: 'Email Address', value: email, setter: setEmail, type: 'none', keyboard: 'email-address' },
+                { icon: 'lock', placeholder: 'Password', value: password, setter: setPassword, secure: true },
+                { icon: 'lock', placeholder: 'Confirm Password', value: confirmPassword, setter: setConfirmPassword, secure: true },
+              ].map((item, index) => (
+                <View key={index} style={styles.inputWrapper}>
+                  <Feather name={item.icon as any} color="#64748B" size={18} style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder={item.placeholder}
+                    placeholderTextColor="#94A3B8"
+                    value={item.value}
+                    onChangeText={item.setter}
+                    secureTextEntry={item.secure && !showPassword}
+                    autoCapitalize={item.type as any || 'none'}
+                    keyboardType={item.keyboard as any || 'default'}
+                  />
+                  {item.secure && (
+                    <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                      <Feather name={showPassword ? 'eye-off' : 'eye'} color="#94A3B8" size={18} />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ))}
 
-            <TouchableOpacity style={styles.primaryButton} onPress={handleRegister} disabled={isLoading}>
-              {isLoading ? <ActivityIndicator color="#FFF" /> : <Text style={styles.buttonText}>Sign Up</Text>}
+              <TouchableOpacity style={styles.primaryButton} onPress={handleRegister} disabled={isLoading}>
+                {isLoading ? <ActivityIndicator color="#FFF" /> : <Text style={styles.buttonText}>Sign Up</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <View style={styles.dividerContainer}>
+            <View style={styles.line} /><Text style={styles.dividerText}>or continue with</Text><View style={styles.line} />
+          </View>
+
+          <View style={styles.socialContainer}>
+            <TouchableOpacity style={styles.socialButton} onPress={handleGoogleLogin}>
+              <GoogleIcon size={16} />
+              <Text style={styles.socialButtonText}>Google</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.socialButton} onPress={handleFacebookLogin}>
+              <FontAwesome name="facebook-official" color="#1877F2" size={16} style={styles.socialIcon} /><Text style={styles.socialButtonText}>Facebook</Text>
             </TouchableOpacity>
           </View>
-        </View>
 
-        <View style={styles.dividerContainer}>
-          <View style={styles.line} /><Text style={styles.dividerText}>or continue with</Text><View style={styles.line} />
-        </View>
-
-        <View style={styles.socialContainer}>
-          <TouchableOpacity style={styles.socialButton} onPress={handleGoogleLogin}>
-            <GoogleIcon size={16} />
-            <Text style={styles.socialButtonText}>Google</Text>
+          <TouchableOpacity style={styles.footer} onPress={() => router.push('/login')}>
+            <Text style={styles.footerText}>Already have an account? <Text style={styles.linkText}>Sign In</Text></Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.socialButton} onPress={handleFacebookLogin}>
-            <FontAwesome name="facebook-official" color="#1877F2" size={16} style={styles.socialIcon} /><Text style={styles.socialButtonText}>Facebook</Text>
-          </TouchableOpacity>
-        </View>
-
-        <TouchableOpacity style={styles.footer} onPress={() => router.push('/login')}>
-          <Text style={styles.footerText}>Already have an account? <Text style={styles.linkText}>Sign In</Text></Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </SafeAreaView>
+        </ScrollView>
+      </SafeAreaView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#F8FAFC' },
+  container: { flex: 1 },
+  safeArea: { flex: 1 },
   scrollContainer: { padding: 24, flexGrow: 1, justifyContent: 'center' },
   headerContainer: { marginBottom: 30, alignItems: 'center' },
   title: { fontSize: 28, fontWeight: '800', color: '#0F172A', marginBottom: 8 },
@@ -165,7 +169,8 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: 25,
-    padding: 24,
+    padding: 25,
+    paddingVertical: 50,
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12 },
       android: { elevation: 8 },

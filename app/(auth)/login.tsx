@@ -1,10 +1,10 @@
  import { Feather, FontAwesome } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Linking from 'expo-linking';
 import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import { LinearGradient } from 'expo-linear-gradient'; 
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View, ScrollView, Platform, Image, KeyboardAvoidingView } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, Animated, Image, KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { supabase } from '../../lib/supabase';
 
@@ -38,6 +38,31 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  
+  // Animation value for logo zoom
+  const logoScale = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    // Create continuous zoom in/out animation
+    const zoomAnimation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(logoScale, {
+          toValue: 1.1,
+          duration: 2000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(logoScale, {
+          toValue: 1,
+          duration: 2000,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    
+    zoomAnimation.start();
+    
+    return () => zoomAnimation.stop();
+  }, [logoScale]);
 
   useEffect(() => {
     const handleDeepLink = async (url: string) => {
@@ -144,16 +169,23 @@ export default function LoginScreen() {
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.container}>
           <ScrollView contentContainerStyle={styles.scrollContainer} bounces={false}>
             <View style={styles.innerContainer}>
-              <View style={styles.gradientLogoContainer}>
+              {/* Animated Logo with zoom effect */}
+              <Animated.View style={[
+                styles.gradientLogoContainer,
+                {
+                  transform: [{ scale: logoScale }]
+                }
+              ]}>
                 <Image source={require('../../assets/images/logo-light1.png')} style={styles.logoImage} resizeMode="contain" />
-              </View>
+              </Animated.View>
               
-              <View style={styles.card}>
-                <View style={styles.headerContainer}>
-                  <Text style={styles.titleText}>Sign In</Text>
-                  <Text style={styles.subtitle}>Access your account securely.</Text>
-                </View>
+              <View style={styles.signInHeader}>
+                <Text style={styles.titleText}>Sign In</Text>
+                <Text style={styles.subtitle}>Access your account securely.</Text>
+              </View>
 
+              {/* White Card - More vertical and bigger */}
+              <View style={styles.card}>
                 <View style={styles.form}>
                   <View style={styles.inputWrapper}>
                     <Feather name="mail" color="#64748B" size={16} style={styles.inputIcon} />
@@ -207,31 +239,133 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   safeArea: { flex: 1 },
-  scrollContainer: { flexGrow: 1, justifyContent: 'center' },
-  innerContainer: { paddingHorizontal: 20, paddingVertical: 10 },
-  gradientLogoContainer: { alignItems: 'center', justifyContent: 'center', marginBottom: 15, height: 200, width: '100%' },
-  logoImage: { width: '70%', height: '70%' },
-  card: { backgroundColor: '#FFFFFF', borderRadius: 30, paddingHorizontal: 20, paddingVertical: 20, elevation: 5 },
-  headerContainer: { marginBottom: 15, alignItems: 'center' },
-  titleText: { fontSize: 20, fontWeight: '700', color: '#0F172A', marginBottom: 4 },
-  subtitle: { fontSize: 13, color: '#64748B', textAlign: 'center' },
+  scrollContainer: { 
+    flexGrow: 1, 
+    justifyContent: 'flex-start',
+    paddingTop: 45,
+  },
+  innerContainer: { 
+    paddingHorizontal: 20, 
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  gradientLogoContainer: { 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    marginBottom: 40, 
+    height: 100, 
+    width: 100,
+    borderRadius: 25,
+    borderWidth: 2,
+    borderColor: '#166534',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    shadowColor: '#166534',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  logoImage: { 
+    width: '60%', 
+    height: '60%',
+  },
+  signInHeader: {
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  titleText: { 
+    fontSize: 25, 
+    fontWeight: '800', 
+    color: '#0F172A', 
+    marginBottom: 3,
+  },
+  subtitle: { 
+    fontSize: 12, 
+    color: '#64748B', 
+    textAlign: 'center',
+  },
+  
+  // White Card - More vertical spacing (bigger)
+  card: { 
+    backgroundColor: '#FFFFFF', 
+    borderRadius: 30, 
+    paddingHorizontal: 25, 
+    paddingVertical: 30,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    width: '100%',
+  },
+  
   form: { width: '100%' },
-  inputWrapper: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 25, paddingHorizontal: 15, height: 46, marginBottom: 10 },
+  inputWrapper: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    backgroundColor: '#F8FAFC', 
+    borderWidth: 1, 
+    borderColor: '#E2E8F0', 
+    borderRadius: 25, 
+    paddingHorizontal: 15, 
+    height: 50, 
+    marginBottom: 20
+  },
   inputIcon: { marginRight: 10 },
-  input: { flex: 1, fontSize: 14, color: '#0F172A', height: '100%' },
+  input: { flex: 1, fontSize: 15, color: '#0F172A', height: '100%' },
   eyeIcon: { padding: 5 },
-  forgotWrapper: { alignSelf: 'flex-end', marginBottom: 12 },
-  forgot: { color: '#166534', fontSize: 12, fontWeight: '600' },
-  primaryButton: { backgroundColor: '#166534', borderRadius: 25, height: 46, alignItems: 'center', justifyContent: 'center' },
-  buttonText: { color: '#FFFFFF', fontSize: 15, fontWeight: '600' },
-  dividerContainer: { flexDirection: 'row', alignItems: 'center', marginVertical: 15 },
+  
+  forgotWrapper: { 
+    alignSelf: 'flex-end', 
+    marginBottom: 20,
+    marginTop: 4 
+  },
+  forgot: { color: '#166534', fontSize: 13, fontWeight: '600' },
+  
+  primaryButton: { 
+    backgroundColor: '#166534', 
+    borderRadius: 25, 
+    height: 50, 
+    alignItems: 'center', 
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  buttonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
+  
+  dividerContainer: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    marginVertical: 24,
+  },
   dividerLine: { flex: 1, height: 1, backgroundColor: '#E2E8F0' },
-  dividerText: { color: '#94A3B8', fontSize: 12, paddingHorizontal: 10 },
-  socialContainer: { flexDirection: 'row', gap: 10, marginBottom: 15 },
-  socialButton: { flex: 1, backgroundColor: '#FFFFFF', borderRadius: 25, height: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#E2E8F0' },
+  dividerText: { color: '#94A3B8', fontSize: 13, paddingHorizontal: 12 },
+  
+  socialContainer: { 
+    flexDirection: 'row', 
+    gap: 12, 
+    marginBottom: 24,
+  },
+  socialButton: { 
+    flex: 1, 
+    backgroundColor: '#FFFFFF', 
+    borderRadius: 25, 
+    height: 48, 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    borderWidth: 1, 
+    borderColor: '#E2E8F0' 
+  },
   socialIcon: { marginRight: 8 },
-  socialButtonText: { color: '#0F172A', fontSize: 13, fontWeight: '600' },
-  footer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 5 },
-  footerText: { color: '#64748B', fontSize: 13 },
-  linkText: { color: '#166534', fontWeight: '600', fontSize: 13 },
+  socialButtonText: { color: '#0F172A', fontSize: 14, fontWeight: '600' },
+  
+  footer: { 
+    flexDirection: 'row', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    marginTop: 8,
+  },
+  footerText: { color: '#64748B', fontSize: 14 },
+  linkText: { color: '#166534', fontWeight: '600', fontSize: 14 },
 });

@@ -4,15 +4,15 @@ import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    FlatList,
-    StatusBar as NativeStatusBar,
-    Platform,
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  FlatList,
+  StatusBar as NativeStatusBar,
+  Platform,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { Circle, Path, Svg } from 'react-native-svg';
 import { supabase } from '../../lib/supabase';
@@ -212,7 +212,7 @@ export default function StatisticsScreen() {
           </Svg>
           
           {/* Tooltip gikan sa stat.png layout */}
-          <View style={[styles.tooltipContainer, { left: currentActive.tooltipLeft }]}>
+          <View style={[styles.tooltipContainer, { left: currentActive.tooltipLeft as any }]}>
             <View style={[styles.tooltipArrow, { borderBottomColor: currentActive.activeColor }]} />
             
             <View style={[styles.tooltipBubble, { backgroundColor: currentActive.activeColor }]}>
@@ -245,7 +245,7 @@ export default function StatisticsScreen() {
         
         <View style={styles.historyHeaderRow}>
           <Text style={styles.historyTitle}>Transaction History</Text>
-          <TouchableOpacity activeOpacity={0.7} onPress={() => router.push('/(personalTabs)/transaction')}>
+          <TouchableOpacity activeOpacity={0.7} onPress={() => router.push('/(spenderTabs)/transaction')}>
             <Text style={styles.viewAllText}>View all {'>'}</Text>
           </TouchableOpacity>
         </View>

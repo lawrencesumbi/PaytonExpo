@@ -1,12 +1,14 @@
- // app/(sponsorTabs)/home.tsx
+  // app/(sponsorTabs)/home.tsx
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Animated,
+  Easing,
   FlatList,
   Image,
   StatusBar as NativeStatusBar,
@@ -29,40 +31,21 @@ interface AllowanceDashboardItem {
   spender_name: string;
 }
 
-/* ---------- Design Tokens ---------- */
+/* ---------- Dark Green Theme Tokens ---------- */
 const COLORS = {
-  bg: '#F6F7F9',
-  surface: '#FFFFFF',
-  ink: '#0B1220',
-  inkSoft: '#475569',
-  muted: '#94A3B8',
-  hairline: '#ECEFF3',
-  brand: '#0F5143',
-  brandSoft: '#E8F2EF',
-  brandBorder: '#D2E7E1',
-  accent: '#C9A227', // refined gold instead of neon yellow
-  danger: '#DC2626',
-};
-
-const SHADOW = {
-  hero: Platform.select({
-    ios: {
-      shadowColor: '#0F5143',
-      shadowOffset: { width: 0, height: 18 },
-      shadowOpacity: 0.22,
-      shadowRadius: 28,
-    },
-    android: { elevation: 12 },
-  }),
-  card: Platform.select({
-    ios: {
-      shadowColor: '#0B1220',
-      shadowOffset: { width: 0, height: 6 },
-      shadowOpacity: 0.05,
-      shadowRadius: 14,
-    },
-    android: { elevation: 2 },
-  }),
+  bg: '#0A1A14', // Dark green-black background
+  surface: '#0D2B1F', // Dark green surface
+  surfaceLight: '#113728', // Slightly lighter dark green
+  ink: '#E8F5E9', // Light green-white text
+  inkSoft: '#A5D6A7', // Soft green text
+  muted: '#6B9B7E', // Muted green
+  hairline: '#1A3D2C', // Dark green border
+  brand: '#1B5E20', // Deep green
+  brandSoft: '#0D3320', // Very dark green
+  brandBorder: '#1A4D2E', // Dark green border
+  accent: '#4CAF50', // Bright green accent
+  danger: '#EF5350', // Red for danger
+  gold: '#FFD700', // Gold accent
 };
 
 export default function HomeScreen() {
@@ -72,6 +55,169 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [totalAllocated, setTotalAllocated] = useState(0);
   const [sponsorProfile, setSponsorProfile] = useState<{ full_name: string; avatar_url: string | null } | null>(null);
+
+  // Animated values for hero card shadow - dark theme
+  const heroShadowOpacity = useRef(new Animated.Value(0.4)).current;
+  const heroShadowRadius = useRef(new Animated.Value(15)).current;
+  const heroElevation = useRef(new Animated.Value(8)).current;
+  
+  // Store animations for each card
+  const cardAnimations = useRef<{ [key: string]: {
+    fadeSlide: Animated.Value;
+    float: Animated.Value;
+    shadowOpacity: Animated.Value;
+    shadowRadius: Animated.Value;
+    elevation: Animated.Value;
+    glowOpacity: Animated.Value;
+  } }>({}).current;
+
+  // Initialize animations for a single card
+  const initializeCardAnimations = (id: string) => {
+    if (!cardAnimations[id]) {
+      cardAnimations[id] = {
+        fadeSlide: new Animated.Value(0),
+        float: new Animated.Value(0),
+        shadowOpacity: new Animated.Value(0.5),
+        shadowRadius: new Animated.Value(8),
+        elevation: new Animated.Value(6),
+        glowOpacity: new Animated.Value(0.3),
+      };
+    }
+  };
+
+  // Animate card entry with floating and dark shadows
+  const animateCardIn = (id: string) => {
+    initializeCardAnimations(id);
+    const anims = cardAnimations[id];
+    
+    // Reset values
+    anims.fadeSlide.setValue(0);
+    anims.float.setValue(0);
+    anims.shadowOpacity.setValue(0.5);
+    anims.shadowRadius.setValue(8);
+    anims.elevation.setValue(6);
+    anims.glowOpacity.setValue(0.3);
+    
+    // Entry animation
+    Animated.parallel([
+      // Smooth slide up and fade in
+      Animated.timing(anims.fadeSlide, {
+        toValue: 1,
+        duration: 500,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      // Dark shadow breathing
+      Animated.loop(
+        Animated.sequence([
+          Animated.parallel([
+            Animated.timing(anims.shadowOpacity, {
+              toValue: 0.8,
+              duration: 3000,
+              easing: Easing.inOut(Easing.sin),
+              useNativeDriver: false,
+            }),
+            Animated.timing(anims.shadowRadius, {
+              toValue: 16,
+              duration: 3000,
+              easing: Easing.inOut(Easing.sin),
+              useNativeDriver: false,
+            }),
+            Animated.timing(anims.elevation, {
+              toValue: 12,
+              duration: 3000,
+              easing: Easing.inOut(Easing.sin),
+              useNativeDriver: false,
+            }),
+            Animated.timing(anims.glowOpacity, {
+              toValue: 0.15,
+              duration: 3000,
+              easing: Easing.inOut(Easing.sin),
+              useNativeDriver: false,
+            }),
+          ]),
+          Animated.parallel([
+            Animated.timing(anims.shadowOpacity, {
+              toValue: 0.5,
+              duration: 3000,
+              easing: Easing.inOut(Easing.sin),
+              useNativeDriver: false,
+            }),
+            Animated.timing(anims.shadowRadius, {
+              toValue: 8,
+              duration: 3000,
+              easing: Easing.inOut(Easing.sin),
+              useNativeDriver: false,
+            }),
+            Animated.timing(anims.elevation, {
+              toValue: 6,
+              duration: 3000,
+              easing: Easing.inOut(Easing.sin),
+              useNativeDriver: false,
+            }),
+            Animated.timing(anims.glowOpacity, {
+              toValue: 0.3,
+              duration: 3000,
+              easing: Easing.inOut(Easing.sin),
+              useNativeDriver: false,
+            }),
+          ]),
+        ])
+      ),
+    ]).start();
+  };
+
+  useEffect(() => {
+    // Hero card dark shadow animation
+    const heroAnimation = Animated.loop(
+      Animated.sequence([
+        Animated.parallel([
+          Animated.timing(heroShadowOpacity, {
+            toValue: 0.7,
+            duration: 4000,
+            easing: Easing.inOut(Easing.sin),
+            useNativeDriver: false,
+          }),
+          Animated.timing(heroShadowRadius, {
+            toValue: 25,
+            duration: 4000,
+            easing: Easing.inOut(Easing.sin),
+            useNativeDriver: false,
+          }),
+          Animated.timing(heroElevation, {
+            toValue: 16,
+            duration: 4000,
+            easing: Easing.inOut(Easing.sin),
+            useNativeDriver: false,
+          }),
+        ]),
+        Animated.parallel([
+          Animated.timing(heroShadowOpacity, {
+            toValue: 0.4,
+            duration: 4000,
+            easing: Easing.inOut(Easing.sin),
+            useNativeDriver: false,
+          }),
+          Animated.timing(heroShadowRadius, {
+            toValue: 15,
+            duration: 4000,
+            easing: Easing.inOut(Easing.sin),
+            useNativeDriver: false,
+          }),
+          Animated.timing(heroElevation, {
+            toValue: 8,
+            duration: 4000,
+            easing: Easing.inOut(Easing.sin),
+            useNativeDriver: false,
+          }),
+        ]),
+      ])
+    );
+    
+    heroAnimation.start();
+    
+    return () => heroAnimation.stop();
+  }, []);
 
   const fetchDashboardData = async (isRefreshing = false) => {
     try {
@@ -108,6 +254,11 @@ export default function HomeScreen() {
 
       setAllowances(formatted);
       setTotalAllocated(formatted.reduce((s, i) => s + i.amount, 0));
+      
+      // Animate each card in with staggered delay
+      formatted.forEach((item, index) => {
+        setTimeout(() => animateCardIn(item.id), index * 150);
+      });
     } catch (e: any) {
       console.error('Error:', e.message);
     } finally {
@@ -120,6 +271,10 @@ export default function HomeScreen() {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
+    // Reset all card animations
+    Object.keys(cardAnimations).forEach(key => {
+      delete cardAnimations[key];
+    });
     await fetchDashboardData(true);
   }, []);
 
@@ -130,9 +285,25 @@ export default function HomeScreen() {
         text: 'Delete',
         style: 'destructive',
         onPress: async () => {
-          const { error } = await supabase.from('allowances').delete().eq('id', id);
-          if (error) Alert.alert('Error', 'Failed to delete allowance.');
-          else fetchDashboardData();
+          if (cardAnimations[id]) {
+            Animated.timing(cardAnimations[id].fadeSlide, {
+              toValue: 0,
+              duration: 300,
+              easing: Easing.in(Easing.cubic),
+              useNativeDriver: true,
+            }).start(async () => {
+              const { error } = await supabase.from('allowances').delete().eq('id', id);
+              if (error) Alert.alert('Error', 'Failed to delete allowance.');
+              else {
+                delete cardAnimations[id];
+                fetchDashboardData();
+              }
+            });
+          } else {
+            const { error } = await supabase.from('allowances').delete().eq('id', id);
+            if (error) Alert.alert('Error', 'Failed to delete allowance.');
+            else fetchDashboardData();
+          }
         },
       },
     ]);
@@ -146,7 +317,7 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar style="dark" />
+      <StatusBar style="light" />
       <View style={styles.content}>
 
         {/* Header */}
@@ -166,15 +337,21 @@ export default function HomeScreen() {
           )}
         </View>
 
-        {/* Hero Card */}
-        <View style={[styles.heroShadow, SHADOW.hero]}>
+        {/* Hero Card with Dark Animated Shadow */}
+        <Animated.View style={[
+          styles.heroShadow,
+          {
+            shadowOpacity: heroShadowOpacity,
+            shadowRadius: heroShadowRadius,
+            elevation: heroElevation,
+          }
+        ]}>
           <LinearGradient
-            colors={['#13614F', '#0F5143', '#0A2E26']}
+            colors={['#1B5E20', '#0D3B1F', '#061A10']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.heroCard}
           >
-            {/* subtle decorative orbs */}
             <View style={styles.orbLg} />
             <View style={styles.orbSm} />
 
@@ -207,7 +384,7 @@ export default function HomeScreen() {
               </View>
             </View>
           </LinearGradient>
-        </View>
+        </Animated.View>
 
         {/* Section Header */}
         <View style={styles.sectionHeader}>
@@ -218,27 +395,28 @@ export default function HomeScreen() {
         </View>
 
         {loading && !refreshing ? (
-          <ActivityIndicator size="large" color={COLORS.brand} style={{ marginTop: 40 }} />
+          <ActivityIndicator size="large" color={COLORS.accent} style={{ marginTop: 40 }} />
         ) : (
           <FlatList
             data={allowances}
             keyExtractor={(item) => item.id}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.listScrollContent}
-            ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
+            ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
             refreshControl={
               <RefreshControl
                 refreshing={refreshing}
                 onRefresh={onRefresh}
-                colors={[COLORS.brand]}
-                tintColor={COLORS.brand}
+                colors={[COLORS.accent]}
+                tintColor={COLORS.accent}
+                progressBackgroundColor={COLORS.surface}
               />
             }
             ListEmptyComponent={
-              <View style={[styles.cardShadow, SHADOW.card]}>
+              <View style={styles.emptyCardShadow}>
                 <View style={styles.emptyContainer}>
                   <View style={styles.emptyIconCircle}>
-                    <Ionicons name="wallet-outline" size={28} color={COLORS.brand} />
+                    <Ionicons name="wallet-outline" size={28} color={COLORS.accent} />
                   </View>
                   <Text style={styles.emptyTitle}>No active allowances</Text>
                   <Text style={styles.emptySubtitle}>
@@ -255,48 +433,89 @@ export default function HomeScreen() {
                 </View>
               </View>
             }
-            renderItem={({ item }) => (
-              <View style={[styles.cardShadow, SHADOW.card]}>
-                <View style={styles.allowanceCard}>
-                  <View style={styles.cardLeft}>
-                    <View style={styles.iconContainer}>
-                      <Ionicons name="wallet" size={16} color={COLORS.brand} />
-                    </View>
-                    <View style={styles.infoBlock}>
-                      <Text style={styles.allowanceName} numberOfLines={1}>
-                        {item.allowance_name}
-                      </Text>
-                      <Text style={styles.spenderName} numberOfLines={1}>
-                        {item.spender_name}
-                      </Text>
-                    </View>
-                  </View>
+            renderItem={({ item, index }) => {
+              initializeCardAnimations(item.id);
+              const anims = cardAnimations[item.id];
+              
+              // Light floating interpolation
+              const floatY = anims.float?.interpolate({
+                inputRange: [0, 0.5, 1],
+                outputRange: [0, -1.5, 0],
+              }) || 0;
 
-                  <View style={styles.cardRight}>
-                    <Text style={styles.cardAmountText}>
-                      ₱{item.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                    </Text>
-                    <View style={styles.actionRow}>
-                      <TouchableOpacity
-                        onPress={() => handleEdit(item)}
-                        style={styles.actionBtn}
-                        activeOpacity={0.6}
-                      >
-                        <Ionicons name="pencil" size={13} color={COLORS.inkSoft} />
-                      </TouchableOpacity>
-                      <View style={styles.actionDivider} />
-                      <TouchableOpacity
-                        onPress={() => handleDelete(item.id)}
-                        style={styles.actionBtn}
-                        activeOpacity={0.6}
-                      >
-                        <Ionicons name="trash" size={13} color={COLORS.danger} />
-                      </TouchableOpacity>
+              return (
+                <Animated.View style={[
+                  styles.floatingCardShadow,
+                  {
+                    opacity: anims.fadeSlide,
+                    transform: [
+                      { 
+                        translateY: anims.fadeSlide.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [10, 0],
+                        })
+                      },
+                      {
+                        scale: anims.fadeSlide.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0.98, 1],
+                        }),
+                      },
+                    ],
+                    shadowOpacity: anims.shadowOpacity,
+                    shadowRadius: anims.shadowRadius,
+                    elevation: anims.elevation,
+                  },
+                ]}>
+                  {/* Green glow effect */}
+                  <Animated.View style={[
+                    styles.glowEffect,
+                    {
+                      opacity: anims.glowOpacity,
+                    }
+                  ]} />
+                  
+                  <View style={styles.allowanceCard}>
+                    <View style={styles.cardLeft}>
+                      <View style={styles.iconContainer}>
+                        <Ionicons name="wallet" size={16} color={COLORS.accent} />
+                      </View>
+                      <View style={styles.infoBlock}>
+                        <Text style={styles.allowanceName} numberOfLines={1}>
+                          {item.allowance_name}
+                        </Text>
+                        <Text style={styles.spenderName} numberOfLines={1}>
+                          {item.spender_name}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.cardRight}>
+                      <Text style={styles.cardAmountText}>
+                        ₱{item.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </Text>
+                      <View style={styles.actionRow}>
+                        <TouchableOpacity
+                          onPress={() => handleEdit(item)}
+                          style={styles.actionBtn}
+                          activeOpacity={0.6}
+                        >
+                          <Ionicons name="pencil" size={13} color={COLORS.inkSoft} />
+                        </TouchableOpacity>
+                        <View style={styles.actionDivider} />
+                        <TouchableOpacity
+                          onPress={() => handleDelete(item.id)}
+                          style={styles.actionBtn}
+                          activeOpacity={0.6}
+                        >
+                          <Ionicons name="trash" size={13} color={COLORS.danger} />
+                        </TouchableOpacity>
+                      </View>
                     </View>
                   </View>
-                </View>
-              </View>
-            )}
+                </Animated.View>
+              );
+            }}
           />
         )}
       </View>
@@ -329,25 +548,32 @@ const styles = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center',
     borderWidth: 1, borderColor: COLORS.brandBorder,
   },
-  avatarInitials: { color: COLORS.brand, fontWeight: '700', fontSize: 13, letterSpacing: 0.3 },
+  avatarInitials: { color: COLORS.accent, fontWeight: '700', fontSize: 13, letterSpacing: 0.3 },
 
   /* Hero */
-  heroShadow: { borderRadius: 22, marginBottom: 28 },
+  heroShadow: { 
+    borderRadius: 22, 
+    marginBottom: 28,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 8 },
+  },
   heroCard: {
     padding: 22,
     borderRadius: 22,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: COLORS.brandBorder,
   },
   orbLg: {
     position: 'absolute',
     width: 220, height: 220, borderRadius: 110,
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: 'rgba(76,175,80,0.05)',
     top: -90, right: -70,
   },
   orbSm: {
     position: 'absolute',
     width: 120, height: 120, borderRadius: 60,
-    backgroundColor: 'rgba(201,162,39,0.08)',
+    backgroundColor: 'rgba(255,215,0,0.05)',
     bottom: -50, left: -40,
   },
   heroTopRow: {
@@ -357,7 +583,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   heroLabel: {
-    color: 'rgba(255,255,255,0.65)',
+    color: 'rgba(255,255,255,0.6)',
     fontSize: 11,
     fontWeight: '600',
     letterSpacing: 1.4,
@@ -369,13 +595,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(0,0,0,0.3)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   heroBrandDot: {
     width: 6, height: 6, borderRadius: 3,
-    backgroundColor: COLORS.accent, marginRight: 6,
+    backgroundColor: COLORS.gold, marginRight: 6,
   },
   heroBrandText: {
     color: 'rgba(255,255,255,0.85)',
@@ -400,11 +626,11 @@ const styles = StyleSheet.create({
   heroStat: { flex: 1 },
   heroStatDivider: {
     width: 1, height: 28,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(255,255,255,0.08)',
     marginHorizontal: 14,
   },
   heroStatLabel: {
-    color: 'rgba(255,255,255,0.55)',
+    color: 'rgba(255,255,255,0.5)',
     fontSize: 10, fontWeight: '600',
     letterSpacing: 0.8, textTransform: 'uppercase',
     marginBottom: 4,
@@ -438,13 +664,29 @@ const styles = StyleSheet.create({
   },
   countPillText: {
     fontSize: 10, fontWeight: '700',
-    color: COLORS.brand, letterSpacing: 0.3,
+    color: COLORS.accent, letterSpacing: 0.3,
   },
 
   listScrollContent: { paddingBottom: 110 },
 
-  /* List item */
-  cardShadow: { borderRadius: 16 },
+  /* Floating Card with dark animated shadow */
+  floatingCardShadow: {
+    borderRadius: 16,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    backgroundColor: 'transparent',
+    position: 'relative',
+  },
+  glowEffect: {
+    position: 'absolute',
+    top: -2,
+    left: -2,
+    right: -2,
+    bottom: -2,
+    borderRadius: 18,
+    backgroundColor: COLORS.accent,
+    opacity: 0,
+  },
   allowanceCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -475,11 +717,11 @@ const styles = StyleSheet.create({
   cardRight: { alignItems: 'flex-end', justifyContent: 'space-between', height: 44 },
   cardAmountText: {
     fontSize: 14, fontWeight: '700',
-    color: COLORS.ink, letterSpacing: -0.1,
+    color: COLORS.accent, letterSpacing: -0.1,
   },
   actionRow: {
     flexDirection: 'row',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: COLORS.surfaceLight,
     borderRadius: 8,
     borderWidth: 1, borderColor: COLORS.hairline,
     alignItems: 'center', height: 24, paddingHorizontal: 2,
@@ -487,7 +729,15 @@ const styles = StyleSheet.create({
   actionBtn: { width: 24, height: 20, justifyContent: 'center', alignItems: 'center' },
   actionDivider: { width: 1, height: 12, backgroundColor: COLORS.hairline },
 
-  /* Empty */
+  /* Empty state with shadow */
+  emptyCardShadow: {
+    borderRadius: 16,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
   emptyContainer: {
     alignItems: 'center', padding: 28,
     backgroundColor: COLORS.surface, borderRadius: 16,
@@ -508,9 +758,9 @@ const styles = StyleSheet.create({
   },
   navigateBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: COLORS.ink,
+    backgroundColor: COLORS.accent,
     paddingVertical: 11, paddingHorizontal: 18,
     borderRadius: 10,
   },
-  navigateBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 12, letterSpacing: 0.2 },
-});
+  navigateBtnText: { color: '#0A1A14', fontWeight: '700', fontSize: 12, letterSpacing: 0.2 },
+}); 

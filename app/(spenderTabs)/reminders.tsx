@@ -1,19 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router'; // Gidugang para sa navigation back to home
+import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  Modal,
-  Platform,
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    Alert,
+    FlatList,
+    ImageBackground,
+    Modal,
+    SafeAreaView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { Calendar } from 'react-native-calendars';
 import { supabase } from '../../lib/supabase';
@@ -38,13 +38,12 @@ interface CategorySelect {
 }
 
 export default function RemindersScreen() {
-  const router = useRouter(); // Initialize ang router engine
+  const router = useRouter(); 
   const [loading, setLoading] = useState(true);
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [categories, setCategories] = useState<CategorySelect[]>([]);
   const [markedDates, setMarkedDates] = useState<any>({});
   
-  // Modal & Selection States
   const [selectedDate, setSelectedDate] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
   const [title, setTitle] = useState('');
@@ -52,13 +51,18 @@ export default function RemindersScreen() {
   const [selectedCategoryId, setSelectedCategoryId] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  // Helper para makuha ang Dynamic Month name para sa atong custom layout header
+  const [currentMonthYear, setCurrentMonthYear] = useState(() => {
+    const now = new Date();
+    return now.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+  });
+
   const fetchRemindersAndCategories = async () => {
     try {
       setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // 1. Fetch Categories
       const { data: catData } = await supabase
         .from('categories')
         .select('id, name')
@@ -66,7 +70,6 @@ export default function RemindersScreen() {
       
       if (catData) setCategories(catData);
 
-      // 2. Fetch Reminders
       const { data: remData, error: remError } = await supabase
         .from('reminders')
         .select(`
@@ -81,12 +84,21 @@ export default function RemindersScreen() {
       if (remData) {
         setReminders(remData as unknown as Reminder[]);
         
-        // Dynamic Calendar Markers
+        // Paghimo og custom markers nga naay text styling nga pareha sa reference image
         const markers: any = {};
         remData.forEach((rem) => {
           markers[rem.due_date] = {
-            marked: true,
-            dotColor: rem.status === 'pending' ? '#EF4444' : '#10B981',
+            customStyles: {
+              container: {
+                borderBottomWidth: 2,
+                borderBottomColor: rem.status === 'pending' ? '#EF4444' : '#10B981',
+                borderRadius: 4
+              },
+              text: {
+                fontWeight: '700',
+                color: '#1E293B'
+              }
+            }
           };
         });
         setMarkedDates(markers);
@@ -158,7 +170,6 @@ export default function RemindersScreen() {
               const { data: { user } } = await supabase.auth.getUser();
               if (!user) return;
 
-              // 1. Verify budget availability
               const { data: budget, error: budgetError } = await supabase
                 .from('budgets')
                 .select('id, remaining_amount')
@@ -180,7 +191,6 @@ export default function RemindersScreen() {
                 return;
               }
 
-              // 2. Deduct from remaining budget
               const newRemaining = Number(budget.remaining_amount) - reminder.amount;
               const { error: updateBudgetError } = await supabase
                 .from('budgets')
@@ -189,7 +199,6 @@ export default function RemindersScreen() {
 
               if (updateBudgetError) throw updateBudgetError;
 
-              // 3. Log target expenditure
               const { error: expenseError } = await supabase
                 .from('expenses')
                 .insert({
@@ -201,7 +210,6 @@ export default function RemindersScreen() {
 
               if (expenseError) throw expenseError;
 
-              // 4. Set reminder status to paid
               const { error: updateRemError } = await supabase
                 .from('reminders')
                 .update({ status: 'paid' })
@@ -225,86 +233,137 @@ export default function RemindersScreen() {
     fetchRemindersAndCategories();
   }, []);
 
-  const renderReminderItem = ({ item }: { item: Reminder }) => (
-    <View style={styles.reminderCard}>
-      <View style={styles.reminderLeft}>
-        <View style={[styles.categoryIndicator, { backgroundColor: item.categories?.color || '#10B981' }]}>
-          <Text style={styles.indicatorText}>{item.categories?.name.substring(0, 2).toUpperCase()}</Text>
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.reminderTitle}>{item.title}</Text>
-          <Text style={styles.reminderSub}>{item.due_date} • ₱{item.amount.toFixed(2)}</Text>
-        </View>
-      </View>
-      
-      {item.status === 'pending' ? (
-        <TouchableOpacity style={styles.payBtn} onPress={() => handleMarkAsPaid(item)}>
-          <Text style={styles.payBtnText}>Pay Now</Text>
-        </TouchableOpacity>
-      ) : (
-        <View style={styles.paidBadge}>
-          <Ionicons name="checkmark-circle" size={16} color="#10B981" />
-          <Text style={styles.paidText}>Paid</Text>
-        </View>
-      )}
-    </View>
-  );
+  const formatTimestamp = (dateStr: string) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+  };
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
       
-      {/* Clean Modern Header Section with Back Button */}
-      <View style={styles.header}>
-        <View style={styles.headerTopRow}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={22} color="#0F172A" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Reminders</Text>
-        </View>
-        <Text style={styles.headerSubtext}>Tap any calendar date to schedule an upcoming payment or bill.</Text>
+      {/* 1st Image Navigation Header Style */}
+      <View style={styles.navigationRow}>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <Ionicons name="chevron-back" size={20} color="#0F172A" />
+        </TouchableOpacity>
+      </View>
+      <View style={styles.calendarCardContainer}>
+        <ImageBackground 
+          source={require('../../assets/images/cover-bg.png')} // <-- Siguroha nga saktong path
+          style={styles.calendarBackgroundImage}
+        >
+          <Calendar
+            onDayPress={handleDayPress}
+            markingType={'custom'}
+            markedDates={{
+              ...markedDates,
+              [selectedDate]: {
+                customStyles: {
+                  container: {
+                    backgroundColor: '#0F172A', // <-- Giusab ngadto sa Dark Slate para klaro kaayo mosantop sa image
+                    borderRadius: 10,
+                    elevation: 4,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.2,
+                    shadowRadius: 3,
+                  },
+                  text: {
+                    color: '#FFFFFF', // Putian ang text sa sulod para high contrast
+                    fontWeight: '800'
+                  }
+                }
+              }
+            }}
+            onMonthChange={(month) => {
+              const date = new Date(month.year, month.month - 1);
+              setCurrentMonthYear(date.toLocaleString('en-US', { month: 'long', year: 'numeric' }));
+            }}
+            hideHeader={true}
+            theme={{
+              backgroundColor: 'transparent',
+              calendarBackground: 'transparent',
+              textSectionTitleColor: '#1E293B',       
+              textSectionTitleFontWeight: '700',
+              dayTextColor: '#334155',              
+              todayTextColor: '#0e664d',            
+              textDayFontWeight: '600',
+              textDayHeaderFontWeight: '700',
+              textDayFontSize: 14,
+              textDayHeaderFontSize: 13,
+            }}
+          />
+        </ImageBackground>
       </View>
 
-      {/* Elegant Elevated Calendar Container */}
-      <View style={styles.calendarWrapper}>
-        <Calendar
-          onDayPress={handleDayPress}
-          markedDates={{
-            ...markedDates,
-            [selectedDate]: { ...markedDates[selectedDate], selected: true, selectedColor: '#10B981' }
-          }}
-          theme={{
-            backgroundColor: '#FFFFFF',
-            calendarBackground: '#FFFFFF',
-            textSectionTitleColor: '#94A3B8',
-            selectedDayBackgroundColor: '#10B981',
-            selectedDayTextColor: '#FFFFFF',
-            todayTextColor: '#10B981',
-            dayTextColor: '#0F172A',
-            arrowColor: '#0F172A',
-            monthTextColor: '#0F172A',
-            indicatorColor: '#10B981',
-          }}
-        />
-      </View>
-
-      {/* Bill List Feed Section */}
+      {/* Bill List Feed Section (Image 1 Bottom Architecture) */}
       <View style={styles.feedWrapper}>
-        <Text style={styles.sectionTitle}>Upcoming Bills</Text>
+        <Text style={styles.sectionTitle}>Scheduled Schedules</Text>
+        
         {loading ? (
           <View style={styles.centeredLoader}>
-            <ActivityIndicator size="small" color="#10B981" />
+            <ActivityIndicator size="small" color="#096975" />
           </View>
         ) : (
           <FlatList
             data={reminders}
             keyExtractor={(item) => item.id}
-            renderItem={renderReminderItem}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.flatListPadding}
+            renderItem={({ item, index }) => {
+              // Dynamic colors para sa mga card backgrounds & side-lines
+              const themeColors = [
+                { bg: '#d5edf3', accent: '#63d6f3', text: '#087996' }, 
+                { bg: '#ECFDF5', accent: '#59f5c1', text: '#035c43' }, 
+                { bg: '#FFF5F5', accent: '#abf566', text: '#254b05' }, 
+                { bg: '#FFFBEB', accent: '#6bcffd', text: '#09445f' }, 
+              ];
+              const theme = themeColors[index % themeColors.length];
+
+              return (
+                <View style={[styles.premiumReminderCard, { backgroundColor: theme.bg }]}>
+                  {/* Left Side Highlight Accent Bar */}
+                  <View style={[styles.verticalAccentBar, { backgroundColor: theme.accent }]} />
+                  
+                  <View style={styles.cardContentWrapper}>
+                    <View style={styles.textCluster}>
+                      <Text style={[styles.tagCategoryLabel, { color: theme.text }]}>
+                        {item.categories?.name || 'Bill Payment'}
+                      </Text>
+                      <Text style={styles.mainBillTitle} numberOfLines={1}>
+                        {item.title}
+                      </Text>
+                      <Text style={styles.secondaryBillMeta}>
+                        {formatTimestamp(item.due_date)} • ₱{item.amount.toFixed(2)}
+                      </Text>
+                    </View>
+
+                    {/* Circular Interaction Tracker */}
+                    <View style={styles.actionCircleWrapper}>
+                      {item.status === 'pending' ? (
+                        <TouchableOpacity 
+                          style={styles.payCircleButton} 
+                          onPress={() => handleMarkAsPaid(item)}
+                        >
+                          <Ionicons name="ellipse-outline" size={22} color="#CBD5E1" />
+                        </TouchableOpacity>
+                      ) : (
+                        <View style={[styles.completeCircleBadge, { backgroundColor: theme.accent }]}>
+                          <Ionicons name="checkmark" size={14} color="#FFFFFF" />
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                </View>
+              );
+            }}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
-                <Ionicons name="calendar-clear-outline" size={40} color="#CBD5E1" />
+                <View style={styles.emptyIconCircle}>
+                  <Ionicons name="calendar-clear-outline" size={32} color="#94A3B8" />
+                </View>
                 <Text style={styles.emptyText}>No upcoming bills scheduled.</Text>
               </View>
             }
@@ -356,145 +415,146 @@ export default function RemindersScreen() {
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: '#F8FAFC' 
+    backgroundColor: '#FFFFFF',
+    marginTop: 10,
   },
-  header: { 
-    paddingHorizontal: 24, 
-    paddingTop: Platform.OS === 'android' ? 40 : 16,
-    paddingBottom: 16 
-  },
-  headerTopRow: {
+  
+  navigationRow: {
+    paddingHorizontal: 24,
+    marginTop: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginLeft: -4 // I-align og gamay sa padding sa container
   },
   backButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    marginTop: 20,
+    marginBottom: 20,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F8FAFC',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  headerTitle: { 
-    fontSize: 28, // Gi-adjust gamay gikan sa 32 para balance sa back button
-    fontWeight: '800', 
-    color: '#0F172A', 
-    letterSpacing: -0.75 
-  },
-  headerSubtext: { 
-    fontSize: 14, 
-    color: '#64748B', 
-    marginTop: 8, 
-    fontWeight: '400' 
-  },
-  calendarWrapper: { 
-    backgroundColor: '#FFFFFF', 
-    marginHorizontal: 24,
-    borderRadius: 20, 
-    padding: 12, 
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    shadowColor: '#0F172A', 
-    shadowOffset: { width: 0, height: 2 }, 
-    shadowOpacity: 0.02, 
-    shadowRadius: 12, 
+    borderColor: '#F1F5F9',
+    elevation: 10,
   },
+
+  headerSection: { paddingHorizontal: 24, marginTop: 24, marginBottom: 20 },
+  headerContext: { fontSize: 13, fontWeight: '600', color: '#0e81b3', marginBottom: 4 },
+  headerTitle: { fontSize: 26, fontWeight: '800', color: '#1E293B', letterSpacing: -0.6 },
+  headerSubtitle: { fontSize: 13, color: '#94A3B8', marginTop: 6, lineHeight: 18, fontWeight: '400' },
+  
+  calendarCardContainer: { 
+    marginHorizontal: 24,
+    borderRadius: 24, 
+    overflow: 'hidden', 
+    elevation: 20,
+  },
+  calendarBackgroundImage: {
+    width: '100%',
+    paddingVertical: 20,
+    borderRadius: 24,
+  },
+
   feedWrapper: { 
     flex: 1, 
     paddingHorizontal: 24, 
-    marginTop: 24 
+    marginTop: 28 
   },
   sectionTitle: { 
-    fontSize: 16, 
+    fontSize: 15, 
     fontWeight: '700', 
-    color: '#0F172A', 
-    marginBottom: 12 
+    color: '#1E293B', 
+    marginBottom: 14 
   },
   flatListPadding: { 
-    paddingBottom: 40 
+    paddingBottom: 30,
+    shadowColor: '#'
   },
   centeredLoader: { 
-    marginTop: 30, 
-    alignItems: 'center' 
+    marginTop: 30
   },
-  reminderCard: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center', 
-    backgroundColor: '#FFFFFF', 
-    padding: 14, 
-    borderRadius: 16, 
-    marginBottom: 10, 
-    borderWidth: 1, 
-    borderColor: '#E2E8F0'
+
+  // Premium List Styling Direct From Image 1 Structure
+  premiumReminderCard: { 
+    flexDirection: 'row',
+    borderRadius: 18, 
+    marginBottom: 12, 
+    overflow: 'hidden',
+    shadowColor: '#0f641d9a',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.01,
+    shadowRadius: 4,
+    elevation: 10,
   },
-  reminderLeft: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    gap: 14, 
-    flex: 1 
+  verticalAccentBar: {
+    width: 5,
+    height: '100%',
   },
-  categoryIndicator: { 
-    width: 42, 
-    height: 42, 
-    borderRadius: 12, 
-    justifyContent: 'center', 
-    alignItems: 'center'
+  cardContentWrapper: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
   },
-  indicatorText: { 
-    color: '#FFFFFF', 
-    fontSize: 12, 
-    fontWeight: '700' 
+  textCluster: { flex: 0.82 },
+  tagCategoryLabel: { fontSize: 11, fontWeight: '700', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.2 },
+  mainBillTitle: { fontSize: 15, fontWeight: '800', color: '#1E293B' },
+  secondaryBillMeta: { fontSize: 12, color: '#64748B', marginTop: 3, fontWeight: '500' },
+  
+  // Interactive Tracker Rings
+  actionCircleWrapper: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  reminderTitle: { 
-    fontSize: 15, 
-    fontWeight: '600', 
-    color: '#0F172A' 
+  payCircleButton: {
+    width: 30,
+    height: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  reminderSub: { 
-    fontSize: 13, 
-    color: '#64748B', 
-    marginTop: 2 
+  completeCircleBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1,
   },
-  payBtn: { 
-    backgroundColor: '#0F172A', 
-    paddingVertical: 8, 
-    paddingHorizontal: 14, 
-    borderRadius: 10 
-  },
-  payBtnText: { 
-    color: '#FFFFFF', 
-    fontSize: 12, 
-    fontWeight: '600' 
-  },
-  paidBadge: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    gap: 4, 
-    paddingRight: 6 
-  },
-  paidText: { 
-    color: '#10B981', 
-    fontSize: 13, 
-    fontWeight: '600' 
-  },
+
+  // Empty UI Layouts
   emptyContainer: { 
     alignItems: 'center', 
-    marginTop: 40, 
-    gap: 12 
+    marginTop: 30, 
+  },
+  emptyIconCircle: {
+    width: 54,
+    height: 54,
+    borderRadius: 18,
+    backgroundColor: '#F8FAFC',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   emptyText: { 
     textAlign: 'center', 
     color: '#94A3B8', 
-    fontSize: 14 
+    fontSize: 13,
+    fontWeight: '500'
   },
+
+  // Form Presentation Components
   modalOverlay: { 
     flex: 1, 
-    backgroundColor: 'rgba(15, 23, 42, 0.3)', 
+    backgroundColor: 'rgba(15, 23, 42, 0.2)', 
     justifyContent: 'flex-end' 
   },
   modalContainer: { 
@@ -511,10 +571,9 @@ const styles = StyleSheet.create({
     marginBottom: 20 
   },
   modalTitle: { 
-    fontSize: 18, 
+    fontSize: 17, 
     fontWeight: '800', 
-    color: '#0F172A', 
-    letterSpacing: -0.4 
+    color: '#1E293B', 
   },
   closeBtnBox: { 
     width: 32, 
@@ -555,32 +614,28 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0' 
   },
   categoryChipSelected: { 
-    backgroundColor: '#E6F4EA', 
-    borderColor: '#10B981' 
+    backgroundColor: '#f3feff', 
+    borderColor: '#006141' 
   },
   chipText: { 
     fontSize: 12, 
     color: '#475569', 
     fontWeight: '500' 
-  },
+  }, 
   chipTextSelected: { 
-    color: '#10B981', 
+    color: '#5cc5f6', 
     fontWeight: '700' 
   },
   saveBtn: { 
-    backgroundColor: '#10B981', 
+    backgroundColor: '#076981', 
     padding: 16, 
     borderRadius: 14, 
     alignItems: 'center', 
     marginTop: 8,
-    shadowColor: '#10B981',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
   },
   saveBtnText: { 
     color: '#FFFFFF', 
-    fontSize: 16, 
-    fontWeight: '600' 
+    fontSize: 15, 
+    fontWeight: '700' 
   }
 });
