@@ -328,7 +328,7 @@ export default function SpenderHomeScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, styles.centeredLoading]}>
+      <SafeAreaView style={styles.container}>
         <StatusBar style="light" />
         <ActivityIndicator size="small" color="#C5FF42" />
       </SafeAreaView>
@@ -348,13 +348,6 @@ return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
       
-      <ScrollView 
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#0D9488']} />
-        }
-      >
         {/* 1. Header Section: Profile & Balance (Magpabilin nga transparent para makita ang ImageBackground) */}
         <View style={styles.headerBackground}>
           <View style={styles.welcomeRow}>
@@ -413,6 +406,13 @@ return (
           )}
         </View>
 
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#0D9488']} />
+        }
+      >
        <View style={styles.bodycard}>
   
           {/* Categories Slider Segment */}
@@ -432,67 +432,69 @@ return (
               }}
               keyExtractor={(item) => item.id}
               renderItem={({ item: cat, index }) => {
-                const remainingPercentage = cat.allocatedAmount > 0 
-                  ? Math.min((cat.remainingAmount / cat.allocatedAmount) * 100, 100) 
-                  : 0;
+              const remainingPercentage = cat.allocatedAmount > 0 
+                ? Math.min((cat.remainingAmount / cat.allocatedAmount) * 100, 100) 
+                : 0;
 
-                // Imuhang mismong premium colors array
-                const premiumColors = ['#aef18e', '#71f551', '#115E59', '#0eb3f5', '#05dabd'];
-                const cardColor = cat.color || premiumColors[index % premiumColors.length];
+              const premiumColors = ['#aef18e', '#71f551', '#115E59', '#0eb3f5', '#05dabd'];
+              const cardColor = cat.color || premiumColors[index % premiumColors.length];
 
-                // LOGIC: Kung ang background mao ang dark teal (#115E59), himoon natong puti ang agi.
-                // Kung hayag ang background, himoon natong itom/slate para klaro basahon.
-                const isDarkBackground = cardColor === '#9de4df';
-                const textColor = isDarkBackground ? '#FFFFFF' : '#0F172A';
-                const subTextColor = isDarkBackground ? 'rgba(255, 255, 255, 0.8)' : '#475569';
-                const badgeBg = isDarkBackground ? 'rgba(255, 255, 255, 0.2)' : 'rgba(15, 23, 42, 0.07)';
-                const progressBg = isDarkBackground ? 'rgba(255, 255, 255, 0.25)' : 'rgba(15, 23, 42, 0.08)';
+            
+              const darkColors = ['#115E59', '#1E463A', '#0F172A']; 
+              const isDarkBackground = darkColors.includes(cardColor.toUpperCase());
 
-                return (
-                  <TouchableOpacity 
-                    activeOpacity={0.9}
-                    onPress={() => openAllocateModal(cat)}
-                    style={[styles.originalCategoryCard, { backgroundColor: cardColor }]}
-                  >
-                    {/* TOP HEADER: Title Cluster + Remaining Badge */}
-                    <View style={styles.cardMainHeader}>
-                      <View style={styles.cardTitleCluster}>
-                        <View style={styles.originalIconCircle}>
-                          <Ionicons name={cat.icon || 'folder'} size={15} color={cardColor} />
-                        </View>
-                        <Text style={[styles.originalCardName, { color: textColor }]} numberOfLines={1}>
-                          {cat.name}
-                        </Text>
+              // Kung dark ang background -> Puti ang agi. Kung hayag -> Itom/Slate ang agi.
+              const textColor = isDarkBackground ? '#FFFFFF' : '#0F172A';
+              const subTextColor = isDarkBackground ? 'rgba(255, 255, 255, 0.75)' : '#475569';
+              const badgeBg = isDarkBackground ? 'rgba(255, 255, 255, 0.2)' : 'rgba(15, 23, 42, 0.07)';
+              const progressBg = isDarkBackground ? 'rgba(255, 255, 255, 0.25)' : 'rgba(15, 23, 42, 0.08)';
+              const iconColor = isDarkBackground ? cardColor : '#FFFFFF'; 
+
+              return (
+                <TouchableOpacity 
+                  activeOpacity={0.9}
+                  onPress={() => openAllocateModal(cat)}
+                  style={[styles.originalCategoryCard, { backgroundColor: cardColor }]}
+                >
+                  {/* TOP HEADER: Title Cluster + Remaining Badge */}
+                  <View style={styles.cardMainHeader}>
+                    <View style={styles.cardTitleCluster}>
+                      <View style={[styles.originalIconCircle, !isDarkBackground && { backgroundColor: '#0F172A' }]}>
+                        <Ionicons name={cat.icon || 'folder'} size={15} color={isDarkBackground ? iconColor : '#FFFFFF'} />
                       </View>
-                      <View style={[styles.remainingBadge, { backgroundColor: badgeBg }]}>
-                        <Text style={[styles.remainingBadgeText, { color: textColor }]}>Remaining</Text>
-                      </View>
-                    </View>
-
-                    {/* MIDDLE BODY: Main Amount Display */}
-                    <View style={styles.originalCardMiddleBody}>
-                      <Text style={[styles.originalRemainingAmount, { color: textColor }]}>
-                        ₱{cat.remainingAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      <Text style={[styles.originalCardName, { color: textColor }]} numberOfLines={1}>
+                        {cat.name}
                       </Text>
                     </View>
-
-                    {/* BOTTOM FOOTER: Progress Bar + Metrics Row */}
-                    <View style={styles.originalCardBottomFooter}>
-                      <View style={[styles.originalProgressBackground, { backgroundColor: progressBg }]}>
-                        <View style={[styles.originalProgressFill, { backgroundColor: textColor, width: `${remainingPercentage}%` }]} />
-                      </View>
-                      <View style={styles.originalCardMetricsRow}>
-                        <Text style={[styles.originalFooterMetaText, { color: subTextColor }]}>
-                          Budget: ₱{cat.allocatedAmount.toLocaleString()}
-                        </Text>
-                        <Text style={[styles.originalFooterMetaText, { color: subTextColor }]}>
-                          Spent: ₱{cat.totalSpent.toLocaleString()}
-                        </Text>
-                      </View>
+                    <View style={[styles.remainingBadge, { backgroundColor: badgeBg }]}>
+                      <Text style={[styles.remainingBadgeText, { color: textColor }]}>Remaining</Text>
                     </View>
-                  </TouchableOpacity>
-                );
-              }}
+                  </View>
+
+                  {/* MIDDLE BODY: Main Amount Display */}
+                  <View style={styles.originalCardMiddleBody}>
+                    <Text style={[styles.originalRemainingAmount, { color: textColor }]}>
+                      ₱{cat.remainingAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </Text>
+                  </View>
+
+                  {/* BOTTOM FOOTER: Progress Bar + Metrics Row */}
+                  <View style={styles.originalCardBottomFooter}>
+                    <View style={[styles.originalProgressBackground, { backgroundColor: progressBg }]}>
+                      <View style={[styles.originalProgressFill, { backgroundColor: textColor, width: `${remainingPercentage}%` }]} />
+                    </View>
+                    <View style={styles.originalCardMetricsRow}>
+                      <Text style={[styles.originalFooterMetaText, { color: subTextColor }]}>
+                        Budget: ₱{cat.allocatedAmount.toLocaleString()}
+                      </Text>
+                      <Text style={[styles.originalFooterMetaText, { color: subTextColor }]}>
+                        Spent: ₱{cat.totalSpent.toLocaleString()}
+                      </Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              );
+            }}
             />
 
             {categories.length > 0 && (
@@ -526,7 +528,7 @@ return (
                   <View key={item.id} style={styles.recentItem}>
                     <View style={styles.recentLeft}>
                       <View style={styles.iconBox}>
-                        <Ionicons name={item.category_icon || 'cash-outline'} size={18} color="#0D9488" />
+                        <Ionicons name={(item.category_icon as any) || 'cash-outline'} size={18} color="#0D9488" />
                       </View>
                       <View style={{ flex: 1 }}>
                         <Text style={styles.recentName} numberOfLines={1}>{item.expense_name}</Text>
@@ -645,7 +647,6 @@ const styles = StyleSheet.create({
     padding: 20,
     minHeight: 175,
     justifyContent: 'space-between',
-    // Premium dynamic shading effects
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.08,
@@ -814,8 +815,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#EF4444',
   },
-  noRecentBox: { padding: 36, backgroundColor: '#FFFFFF', borderRadius: 24, alignItems: 'center', marginBottom: 20 },
-  noRecentText: { fontSize: 14, color: '#64748B', fontWeight: '500' },
   
   modalOverlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.3)', justifyContent: 'center', alignItems: 'center' },
   modalContainer: { backgroundColor: '#FFFFFF', width: '88%', padding: 24, borderRadius: 28, shadowColor: '#0F172A', shadowOpacity: 0.1, shadowRadius: 16, elevation: 10 },

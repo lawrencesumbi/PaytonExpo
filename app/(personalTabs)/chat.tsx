@@ -68,25 +68,35 @@ export default function ChatCoachScreen() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("No authenticated user found");
 
-      // 📅 Pagkuha og data context (Kasamtangang Expenses ug Budgets para ma-analisar sa AI)
+      // 📅 Pagkuha sa sugod nga adlaw sa kasamtangang bulan
       const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
       
-      const { data: userExpenses } = await supabase
+      // 📊 STEP A: Fetch expenses gamit ang relational inner join sa budgets table (para ma-filter sa user.id)
+      const { data: userExpenses, error: expensesError } = await supabase
         .from('expenses')
         .select(`
           amount,
           description,
           spent_at,
-          budgets (
+          budgets!inner (
+            id,
+            user_id,
             allocated_amount,
             remaining_amount,
             categories ( name )
           )
         `)
-        .eq('user_id', user.id)
+        .eq('budgets.user_id', user.id)
         .gte('spent_at', startOfMonth);
 
-      const { data: userBudgets } = await supabase
+      if (expensesError) {
+        console.error("❌ Supabase Expenses Fetch Error:", expensesError.message);
+      } else {
+        console.log("📊 Pila kabuok expenses ang nakuha:", userExpenses?.length);
+      }
+
+      // 📊 STEP B: Fetch budgets para makita ang allocation ug limit sa mga kategorya
+      const { data: userBudgets, error: budgetsError } = await supabase
         .from('budgets')
         .select(`
           allocated_amount,
@@ -94,6 +104,10 @@ export default function ChatCoachScreen() {
           categories ( name )
         `)
         .eq('user_id', user.id);
+
+      if (budgetsError) {
+        console.error("❌ Supabase Budgets Fetch Error:", budgetsError.message);
+      }
 
       const model = genAI.getGenerativeModel({ 
         model: "gemini-2.5-flash",
@@ -117,7 +131,7 @@ export default function ChatCoachScreen() {
         DIRECTIONS FOR "ASK_INSIGHT":
         - Analyze the provided FINANCIAL DATA CONTEXT to answer the user's question accurately.
         - Do the math (summing, comparing, checking balance) based on the context data.
-        - Answer directly, warmly, and encouragingly in Bisaya/Cebuano language.
+        - Answer directly, warmly, and encouragingly in Bisaya/Cebuano language. Use standard conversational words (e.g., "bay", "gasto", "nabilin").
 
         Return a strict raw JSON matching this schema:
         {
@@ -143,7 +157,7 @@ export default function ChatCoachScreen() {
       if (extractedData.intent === 'LOG_EXPENSE' && extractedData.amount > 0) {
         let targetBudgetId = null;
 
-        // STEP 1: Name match sa categories table
+        // STEP 1: I-match ang ngalan sa kategorya
         const { data: categoryData } = await supabase
           .from('categories')
           .select('id')
@@ -164,12 +178,12 @@ export default function ChatCoachScreen() {
           }
         }
 
-        // STEP 3: Isulod sa expenses table
+        // STEP 3: Isulod na sa expenses table (Gi-set nato og null ang user_id kon gusto nimo i-rely ra sa budget relasyon, apan mas maayo i-pasa gihapon ang user.id para double protection!)
         const { error: insertError } = await supabase
           .from('expenses')
           .insert([
             {
-              user_id: user.id,
+              user_id: user.id, // Gi-apil nato para dili na mag-NULL sa sunod logs
               budget_id: targetBudgetId,
               amount: Number(extractedData.amount || 0),
               description: extractedData.description || 'Gasto gikan sa AI Chat',
@@ -177,12 +191,15 @@ export default function ChatCoachScreen() {
             },
           ]);
 
-        if (!insertError) {
+        if (insertError) {
+          console.error("❌ Supabase Insertion Error:", insertError.message);
+        } else {
           savedDataToDisplay = {
             amount: Number(extractedData.amount),
             category: extractedData.category,
             description: extractedData.description
           };
+          console.log("🔥 Successfully logged via AI coach!");
         }
       }
 
@@ -198,7 +215,7 @@ export default function ChatCoachScreen() {
       setMessages((prev) => [...prev, botReply]);
 
     } catch (error) {
-      console.error("Gemini/Supabase Flow Error:", error);
+      console.error("🚨 General Chat Flow Error:", error);
       const errorReply: Message = {
         id: Date.now().toString(),
         text: 'Pasayloa ko bay, medyo naglisod kog analyze sa imong data karon. Pwede nimo sulayan pag-usab?',
@@ -238,7 +255,7 @@ export default function ChatCoachScreen() {
             <View style={[styles.messageBubble, item.sender === 'user' ? styles.userBubble : styles.botBubble]}>
               <Text style={item.sender === 'user' ? styles.userText : styles.botText}>{item.text}</Text>
 
-              {/* DYNAMIC EXPENSE CARD (Mo-pakita lang kung LOG_EXPENSE ang intent) */}
+              {/* DYNAMIC EXPENSE CARD (Mo-pakita lang kung nag-log og gasto) */}
               {item.extractedData && item.extractedData.amount > 0 && (
                 <View style={styles.dataCard}>
                   <View style={styles.dataRow}>

@@ -2,16 +2,16 @@ import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useRef } from 'react';
 import { Animated, SafeAreaView, StyleSheet, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage'; // <--- I-install ug i-import ni
 
 export default function WelcomeScreen() {
   const router = useRouter();
   
-  // 1. Create animated values for both opacity and scale
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.7)).current; // Start at half size
+  const scaleAnim = useRef(new Animated.Value(0.7)).current;
 
   useEffect(() => {
-    // 2. Run both animations at the same time
+    // 1. Sugdan ang Animation sa Logo
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -19,14 +19,39 @@ export default function WelcomeScreen() {
         useNativeDriver: true,
       }),
       Animated.timing(scaleAnim, {
-        toValue: 1, // Grow to full size (100%)
+        toValue: 1,
         duration: 500,
         useNativeDriver: true,
       })
     ]).start();
 
+    // 2. Ang Logic sa Routing sulod sa Timer
+    const checkNavigation = async () => {
+      try {
+        // I-check kung duna na ba'y token/session ang user (kung naka-login ba)
+        const userToken = await AsyncStorage.getItem('user_token');
+        // I-check kung nakasulod na ba siya sa app sukad sa una
+        const hasVisitedBefore = await AsyncStorage.getItem('has_visited_before');
+
+        if (userToken) {
+          // Kung naka-login na, diritso sa Main Dashboard
+          router.replace('/(main)/dashboard'); // <--- Usba ni sa saktong route sa imong dashboard
+        } else if (hasVisitedBefore === 'true') {
+          // Kung nakabisita na pero wala naka-login, diritso sa Login Screen
+          router.replace('/(auth)/login'); // <--- Usba ni sa saktong route sa imong login screen
+        } else {
+          // Kung presko pa jud kaayo, adto sa Getting Started
+          router.replace('/(auth)/getting-started');
+        }
+      } catch (error) {
+        // Kung naay error sa AsyncStorage, i-fallback lang sa getting-started para luwas
+        router.replace('/(auth)/getting-started');
+      }
+    };
+
+    // Paabuton mahuman ang 2 seconds una i-execute ang navigation logic
     const timer = setTimeout(() => {
-     router.replace("/(auth)/getting-started");
+      checkNavigation();
     }, 2000); 
 
     return () => clearTimeout(timer);

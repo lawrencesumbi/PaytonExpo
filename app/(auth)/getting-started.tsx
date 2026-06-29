@@ -1,36 +1,31 @@
- // app/(auth)/getting-started.tsx
+// app/(auth)/getting-started.tsx
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { LinearGradient } from 'expo-linear-gradient';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
-  ActivityIndicator,
   Dimensions,
-  Image,
   SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
   ScrollView,
-  Platform
+  Platform,
+  ImageBackground
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
 const DESIGN_COLORS = {
-  brandGreen: '#166534',     
-  textDark: '#0F172A',       
+  brandGreen: '#166534', 
+  textDark: '#0F172A',      
   textMuted: '#64748B',      
-  borderLight: '#E2E8F0',    
+  borderLight: '#E2E8F0',
+  lightGrayBg: '#F8FAFC'    
 };
 
 const ONBOARDING_STEPS = [
-  {
-    id: 'loading',
-    title: 'Payton',
-    description: 'Loading your financial ecosystem...',
-  },
   {
     id: 'track',
     title: 'Track Expense',
@@ -57,15 +52,6 @@ export default function GettingStartedScreen() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(0);
 
-  useEffect(() => {
-    if (currentStep === 0) {
-      const timer = setTimeout(() => {
-        setCurrentStep(1); 
-      }, 2500);
-      return () => clearTimeout(timer);
-    }
-  }, [currentStep]);
-
   const handleNext = () => {
     if (currentStep < ONBOARDING_STEPS.length - 1) {
       setCurrentStep(currentStep + 1);
@@ -73,344 +59,502 @@ export default function GettingStartedScreen() {
   };
 
   const handleBack = () => {
-    if (currentStep > 1) {
+    if (currentStep > 0) {
       setCurrentStep(currentStep - 1);
     }
   };
 
-  const handleRedirectToLogin = () => {
-    router.push('/login'); 
+  const handleRedirectToLogin = async () => {
+    try {
+      await AsyncStorage.setItem('has_visited_before', 'true');
+      router.push('/login'); 
+    } catch (error) {
+      router.push('/login'); 
+    }
   };
 
   const step = ONBOARDING_STEPS[currentStep];
 
-  // Step 0: Splash Loading Layout 
-  if (currentStep === 0) {
-    return (
-      <LinearGradient
-        colors={['#ffffff', '#ffffff']} 
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.container}
-      >
-        <SafeAreaView style={styles.safeArea}>
-          <View style={styles.loadingContent}>
-            <View style={styles.gradientLogoContainer}>
-              <Image 
-                source={require('../../assets/images/logo-light1.png')} 
-                style={styles.logoImage}
-                resizeMode="contain"
-              />
-            </View>
-            <Text style={styles.loadingText}>{step.title}</Text>
-            <ActivityIndicator size="small" color={DESIGN_COLORS.brandGreen} style={{ marginTop: 24 }} />
-          </View>
-        </SafeAreaView>
-      </LinearGradient>
-    );
-  }
-
   return (
-    <LinearGradient
-      colors={['#ffffff', '#ffffff']} 
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={styles.container}
-    >
-      <SafeAreaView style={styles.safeArea}>
-        <ScrollView contentContainerStyle={styles.scrollContainer} bounces={false}>
-          <View style={styles.innerContainer}>
-            
-            {/* Logo area shown EXCLUSIVELY on the final 'get-started' step */}
-            {step.id === 'get-started' && (
-              <View style={styles.gradientLogoContainer}>
-                <Image 
-                  source={require('../../assets/images/logo-light1.png')} 
-                  style={styles.logoImage}
-                  resizeMode="contain"
-                />
-              </View>
-            )}
-            
-            {/* Floating Oval Content Presentation Card */}
-            <View style={styles.card}>
-              
-              {/* Dashboard Preview Module Container */}
-              {step.id !== 'get-started' && (
-                <View style={styles.graphicContainer}>
-                  <View style={styles.mockupCard}>
-                    <View style={styles.mockupTopBar}>
-                      <View style={[styles.mockupPill, { backgroundColor: DESIGN_COLORS.brandGreen }]} />
-                    </View>
-                    
-                    {step.id === 'track' && (
-                      <View style={styles.mockupContent}>
-                        <Text style={styles.cardLabel}>Expense Summary</Text>
-                        <Text style={styles.cardValue}>$1,240.50</Text>
-                        <View style={styles.mockupChartRow}>
-                          <View style={[styles.chartBar, { height: 35, backgroundColor: DESIGN_COLORS.brandGreen }]} />
-                          <View style={[styles.chartBar, { height: 65, backgroundColor: DESIGN_COLORS.brandGreen }]} />
-                          <View style={[styles.chartBar, { height: 45, backgroundColor: DESIGN_COLORS.brandGreen }]} />
-                        </View>
-                      </View>
-                    )}
+    <View style={styles.container}>
+      <StatusBar style="light" />
 
-                    {step.id === 'reminders' && (
-                      <View style={styles.mockupContentCentered}>
-                        <View style={styles.iconCircle}>
-                          <Text style={{ color: '#FFFFFF', fontWeight: 'bold', fontSize: 18 }}>🔔</Text>
-                        </View>
-                        <Text style={styles.cardValueText}>Electricity Bill Due</Text>
-                        <Text style={styles.cardSubText}>In 2 days</Text>
-                      </View>
-                    )}
+      {/* 1. TOP BACKGROUND CANVAS */}
+      <ImageBackground
+        source={require('../../assets/images/cover-bg.png')}
+        style={styles.topBackground}
+      >
+        <SafeAreaView style={{ flex: 1 }} />
+      </ImageBackground>
 
-                    {step.id === 'splitting' && (
-                      <View style={styles.mockupContent}>
-                        <Text style={styles.cardLabel}>Group Expense Split</Text>
-                        <View style={styles.splitRow}><Text style={styles.darkText}>You owe</Text><Text style={styles.greenText}>$12.50</Text></View>
-                        <View style={styles.splitRow}><Text style={styles.darkText}>Alex owes</Text><Text style={styles.greenText}>$12.50</Text></View>
-                      </View>
-                    )}
-                  </View>
-                </View>
-              )}
+      {/* 2. BOTTOM CARD WRAPPER */}
+      <View style={styles.bottomCardWrapper}>
+        <View style={styles.waveCurve} />
 
-              {/* Messaging Context Block */}
-              <View style={styles.textContainer}>
-                <Text style={styles.heading}>{step.title}</Text>
-                <Text style={styles.description}>{step.description}</Text>
-              </View>
+        <View style={styles.bottomCardContent}>
+          <ScrollView 
+            contentContainerStyle={styles.scrollContainer} 
+            bounces={false}
+            scrollEnabled={false} 
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Dynamic spacing placeholder element (Gipamub-an para mapaduol ang text) */}
+            <View style={styles.layoutPhoneSpacer} />
 
-              {/* Progress Stepper Bullets */}
-              <View style={styles.indicatorContainer}>
-                {ONBOARDING_STEPS.slice(1).map((_, index) => (
-                  <View 
-                    key={index} 
-                    style={[
-                      styles.dot, 
-                      currentStep - 1 === index ? styles.activeDot : styles.inactiveDot
-                    ]} 
-                  />
-                ))}
-              </View>
+            {/* Message Block */}
+            <View style={styles.textContainer}>
+              <Text style={styles.heading}>{step.title}</Text>
+              <Text style={styles.description}>{step.description}</Text>
+            </View>
+          </ScrollView>
 
-              {/* EMBEDDED NAVIGATION CONTAINER: Now inside the Card structure */}
-              <View style={styles.embeddedNavigationContainer}>
-                {step.id === 'get-started' ? (
-                  <TouchableOpacity style={styles.primaryButtonFull} onPress={handleRedirectToLogin}>
-                    <Text style={styles.primaryButtonText}>Sign In</Text>
+          {/* Progress Stepper Bullets */}
+          <View style={styles.indicatorContainer}>
+            {ONBOARDING_STEPS.map((_, index) => (
+              <View 
+                key={index} 
+                style={[
+                  styles.dot, 
+                  currentStep === index ? styles.activeDot : styles.inactiveDot
+                ]} 
+              />
+            ))}
+          </View>
+
+          {/* NAVIGATION ACTIONS */}
+          <View style={styles.embeddedNavigationContainer}>
+            {step.id === 'get-started' ? (
+              <TouchableOpacity style={styles.primaryButtonFull} onPress={handleRedirectToLogin}>
+                <Text style={styles.primaryButtonText}>Get Started</Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.navigationRow}>
+                {currentStep === 0 ? (
+                  <TouchableOpacity style={styles.secondaryButtonHalf} onPress={handleRedirectToLogin}>
+                    <Text style={styles.secondaryButtonText}>Skip</Text>
                   </TouchableOpacity>
                 ) : (
-                  <View style={styles.navigationRow}>
-                    
-                    {/* Left Action Text Navigation Anchor */}
-                    {step.id === 'track' ? (
-                      <TouchableOpacity style={styles.navBarTextButton} onPress={handleRedirectToLogin}>
-                        <Text style={styles.navBarSecondaryText}>Skip</Text>
-                      </TouchableOpacity>
-                    ) : (
-                      <TouchableOpacity style={styles.navBarTextButton} onPress={handleBack}>
-                        <Text style={styles.navBarSecondaryText}>Back</Text>
-                      </TouchableOpacity>
-                    )}
-
-                    {/* Right Action Capsule Accent Anchor */}
-                    <TouchableOpacity style={styles.primaryButtonHalf} onPress={handleNext}>
-                      <Text style={styles.primaryButtonText}>Continue</Text>
-                    </TouchableOpacity>
-
-                  </View>
+                  <TouchableOpacity style={styles.secondaryButtonHalf} onPress={handleBack}>
+                    <Text style={styles.secondaryButtonText}>Back</Text>
+                  </TouchableOpacity>
                 )}
+
+                <TouchableOpacity style={styles.primaryButtonHalf} onPress={handleNext}>
+                  <Text style={styles.primaryButtonText}>Continue</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </View>
+      </View>
+
+      {/* 3. EXTRA TALL PORTRAIT PHONE CANVAS */}
+      <View style={styles.absolutePhoneWrapper} pointerEvents="none">
+        <View style={styles.mockupPhoneFrame}>
+          
+          {/* PHONE HARDWARE TOP BEZEL / DYNAMIC ISLAND */}
+          <View style={styles.hardwareHeader}>
+            <Text style={styles.hardwareTime}>9:41</Text>
+            <View style={styles.dynamicIsland} />
+            <View style={styles.hardwareIcons}>
+              <Text style={styles.hardwareIconText}>📶 🔋</Text>
+            </View>
+          </View>
+
+          {/* APP INNER HEADER */}
+          <View style={styles.appHeaderRow}>
+            <Text style={styles.appHeaderTitle}>Payton Analytics</Text>
+            <Text style={styles.appHeaderIcon}>🔔</Text>
+          </View>
+          
+          {/* STEP 1: TRACK EXPENSE DETAIL SCREEN */}
+          {step.id === 'track' && (
+            <View style={styles.mockupInnerContent}>
+              <View style={styles.balanceCard}>
+                <Text style={styles.cardLabel}>Available Balance</Text>
+                <Text style={styles.cardValue}>₱48,250.00</Text>
+              </View>
+              
+              <Text style={styles.sectionSubtitle}>Monthly Insights</Text>
+              <View style={styles.mockupChartRow}>
+                <View style={styles.chartBarContainer}>
+                  <View style={[styles.chartBar, { height: 60, backgroundColor: DESIGN_COLORS.brandGreen }]} />
+                  <Text style={styles.chartBarLabel}>W1</Text>
+                </View>
+                <View style={styles.chartBarContainer}>
+                  <View style={[styles.chartBar, { height: 110, backgroundColor: DESIGN_COLORS.brandGreen }]} />
+                  <Text style={styles.chartBarLabel}>W2</Text>
+                </View>
+                <View style={styles.chartBarContainer}>
+                  <View style={[styles.chartBar, { height: 80, backgroundColor: DESIGN_COLORS.brandGreen }]} />
+                  <Text style={styles.chartBarLabel}>W3</Text>
+                </View>
+                <View style={styles.chartBarContainer}>
+                  <View style={[styles.chartBar, { height: 140, backgroundColor: DESIGN_COLORS.brandGreen }]} />
+                  <Text style={styles.chartBarLabel}>W4</Text>
+                </View>
+              </View>
+            </View>
+          )}
+
+          {/* STEP 2: SMART REMINDERS DETAIL SCREEN */}
+          {step.id === 'reminders' && (
+            <View style={styles.mockupInnerContent}>
+              <Text style={styles.sectionSubtitle}>Upcoming Obligations</Text>
+              
+              <View style={styles.reminderItemBox}>
+                <View style={styles.reminderIconWrapper}>
+                  <Text style={{ fontSize: 16 }}>⚡</Text>
+                </View>
+                <View style={{ flex: 1, marginLeft: 10 }}>
+                  <Text style={styles.detailItemTitle}>Electricity Bill</Text>
+                  <Text style={styles.detailItemSub}>Due in 2 days</Text>
+                </View>
+                <Text style={styles.detailItemAmount}>₱3,500</Text>
               </View>
 
-            </View>
+              <View style={styles.reminderItemBox}>
+                <View style={[styles.reminderIconWrapper, { backgroundColor: '#EFF6FF' }]}>
+                  <Text style={{ fontSize: 16 }}>🌐</Text>
+                </View>
+                <View style={{ flex: 1, marginLeft: 10 }}>
+                  <Text style={styles.detailItemTitle}>Internet Subscription</Text>
+                  <Text style={styles.detailItemSub}>Due tomorrow</Text>
+                </View>
+                <Text style={styles.detailItemAmount}>₱1,299</Text>
+              </View>
 
-          </View>
-        </ScrollView>
-      </SafeAreaView>
-    </LinearGradient>
+              <View style={styles.reminderItemBox}>
+                <View style={[styles.reminderIconWrapper, { backgroundColor: '#FEE2E2' }]}>
+                  <Text style={{ fontSize: 16 }}>🏠</Text>
+                </View>
+                <View style={{ flex: 1, marginLeft: 10 }}>
+                  <Text style={styles.detailItemTitle}>House Rental Fee</Text>
+                  <Text style={styles.detailItemSub}>Due in 5 days</Text>
+                </View>
+                <Text style={styles.detailItemAmount}>₱8,500</Text>
+              </View>
+            </View>
+          )}
+
+          {/* STEP 3: BILL SPLITTING DETAIL SCREEN */}
+          {step.id === 'splitting' && (
+            <View style={styles.mockupInnerContent}>
+              <View style={styles.splitTotalHeader}>
+                <Text style={styles.cardLabel}>Total Shared Bill</Text>
+                <Text style={{ color: DESIGN_COLORS.textDark, fontSize: 18, fontWeight: '700' }}>₱1,500.00</Text>
+              </View>
+              
+              <Text style={styles.sectionSubtitle}>Group Split Breakdown</Text>
+              <View style={styles.splitRow}>
+                <Text style={styles.darkText}>👤 You owe</Text>
+                <Text style={styles.greenText}>₱500.00</Text>
+              </View>
+              <View style={styles.splitRow}>
+                <Text style={styles.darkText}>👤 Lawrence owes</Text>
+                <Text style={styles.greenText}>₱500.00</Text>
+              </View>
+              <View style={styles.splitRow}>
+                <Text style={styles.darkText}>👤 Alex owes</Text>
+                <Text style={styles.greenText}>₱500.00</Text>
+              </View>
+            </View>
+          )}
+
+          {/* STEP 4: GET STARTED SCREEN DETAIL */}
+          {step.id === 'get-started' && (
+            <View style={[styles.mockupInnerContent, { justifyContent: 'center', alignItems: 'center', paddingTop: 20 }]}>
+              <View style={[styles.iconCircle, { backgroundColor: DESIGN_COLORS.brandGreen, width: 72, height: 72, borderRadius: 36 }]}>
+                <Text style={{ color: '#FFFFFF', fontWeight: 'bold', fontSize: 32 }}>🚀</Text>
+              </View>
+              <Text style={[styles.cardValueText, { marginTop: 14, fontSize: 18 }]}>Account Secured</Text>
+              <Text style={[styles.cardSubText, { textAlign: 'center', paddingHorizontal: 12, lineHeight: 18, marginTop: 4 }]}>
+                Your local financial ecosystem is completely configured and ready to roll.
+              </Text>
+            </View>
+          )}
+
+          {/* BOTTOM HOME INDICATOR BAR */}
+          <View style={styles.hardwareHomeIndicator} />
+        </View>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
+    backgroundColor: '#FFFFFF',
   },
-  safeArea: {
+  topBackground: {
+    height: height * 0.58, 
+    backgroundColor: '#166534',
+  },
+  bottomCardWrapper: {
+    height: height * 0.42, 
+    backgroundColor: '#FFFFFF',
+  },
+  waveCurve: {
+    position: 'absolute',
+    top: -44,
+    left: 0,
+    right: 0,
+    height: 48,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: width * 0.5,
+    borderTopRightRadius: width * 0.5,
+    transform: [{ scaleX: 1.3 }],
+  },
+  bottomCardContent: {
     flex: 1,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 24,
+    paddingBottom: Platform.OS === 'ios' ? 34 : 24,
+    justifyContent: 'space-between',
   },
   scrollContainer: {
     flexGrow: 1,
-    justifyContent: 'center', 
+    justifyContent: 'flex-start',
   },
-  innerContainer: { 
-    paddingHorizontal: 16, 
-    paddingVertical: 24,
-  },
-  loadingContent: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-  },
-  gradientLogoContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 32, 
+  
+  // FIX 1: Gipa-mub-an ngadto sa 60px para mosaka ang title/description ug mosikit sa CP
+  layoutPhoneSpacer: {
+    height: 60, 
     width: '100%',
-    height: 160, 
-    ...Platform.select({
-      ios: {
-        shadowColor: '#166534',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.12,
-        shadowRadius: 16,
-      },
-      android: {
-        elevation: 4,
-      },
-    }),
   },
-  logoImage: {
-    width: '100%', 
-    height: '100%', 
+  
+  // FIX 2: Gipaubos ang cellphone frame (gikan sa -395, gihimo natong -330)
+  absolutePhoneWrapper: {
+    position: 'absolute',
+    top: (height * 0.58) - 330, 
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
   },
-  loadingText: {
-    color: DESIGN_COLORS.textDark,
-    fontSize: 28,
-    fontWeight: '800',
-    marginTop: 16,
-    letterSpacing: -0.5,
-  },
-  card: {
+  mockupPhoneFrame: {
+    width: width * 0.74, 
+    height: 425, 
     backgroundColor: '#FFFFFF',
-    borderRadius: 44, 
-    paddingHorizontal: 24,
-    paddingTop: 32, 
-    paddingBottom: 32,
+    borderRadius: 36, 
+    borderWidth: 8, 
+    borderColor: '#1E293B', 
+    paddingHorizontal: 14,
+    paddingTop: 10,
+    paddingBottom: 8,
+    justifyContent: 'space-between',
     ...Platform.select({
       ios: {
-        shadowColor: '#1e293b',
-        shadowOffset: { width: 0, height: 12 },
-        shadowOpacity: 0.1,
-        shadowRadius: 28,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 16 },
+        shadowOpacity: 0.15,
+        shadowRadius: 20,
       },
       android: {
-        elevation: 8,
+        elevation: 14,
       },
     }),
   },
-  graphicContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '100%',
-    marginBottom: 28,
-  },
-  mockupCard: {
-    width: '100%',
-    height: 170,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 30, 
-    borderWidth: 1,
-    borderColor: DESIGN_COLORS.borderLight,
-    padding: 18,
+  
+  hardwareHeader: {
+    flexDirection: 'row',
     justifyContent: 'space-between',
-  },
-  mockupTopBar: {
     alignItems: 'center',
     width: '100%',
+    height: 18,
+    marginBottom: 4,
   },
-  mockupPill: {
-    width: 40,
-    height: 5,
-    borderRadius: 3,
+  hardwareTime: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#0F172A',
+    width: 30,
   },
-  mockupContent: {
-    flex: 1,
-    justifyContent: 'center',
+  dynamicIsland: {
+    width: 64,
+    height: 12,
+    backgroundColor: '#000000',
+    borderRadius: 6,
   },
-  mockupContentCentered: {
-    flex: 1,
-    justifyContent: 'center',
+  hardwareIcons: {
+    width: 30,
+    alignItems: 'flex-end',
+  },
+  hardwareIconText: {
+    fontSize: 8,
+  },
+
+  appHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-  },
-  cardLabel: {
-    color: DESIGN_COLORS.textMuted,
-    fontSize: 12,
-    marginBottom: 2,
-  },
-  cardValue: {
-    color: DESIGN_COLORS.textDark,
-    fontSize: 24,
-    fontWeight: '700',
-  },
-  iconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: DESIGN_COLORS.textDark,
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: '100%',
+    paddingBottom: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
     marginBottom: 8,
   },
-  cardValueText: {
-    color: DESIGN_COLORS.textDark,
-    fontSize: 15,
-    fontWeight: '600',
-    textAlign: 'center',
+  appHeaderTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#166534',
   },
-  cardSubText: {
-    color: DESIGN_COLORS.textMuted,
-    fontSize: 12,
-    marginTop: 2,
+  appHeaderIcon: {
+    fontSize: 11,
+  },
+  mockupInnerContent: {
+    flex: 1,
+    justifyContent: 'flex-start',
+  },
+  
+  balanceCard: {
+    backgroundColor: '#F0FDF4',
+    padding: 8,
+    borderRadius: 10,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#DCFCE7',
+  },
+  sectionSubtitle: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#334155',
+    marginBottom: 6,
   },
   mockupChartRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'space-between',
-    height: 60,
-    marginTop: 8,
+    height: 145, 
     paddingHorizontal: 10,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 10,
+    paddingVertical: 10,
+  },
+  chartBarContainer: {
+    alignItems: 'center',
+    justifyContent: 'flex-end',
   },
   chartBar: {
-    width: 20,
-    borderRadius: 6,
+    width: 14,
+    borderRadius: 4,
+  },
+  chartBarLabel: {
+    fontSize: 8,
+    color: '#94A3B8',
+    marginTop: 4,
+    fontWeight: '500',
+  },
+  reminderItemBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    padding: 8,
+    borderRadius: 10,
+    marginBottom: 6,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  reminderIconWrapper: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#FEF3C7',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  detailItemTitle: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#0F172A',
+  },
+  detailItemSub: {
+    fontSize: 8,
+    color: '#64748B',
+  },
+  detailItemAmount: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  splitTotalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    padding: 10,
+    borderRadius: 10,
+    marginBottom: 10,
+  },
+
+  cardLabel: {
+    color: DESIGN_COLORS.textMuted,
+    fontSize: 9,
+  },
+  cardValue: {
+    color: DESIGN_COLORS.textDark,
+    fontSize: 16,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  iconCircle: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cardValueText: {
+    color: DESIGN_COLORS.textDark,
+    fontWeight: '700',
+  },
+  cardSubText: {
+    color: DESIGN_COLORS.textMuted,
+    fontSize: 11,
   },
   splitRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 8,
-    paddingBottom: 6,
+    paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: DESIGN_COLORS.borderLight,
+    borderBottomColor: '#F1F5F9',
   },
-  darkText: { color: DESIGN_COLORS.textDark, fontSize: 14 },
-  greenText: { color: DESIGN_COLORS.brandGreen, fontSize: 14, fontWeight: '600' },
+  darkText: { color: DESIGN_COLORS.textDark, fontSize: 10, fontWeight: '500' },
+  greenText: { color: DESIGN_COLORS.brandGreen, fontSize: 10, fontWeight: '700' },
+  
+  hardwareHomeIndicator: {
+    width: 80,
+    height: 4,
+    backgroundColor: '#000000',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginTop: 10,
+  },
+
   textContainer: { 
     width: '100%', 
-    alignItems: 'center', 
-    marginBottom: 20,
+    alignItems: 'center',
+    marginTop: 10, 
   },
   heading: { 
     color: DESIGN_COLORS.textDark, 
-    fontSize: 24, 
-    fontWeight: '700', 
+    fontSize: 22, 
+    fontWeight: '800', 
     textAlign: 'center',
-    marginBottom: 10,
+    marginBottom: 6,
+    letterSpacing: -0.5,
   },
   description: {
     color: DESIGN_COLORS.textMuted,
-    fontSize: 14,
+    fontSize: 13,
     textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: 20,
     paddingHorizontal: 8,
   },
   indicatorContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 28,
+    marginVertical: 10,
   },
   dot: {
     height: 6,
@@ -419,7 +563,7 @@ const styles = StyleSheet.create({
   },
   activeDot: {
     width: 20,
-    backgroundColor: DESIGN_COLORS.brandGreen,
+    backgroundColor: DESIGN_COLORS.textDark,
   },
   inactiveDot: {
     width: 6,
@@ -428,65 +572,54 @@ const styles = StyleSheet.create({
   embeddedNavigationContainer: {
     width: '100%',
     alignItems: 'center',
-    marginTop: 4,
   },
   navigationRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center', 
+    justifyContent: 'space-between', 
     width: '100%',
-    gap: 32, 
+    gap: 12,
   },
-  navBarTextButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-  },
-  navBarSecondaryText: {
-    color: DESIGN_COLORS.brandGreen,
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  primaryButtonHalf: {
-    backgroundColor: DESIGN_COLORS.brandGreen, 
-    height: 52, 
-    paddingHorizontal: 36,
-    borderRadius: 26, 
+  
+  secondaryButtonHalf: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: DESIGN_COLORS.borderLight,
+    height: 48, 
+    borderRadius: 24, 
+    flexDirection: 'row',
     justifyContent: 'center', 
     alignItems: 'center',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#166534',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 3,
-      },
-    }),
+  },
+  secondaryButtonText: {
+    color: DESIGN_COLORS.textDark,
+    fontSize: 15,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  primaryButtonHalf: {
+    flex: 1,
+    backgroundColor: DESIGN_COLORS.brandGreen, 
+    height: 48, 
+    borderRadius: 24, 
+    flexDirection: 'row',
+    justifyContent: 'center', 
+    alignItems: 'center',
   },
   primaryButtonFull: {
     width: '100%',
     backgroundColor: DESIGN_COLORS.brandGreen, 
-    height: 54, 
-    borderRadius: 30, 
+    height: 50, 
+    borderRadius: 25, 
+    flexDirection: 'row',
     justifyContent: 'center', 
     alignItems: 'center',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#166534',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 3,
-      },
-    }),
   },
   primaryButtonText: { 
     color: '#FFFFFF', 
-    fontSize: 16, 
-    fontWeight: '600' 
+    fontSize: 15, 
+    fontWeight: '600',
+    textAlign: 'center',
   }
 });
