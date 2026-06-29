@@ -100,20 +100,70 @@ export default function StatisticsScreen() {
     return tDate.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase();
   };
 
+  const chartPaths = {
+    Day: {
+      pathData: "M0,95 Q40,115 100,80 T150,55 T260,85 T400,65",
+      activeColor: "#A3E635", 
+      circleCX: 150,
+      circleCY: 55,
+      tooltipLeft: "23%", 
+      dateLeft: "JULY 15",
+      dateRight: "JULY 16",
+      labelDate: "July 16",
+      trendText: "vs yesterday"
+    },
+    Week: {
+      pathData: "M0,75 Q50,110 110,60 T180,42 T275,70 T400,55",
+      activeColor: "#38BDF8", 
+      circleCX: 180,
+      circleCY: 42,
+      tooltipLeft: "30%",
+      dateLeft: "WEEK 1",
+      dateRight: "WEEK 2",
+      labelDate: "this week",
+      trendText: "vs last week"
+    },
+    Month: {
+      pathData: "M0,65 Q60,95 120,50 T210,32 T290,60 T400,45",
+      activeColor: "#FB923C", 
+      circleCX: 210,
+      circleCY: 32,
+      tooltipLeft: "38%",
+      dateLeft: "JUN",
+      dateRight: "JUL",
+      labelDate: "July",
+      trendText: "vs last month"
+    },
+    Year: {
+      pathData: "M0,85 Q45,105 115,70 T240,28 T310,75 T400,50",
+      activeColor: "#E879F9", 
+      circleCX: 240,
+      circleCY: 28,
+      tooltipLeft: "45%",
+      dateLeft: "2025",
+      dateRight: "2026",
+      labelDate: "2026",
+      trendText: "vs last year"
+    },
+  };
+
+  const currentActive = chartPaths[period];
+  const simulatedAmount = (totalSpendings * 0.12).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
 
-      {/* Header Row - Giwagtang ang mga icons sa tuo ug gi-fix ang spacing */}
+      {/* Header Row */}
       <View style={styles.headerContainer}>
         <TouchableOpacity 
           onPress={() => router.replace('/(personalTabs)/budget')} 
           style={styles.backButton}
           activeOpacity={0.7}
         >
-          <Ionicons name="chevron-back" size={26} color="#FFFFFF" />
+          <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Statistic</Text>
+        <Text style={styles.headerTitle}>Statistics</Text>
         <View style={styles.headerPlaceholder} /> 
       </View>
 
@@ -123,7 +173,10 @@ export default function StatisticsScreen() {
           <TouchableOpacity
             key={p}
             onPress={() => setPeriod(p)}
-            style={[styles.tabButton, period === p && styles.activeTabButton]}
+            style={[
+              styles.tabButton, 
+              period === p && { backgroundColor: chartPaths[p].activeColor }
+            ]}
           >
             <Text style={[styles.tabText, period === p && styles.activeTabText]}>
               {p}
@@ -132,35 +185,57 @@ export default function StatisticsScreen() {
         ))}
       </View>
 
-      {/* Total Spendings Display */}
+      {/* MODERNIZED & COMPACT TOTAL SPENDINGS CONTAINER */}
       <View style={styles.spendingContainer}>
-        <Text style={styles.spendingLabel}>Total Spendings</Text>
+        <Text style={styles.spendingLabel}>TOTAL SPENDINGS</Text>
         <Text style={styles.spendingAmount}>
           ₱{totalSpendings.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </Text>
+        {/* Subtle insight indicator para dali masabtan ang context sa data */}
+        <View style={styles.trendBadge}>
+          <Ionicons name="trending-up" size={12} color="#EF4444" />
+          <Text style={styles.trendText}>+12.4% {currentActive.trendText}</Text>
+        </View>
       </View>
 
-      {/* Curved Graph Simulation */}
-      <View style={styles.chartContainer}>
-        <Svg height="120" width="100%">
-          <Path
-            d="M0,90 Q40,40 90,70 T200,40 T300,80 T400,30"
-            fill="none"
-            stroke="#164E63"
-            strokeWidth="3"
-          />
-          <Path
-            d="M0,75 Q50,110 110,60 T220,35 T320,65 T400,55"
-            fill="none"
-            stroke="#A3E635"
-            strokeWidth="3"
-          />
-          <Circle cx="180" cy="42" r="7" fill="#FFFFFF" stroke="#A3E635" strokeWidth="4" />
-        </Svg>
-        <View style={styles.tooltipBadge}>
-          <Text style={styles.tooltipText}>
-            ₱{(totalSpendings * 0.12).toFixed(0)}
-          </Text>
+      {/* Curved Graph Simulation Section */}
+      <View style={styles.graphSectionWrapper}>
+        <View style={styles.chartContainer}>
+          <Svg height="120" width="100%">
+            <Path d={chartPaths.Day.pathData} fill="none" stroke={period === 'Day' ? chartPaths.Day.activeColor : '#164E63'} strokeWidth={period === 'Day' ? "3.5" : "2"} strokeOpacity={period === 'Day' ? 1 : 0.2} />
+            <Path d={chartPaths.Week.pathData} fill="none" stroke={period === 'Week' ? chartPaths.Week.activeColor : '#164E63'} strokeWidth={period === 'Week' ? "3.5" : "2"} strokeOpacity={period === 'Week' ? 1 : 0.2} />
+            <Path d={chartPaths.Month.pathData} fill="none" stroke={period === 'Month' ? chartPaths.Month.activeColor : '#164E63'} strokeWidth={period === 'Month' ? "3.5" : "2"} strokeOpacity={period === 'Month' ? 1 : 0.2} />
+            <Path d={chartPaths.Year.pathData} fill="none" stroke={period === 'Year' ? chartPaths.Year.activeColor : '#164E63'} strokeWidth={period === 'Year' ? "3.5" : "2"} strokeOpacity={period === 'Year' ? 1 : 0.2} />
+            
+            <Circle cx={currentActive.circleCX} cy={currentActive.circleCY} r="11" fill="none" stroke={currentActive.activeColor} strokeWidth="3.5" />
+            <Circle cx={currentActive.circleCX} cy={currentActive.circleCY} r="5.5" fill="#FFFFFF" />
+          </Svg>
+          
+          {/* Tooltip gikan sa stat.png layout */}
+          <View style={[styles.tooltipContainer, { left: currentActive.tooltipLeft }]}>
+            <View style={[styles.tooltipArrow, { borderBottomColor: currentActive.activeColor }]} />
+            
+            <View style={[styles.tooltipBubble, { backgroundColor: currentActive.activeColor }]}>
+              <Text style={styles.tooltipAmountText}>₱{simulatedAmount}</Text>
+            </View>
+            
+            <Text style={styles.transactionMetaText}>
+              Transaction Amount:{'\n'}
+              <Text style={styles.transactionMetaSubText}>₱{simulatedAmount} on {currentActive.labelDate}</Text>
+            </Text>
+          </View>
+        </View>
+
+        {/* X-AXIS TIMESTAMPS */}
+        <View style={styles.xAxisContainer}>
+          <View style={styles.xAxisLabelGroup}>
+            <Text style={styles.xAxisLabelTop}>{currentActive.dateLeft.split(' ')[0]}</Text>
+            <Text style={styles.xAxisLabelBottom}>{currentActive.dateLeft.split(' ')[1] || '15'}</Text>
+          </View>
+          <View style={[styles.xAxisLabelGroup, { alignItems: 'flex-end' }]}>
+            <Text style={styles.xAxisLabelTop}>{currentActive.dateRight.split(' ')[0]}</Text>
+            <Text style={styles.xAxisLabelBottom}>{currentActive.dateRight.split(' ')[1] || '16'}</Text>
+          </View>
         </View>
       </View>
 
@@ -170,16 +245,13 @@ export default function StatisticsScreen() {
         
         <View style={styles.historyHeaderRow}>
           <Text style={styles.historyTitle}>Transaction History</Text>
-          <TouchableOpacity 
-            activeOpacity={0.7}
-            onPress={() => router.push('/(personalTabs)/transaction')} // Pwede sad replace() kung gusto nimo dretso ilis ang screen
-            >
+          <TouchableOpacity activeOpacity={0.7} onPress={() => router.push('/(personalTabs)/transaction')}>
             <Text style={styles.viewAllText}>View all {'>'}</Text>
-            </TouchableOpacity>
+          </TouchableOpacity>
         </View>
 
         {loading ? (
-          <ActivityIndicator size="small" color="#0F172A" style={{ marginTop: 40 }} />
+          <ActivityIndicator size="small" color="#0F172A" style={{ marginTop: 30 }} />
         ) : transactions.length === 0 ? (
           <Text style={styles.emptyText}>No transactions logged for this duration.</Text>
         ) : (
@@ -194,27 +266,17 @@ export default function StatisticsScreen() {
                 <View style={styles.transactionCard}>
                   <View style={styles.leftRow}>
                     <View style={[styles.avatarIcon, { backgroundColor: category?.color ? `${category.color}15` : '#F1F5F9' }]}>
-                      <Ionicons 
-                        name={(category?.icon as any) || 'document-text-outline'} 
-                        size={18} 
-                        color={category?.color || '#64748B'} 
-                      />
+                      <Ionicons name={(category?.icon as any) || 'document-text-outline'} size={18} color={category?.color || '#64748B'} />
                     </View>
                     <View style={styles.textMetadata}>
                       <Text style={styles.itemName} numberOfLines={1}>{item.description}</Text>
-                      <Text style={styles.itemTime}>
-                        {formatTransactionDate(item.spent_at)}
-                      </Text>
+                      <Text style={styles.itemTime}>{formatTransactionDate(item.spent_at)}</Text>
                     </View>
                   </View>
                   
                   <View style={styles.rightRow}>
-                    <Text style={styles.itemAmount}>
-                      -₱{item.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                    </Text>
-                    <Text style={styles.itemCategoryName}>
-                      {category?.name || 'Expense'}
-                    </Text>
+                    <Text style={styles.itemAmount}>-₱{item.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</Text>
+                    <Text style={styles.itemCategoryName}>{category?.name || 'Expense'}</Text>
                   </View>
                 </View>
               );
@@ -230,7 +292,6 @@ const styles = StyleSheet.create({
   container: { 
     flex: 1, 
     backgroundColor: '#061F1A',
-    // Gi-fix ang top spacing para sa Android ug iOS status bars aron dili mo-overlap
     paddingTop: Platform.OS === 'android' ? NativeStatusBar.currentHeight : 0 
   },
   headerContainer: {
@@ -239,77 +300,148 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 24,
     paddingTop: 16,
-    paddingBottom: 10,
+    paddingBottom: 8,
   },
-  backButton: { 
-    padding: 6,
-    marginLeft: -6 
-  },
-  headerTitle: { 
-    fontSize: 20, 
-    fontWeight: '700', 
-    color: '#FFFFFF',
-    textAlign: 'center' 
-  },
-  headerPlaceholder: { 
-    width: 32 // Gigamit para magpabiling sentro ang title bisan walay icon sa tuo
-  },
+  backButton: { padding: 6, marginLeft: -6 },
+  headerTitle: { fontSize: 18, fontWeight: '700', color: '#FFFFFF', textAlign: 'center', letterSpacing: -0.3 },
+  headerPlaceholder: { width: 32 },
   tabContainer: {
     flexDirection: 'row',
     backgroundColor: 'rgba(255,255,255,0.06)',
     marginHorizontal: 24,
     borderRadius: 24,
     padding: 4,
-    marginTop: 12,
+    marginTop: 8,
   },
-  tabButton: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 20 },
-  activeTabButton: { backgroundColor: '#A3E635' },
-  tabText: { color: 'rgba(255,255,255,0.5)', fontWeight: '600', fontSize: 13 },
+  tabButton: { flex: 1, paddingVertical: 9, alignItems: 'center', borderRadius: 20 },
+  tabText: { color: 'rgba(255,255,255,0.4)', fontWeight: '600', fontSize: 13 },
   activeTabText: { color: '#061F1A', fontWeight: '700' },
-  spendingContainer: { alignItems: 'center', marginTop: 24, marginBottom: 6 },
-  spendingLabel: { color: 'rgba(255,255,255,0.5)', fontSize: 13, fontWeight: '500' },
-  spendingAmount: { color: '#FFFFFF', fontSize: 36, fontWeight: '800', marginTop: 4, letterSpacing: -0.5 },
-  chartContainer: { height: 120, width: '100%', paddingHorizontal: 10, position: 'relative', justifyContent: 'center', marginBottom: 8 },
-  tooltipBadge: {
-    position: 'absolute',
-    top: 5,
-    left: '42%',
-    backgroundColor: '#A3E635',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+  
+  // MODERNISED SPENDING AREA STYLES
+  spendingContainer: { 
+    alignItems: 'center', 
+    marginTop: 20, 
+    marginBottom: 4,
+    paddingHorizontal: 24
   },
-  tooltipText: { color: '#061F1A', fontSize: 11, fontWeight: '700' },
+  spendingLabel: { 
+    color: 'rgba(255,255,255,0.4)', 
+    fontSize: 11, 
+    fontWeight: '700',
+    letterSpacing: 1 // Gipa-spaced gamay para premium look
+  },
+  spendingAmount: { 
+    color: '#FFFFFF', 
+    fontSize: 32, // Gidala gikan sa 36 paubos para compact ug clean
+    fontWeight: '800', 
+    marginTop: 4, 
+    letterSpacing: -0.8 
+  },
+  trendBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(239, 68, 68, 0.1)', // Subtle red transparent pill
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    marginTop: 6,
+    gap: 4
+  },
+  trendText: {
+    color: '#EF4444',
+    fontSize: 11,
+    fontWeight: '600'
+  },
+  
+  graphSectionWrapper: {
+    marginVertical: 10,
+    position: 'relative'
+  },
+  chartContainer: { 
+    height: 185, 
+    width: '100%', 
+    paddingHorizontal: 10, 
+    position: 'relative',
+  },
+  tooltipContainer: {
+    position: 'absolute',
+    top: 65, 
+    alignItems: 'center',
+    width: 150,
+  },
+  tooltipArrow: {
+    width: 0,
+    height: 0,
+    borderLeftWidth: 6,
+    borderRightWidth: 6,
+    borderBottomWidth: 6,
+    borderStyle: 'solid',
+    backgroundColor: 'transparent',
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+  },
+  tooltipBubble: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 110,
+  },
+  tooltipAmountText: { color: '#061F1A', fontSize: 16, fontWeight: '700' },
+  transactionMetaText: {
+    color: 'rgba(255,255,255,0.45)',
+    fontSize: 10,
+    textAlign: 'center',
+    marginTop: 6,
+    lineHeight: 13,
+    fontWeight: '500'
+  },
+  transactionMetaSubText: {
+    color: '#FFFFFF',
+    fontWeight: '600'
+  },
+  xAxisContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
+    marginTop: -15,
+    marginBottom: 8
+  },
+  xAxisLabelGroup: { flexDirection: 'column' },
+  xAxisLabelTop: { color: 'rgba(255,255,255,0.35)', fontSize: 10, fontWeight: '600', letterSpacing: 0.5 },
+  xAxisLabelBottom: { color: 'rgba(255,255,255,0.35)', fontSize: 11, fontWeight: '600', marginTop: 2, textAlign: 'center' },
+  
   historyContainer: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     paddingHorizontal: 24,
     paddingTop: 12,
   },
   dragIndicator: {
     width: 36,
     height: 4,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: '#F1F5F9',
     borderRadius: 2,
     alignSelf: 'center',
     marginBottom: 16,
   },
-  historyHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  historyHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
   historyTitle: { fontSize: 16, fontWeight: '700', color: '#0F172A' },
   viewAllText: { fontSize: 13, color: '#64748B', fontWeight: '500' },
-  emptyText: { color: '#94A3B8', textAlign: 'center', marginTop: 40, fontSize: 14 },
+  emptyText: { color: '#94A3B8', textAlign: 'center', marginTop: 30, fontSize: 13 },
   transactionCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 14,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#F8FAFC',
   },
   leftRow: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 0.7 },
-  avatarIcon: { width: 42, height: 42, borderRadius: 21, justifyContent: 'center', alignItems: 'center' },
+  avatarIcon: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
   textMetadata: { flex: 1 },
   itemName: { fontSize: 14, fontWeight: '600', color: '#0F172A' },
   itemTime: { fontSize: 11, color: '#94A3B8', fontWeight: '500', marginTop: 2 },

@@ -282,7 +282,7 @@ export default function SpenderHomeScreen() {
     stopAutoScrollEngine(); 
     if (categories.length <= 1) return;
 
-    autoScrollTimer.current = setInterval(() => {
+    autoScrollTimer.current = window.setInterval(() => {
       setCurrentCardIndex((prevIndex) => {
         const nextIndex = prevIndex >= categories.length - 1 ? 0 : prevIndex + 1;
         flatListRef.current?.scrollToOffset({
@@ -296,7 +296,7 @@ export default function SpenderHomeScreen() {
 
   const stopAutoScrollEngine = () => {
     if (autoScrollTimer.current) {
-      clearInterval(autoScrollTimer.current);
+      window.clearInterval(autoScrollTimer.current);
       autoScrollTimer.current = null;
     }
   };
@@ -341,10 +341,10 @@ export default function SpenderHomeScreen() {
 
 return (
   <ImageBackground
-  source={require("../../assets/images/cover-bg.png")}
-  resizeMode="cover"
-  style={styles.backgroundImage}
-  > 
+    source={require("../../assets/images/cover-bg.png")}
+    resizeMode="cover"
+    style={styles.backgroundImage}
+  >
   <SafeAreaView style={styles.container}>
     <StatusBar style="dark" />
       <ScrollView 
@@ -354,7 +354,7 @@ return (
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#0D9488']} />
         }
       >
-        {/* Profile & Balance Top Header Section */}
+        {/* Profile and Balance Section */}
         <View style={styles.headerBackground}>
           <View style={styles.welcomeRow}>
             <View style={styles.avatarRow}>
@@ -371,6 +371,7 @@ return (
               </View>
             </View>
 
+            {/* Action Icon Group Container */}
             <View style={styles.iconGroupRow}>
               <TouchableOpacity 
                 style={styles.iconBoxTop} 
@@ -389,6 +390,7 @@ return (
             </View>
           </View>
           
+          {/* Main Financial Balance Readout */}
           <View style={styles.balanceContainer}>
             <Text style={styles.balanceLabel}>Total Remaining Balance</Text>
             <Text style={styles.mainBalance}>
@@ -396,6 +398,7 @@ return (
             </Text>
           </View>
 
+          {/* Metric Status Micro-Bars */}
           {summary && (
             <View style={styles.headerMetricsWrapper}>
               <View style={styles.headerProgressBarBg}>
@@ -409,18 +412,19 @@ return (
           )}
         </View>
 
-        {/* Carousel Section - Gi-maintain ang tibuok snapping engine props */}
+        {/* Categories Slider Segment */}
+        <View style= {styles.bodycard}>
         <View style={styles.cardsSectionContainer}>
           <FlatList
             ref={flatListRef}
             data={categories}
             horizontal
             decelerationRate="fast"
-            snapToInterval={SNAP_INTERVAL} // Nag-maintain sa snap sliding
+            snapToInterval={SNAP_INTERVAL}
             snapToAlignment="center"
             showsHorizontalScrollIndicator={false}
-            onMomentumScrollEnd={onScrollMomentumEnd} // Para sa active dot indicator logic
-            onScrollBeginDrag={stopAutoScrollEngine}   // Para mapunong ang auto scroll animation kung gina-drag
+            onMomentumScrollEnd={onScrollMomentumEnd}
+            onScrollBeginDrag={stopAutoScrollEngine} 
             contentContainerStyle={{
               paddingHorizontal: (width - CARD_WIDTH) / 2 - CARD_MARGIN
             }}
@@ -480,7 +484,7 @@ return (
           )}
         </View>
 
-        {/* Recent Transactions List Component */}
+        {/* Transaction History Section Block */}
         <View style={styles.contentBody}>
           <View style={styles.recentSectionHeader}>
             <Text style={styles.sectionTitle}>Recent Transactions</Text>
@@ -514,7 +518,7 @@ return (
         </View>
       </ScrollView>
 
-      {/* Allocation Budget Flow Modal */}
+      {/* Allocation Budget Flow Modal Component */}
       <Modal animationType="fade" transparent={true} visible={modalVisible} onRequestClose={() => setModalVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
@@ -546,15 +550,16 @@ return (
           </View>
         </View>
       </Modal>
-  </SafeAreaView>
- </ImageBackground>
+    </View>
+    </SafeAreaView>
+  </ImageBackground>
 );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8F9FA' },
+  container: { flex: 1, },
+  backgroundImage: { flex: 1 },
   scrollContent: { paddingBottom: 40 },
-  backgroundImage:{flex:1 },
   
   headerBackground: { 
     paddingHorizontal: 24, 
@@ -584,7 +589,7 @@ const styles = StyleSheet.create({
   headerMetricsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   headerMetricText: { color: '#64748B', fontSize: 12, fontWeight: '600' },
 
-  cardsSectionContainer: { marginTop: -40, marginBottom: 20, width: '100%' },
+  cardsSectionContainer: { marginTop: -40, marginBottom: 20, width: '100%'},
   originalCategoryCard: {
     width: CARD_WIDTH,
     height: 180,
@@ -592,11 +597,11 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     padding: 22,
     justifyContent: 'space-between',
-    shadowColor: '#0F766E',
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.25,
     shadowRadius: 14,
-    elevation: 8
+    elevation: 8,
   },
   cardMainHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   cardTitleCluster: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 0.75 },
@@ -619,32 +624,30 @@ const styles = StyleSheet.create({
   activeDot: { width: 16, backgroundColor: '#0D9488' },
   inactiveDot: { width: 6, backgroundColor: '#CBD5E1' },
 
-  contentBody: { paddingHorizontal: 24, marginTop: 12 },
+  contentBody: { paddingHorizontal: 24, marginTop: 10},
   sectionTitle: { fontSize: 18, fontWeight: '700', color: '#0F172A', letterSpacing: -0.3 },
   recentSectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   seeAllText: { fontSize: 14, color: '#0D9488', fontWeight: '700' },
   
-  recentListContainer: { backgroundColor: '#FFFFFF', borderRadius: 24, overflow: 'hidden', padding: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.03, shadowRadius: 10, elevation: 2 },
+  recentListContainer: { backgroundColor: '#FFFFFF', borderRadius: 24, bottom: 20, overflow: 'hidden', padding: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.03, shadowRadius: 10, elevation: 10 },
   recentItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
   recentLeft: { flexDirection: 'row', alignItems: 'center', gap: 14, flex: 0.75 },
   iconBox: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#F0FDFA', justifyContent: 'center', alignItems: 'center' },
-  recentName: { fontSize: 14, fontWeight: '600', color: '#0F172A' },
-  recentCategory: { fontSize: 12, color: '#64748B', marginTop: 2 },
-  recentAmount: { fontSize: 14, fontWeight: '700', color: '#0D9488' },
-  noRecentBox: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 32, alignItems: 'center', justifyContent: 'center' },
-  noRecentText: { fontSize: 14, color: '#64748B', textAlign: 'center' },
+  recentName: { fontSize: 15, fontWeight: '600', color: '#1E293B', letterSpacing: -0.1 },
+  recentCategory: { fontSize: 12, color: '#64748B', marginTop: 2, fontWeight: '500' },
+  recentAmount: { fontSize: 15, fontWeight: '700', color: '#0F172A' },
+  noRecentBox: { padding: 36, backgroundColor: '#FFFFFF', borderRadius: 24, alignItems: 'center' },
+  noRecentText: { fontSize: 14, color: '#64748B', fontWeight: '500' },
   
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
-  modalContainer: { backgroundColor: '#FFFFFF', borderRadius: 20, padding: 28, width: '85%', alignItems: 'center' },
-  modalTitle: { fontSize: 18, fontWeight: '700', color: '#0F172A', marginBottom: 8 },
-  modalSubText: { fontSize: 13, color: '#64748B', textAlign: 'center', marginBottom: 20 },
-  modalInput: { width: '100%', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 12, padding: 14, fontSize: 16, marginBottom: 20, color: '#0F172A' },
-  modalButtonsRow: { flexDirection: 'row', gap: 12, width: '100%' },
-  modalButton: { flex: 1, paddingVertical: 12, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.3)', justifyContent: 'center', alignItems: 'center' },
+  modalContainer: { backgroundColor: '#FFFFFF', width: '88%', padding: 24, borderRadius: 28, shadowColor: '#0F172A', shadowOpacity: 0.1, shadowRadius: 16, elevation: 10 },
+  modalTitle: { fontSize: 19, fontWeight: '700', color: '#0F172A' },
+  modalSubText: { fontSize: 14, color: '#64748B', marginTop: 6, marginBottom: 20, lineHeight: 20 },
+  modalInput: { borderWidth: 1, borderColor: '#E2E8F0', padding: 14, borderRadius: 16, marginBottom: 22, fontSize: 20, fontWeight: '700', color: '#0F172A', backgroundColor: '#F8F9FA' },
+  modalButtonsRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: 12 },
+  modalButton: { paddingVertical: 14, paddingHorizontal: 20, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
   cancelBtn: { backgroundColor: '#F1F5F9' },
-  cancelBtnText: { color: '#64748B', fontSize: 14, fontWeight: '600' },
-  confirmBtn: { backgroundColor: '#0D9488' },
-  confirmBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '600' },
-  
-  centeredLoading: { justifyContent: 'center', alignItems: 'center' },
-  });
+  cancelBtnText: { color: '#475569', fontWeight: '600', fontSize: 14 },
+  confirmBtn: { backgroundColor: '#0D9488', minWidth: 120 },
+  confirmBtnText: { color: '#FFFFFF', fontWeight: '600', fontSize: 14 }
+});
