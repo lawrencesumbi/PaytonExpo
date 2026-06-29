@@ -1,6 +1,5 @@
 // app/(spenderTabs)/budget.tsx
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useCallback, useEffect, useState } from 'react';
@@ -20,10 +19,9 @@ import {
   TextInput,
   TouchableOpacity,
   TouchableWithoutFeedback,
-  View,
+  View
 } from 'react-native';
 import { supabase } from '../../lib/supabase';
-
 
 interface BudgetOption {
   id: string;
@@ -153,7 +151,7 @@ export default function SpenderExpensesScreen() {
 
       if (updateError) throw updateError;
 
-      Alert.alert("Success 🎉", `Your transaction of ₱${expenseAmount.toFixed(2)} was securely captured.`);
+      Alert.alert("Success ", `Your transaction of ₱${expenseAmount.toFixed(2)} was securely captured.`);
       
       setAmount('');
       setDescription('');
@@ -181,15 +179,33 @@ export default function SpenderExpensesScreen() {
     );
   }
 
-  
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
       
       <View style={styles.cardSelectionHeader}>
-        <Text style={styles.cardSelectionTitle}>Select Wallet</Text>
-        <Text style={styles.cardSelectionSubtitle}>{budgets.length} active folders</Text>
-      </View>
+  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+    <View>
+      <Text style={styles.cardSelectionTitle}>Select Wallet</Text>
+      <Text style={styles.cardSelectionSubtitle}>{budgets.length} active folders</Text>
+    </View>
+    
+    {/* BAG-ONG GIDUGANG: Statistics Nav Button */}
+    <TouchableOpacity 
+      activeOpacity={0.7}
+      onPress={() => router.push('/(spenderTabs)/statistics')}
+      style={{
+        backgroundColor: '#F1F5F9',
+        padding: 10,
+        borderRadius: 50,
+        borderWidth: 1,
+        borderColor: '#E2E8F0'
+      }}
+    >
+      <Ionicons name="bar-chart-outline" size={20} color="#0F172A" />
+    </TouchableOpacity>
+  </View>
+</View>
 
       {budgets.length === 0 ? (
         <View style={styles.emptyState}>
@@ -367,14 +383,14 @@ export default function SpenderExpensesScreen() {
             </TouchableWithoutFeedback>
           </KeyboardAvoidingView>
         </View>
-      </Modal>             
+      </Modal>
+
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FAFBFD' },
-  gradient: {flex: 1},
   centeredContent: { justifyContent: 'center', alignItems: 'center' },
   modalOverlay: {
     flex: 1,

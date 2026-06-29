@@ -88,7 +88,7 @@ export default function GettingStartedScreen() {
   if (currentStep === 0) {
     return (
       <LinearGradient
-        colors={['#f0fdf4', '#dcfce7']} 
+        colors={['#ffffff', '#ffffff']} 
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.container}
@@ -112,7 +112,7 @@ export default function GettingStartedScreen() {
 
   return (
     <LinearGradient
-      colors={['#f0fdf4', '#dcfce7']} 
+      colors={['#ffffff', '#ffffff']} 
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={styles.container}

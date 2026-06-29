@@ -413,119 +413,133 @@ return (
           )}
         </View>
 
-        {/* 2. ⬜ KINI ANG PUTI NGA CONTAINER PANEL (Napatong na sa ibabaw sa Image) */}
        <View style={styles.bodycard}>
   
-  {/* Categories Slider Segment */}
-  <View style={styles.cardsSectionContainer}>
-    <FlatList
-      ref={flatListRef}
-      data={categories}
-      horizontal
-      decelerationRate="fast"
-      snapToInterval={SNAP_INTERVAL}
-      snapToAlignment="center"
-      showsHorizontalScrollIndicator={false}
-      onMomentumScrollEnd={onScrollMomentumEnd}
-      onScrollBeginDrag={stopAutoScrollEngine} 
-      contentContainerStyle={{
-        paddingHorizontal: (width - CARD_WIDTH) / 2 - CARD_MARGIN
-      }}
-      keyExtractor={(item) => item.id}
-      renderItem={({ item: cat, index }) => {
-        const remainingPercentage = cat.allocatedAmount > 0 
-          ? Math.min((cat.remainingAmount / cat.allocatedAmount) * 100, 100) 
-          : 0;
-        const premiumColors = ['#aef18e', '#71f551', '#115E59', '#0eb3f5', '#05dabd'];
-        const cardColor = cat.color || premiumColors[index % premiumColors.length];
+          {/* Categories Slider Segment */}
+          <View style={styles.cardsSectionContainer}>
+            <FlatList
+              ref={flatListRef}
+              data={categories}
+              horizontal
+              decelerationRate="fast"
+              snapToInterval={SNAP_INTERVAL}
+              snapToAlignment="center"
+              showsHorizontalScrollIndicator={false}
+              onMomentumScrollEnd={onScrollMomentumEnd}
+              onScrollBeginDrag={stopAutoScrollEngine} 
+              contentContainerStyle={{
+                paddingHorizontal: (width - CARD_WIDTH) / 2 - CARD_MARGIN
+              }}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item: cat, index }) => {
+                const remainingPercentage = cat.allocatedAmount > 0 
+                  ? Math.min((cat.remainingAmount / cat.allocatedAmount) * 100, 100) 
+                  : 0;
 
-        return (
-          <TouchableOpacity 
-            activeOpacity={1}
-            onPress={() => openAllocateModal(cat)}
-            style={[styles.originalCategoryCard, { backgroundColor: cardColor }]}
-          >
-            {/* TOP HEADER: Title Cluster + Remaining Badge */}
-            <View style={styles.cardMainHeader}>
-              <View style={styles.cardTitleCluster}>
-                <View style={styles.originalIconCircle}>
-                  <Ionicons name={cat.icon || 'folder'} size={15} color={cardColor} />
-                </View>
-                <Text style={styles.originalCardName} numberOfLines={1}>{cat.name}</Text>
-              </View>
-              <View style={styles.remainingBadge}>
-                <Text style={styles.remainingBadgeText}>Remaining</Text>
-              </View>
-            </View>
+                // Imuhang mismong premium colors array
+                const premiumColors = ['#aef18e', '#71f551', '#115E59', '#0eb3f5', '#05dabd'];
+                const cardColor = cat.color || premiumColors[index % premiumColors.length];
 
-            {/* MIDDLE BODY: Main Amount Display */}
-            <View style={styles.originalCardMiddleBody}>
-              <Text style={styles.originalRemainingAmount}>
-                ₱{cat.remainingAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </Text>
-            </View>
+                // LOGIC: Kung ang background mao ang dark teal (#115E59), himoon natong puti ang agi.
+                // Kung hayag ang background, himoon natong itom/slate para klaro basahon.
+                const isDarkBackground = cardColor === '#9de4df';
+                const textColor = isDarkBackground ? '#FFFFFF' : '#0F172A';
+                const subTextColor = isDarkBackground ? 'rgba(255, 255, 255, 0.8)' : '#475569';
+                const badgeBg = isDarkBackground ? 'rgba(255, 255, 255, 0.2)' : 'rgba(15, 23, 42, 0.07)';
+                const progressBg = isDarkBackground ? 'rgba(255, 255, 255, 0.25)' : 'rgba(15, 23, 42, 0.08)';
 
-            {/* BOTTOM FOOTER: Progress Bar + Metrics Row */}
-            <View style={styles.originalCardBottomFooter}>
-              <View style={styles.originalProgressBackground}>
-                <View style={[styles.originalProgressFill, { width: `${remainingPercentage}%` }]} />
-              </View>
-              <View style={styles.originalCardMetricsRow}>
-                <Text style={styles.originalFooterMetaText}>Budget: ₱{cat.allocatedAmount.toLocaleString()}</Text>
-                <Text style={styles.originalFooterMetaText}>Spent: ₱{cat.totalSpent.toLocaleString()}</Text>
-              </View>
-            </View>
-            </TouchableOpacity>
-            );
-            }}
+                return (
+                  <TouchableOpacity 
+                    activeOpacity={0.9}
+                    onPress={() => openAllocateModal(cat)}
+                    style={[styles.originalCategoryCard, { backgroundColor: cardColor }]}
+                  >
+                    {/* TOP HEADER: Title Cluster + Remaining Badge */}
+                    <View style={styles.cardMainHeader}>
+                      <View style={styles.cardTitleCluster}>
+                        <View style={styles.originalIconCircle}>
+                          <Ionicons name={cat.icon || 'folder'} size={15} color={cardColor} />
+                        </View>
+                        <Text style={[styles.originalCardName, { color: textColor }]} numberOfLines={1}>
+                          {cat.name}
+                        </Text>
+                      </View>
+                      <View style={[styles.remainingBadge, { backgroundColor: badgeBg }]}>
+                        <Text style={[styles.remainingBadgeText, { color: textColor }]}>Remaining</Text>
+                      </View>
+                    </View>
+
+                    {/* MIDDLE BODY: Main Amount Display */}
+                    <View style={styles.originalCardMiddleBody}>
+                      <Text style={[styles.originalRemainingAmount, { color: textColor }]}>
+                        ₱{cat.remainingAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </Text>
+                    </View>
+
+                    {/* BOTTOM FOOTER: Progress Bar + Metrics Row */}
+                    <View style={styles.originalCardBottomFooter}>
+                      <View style={[styles.originalProgressBackground, { backgroundColor: progressBg }]}>
+                        <View style={[styles.originalProgressFill, { backgroundColor: textColor, width: `${remainingPercentage}%` }]} />
+                      </View>
+                      <View style={styles.originalCardMetricsRow}>
+                        <Text style={[styles.originalFooterMetaText, { color: subTextColor }]}>
+                          Budget: ₱{cat.allocatedAmount.toLocaleString()}
+                        </Text>
+                        <Text style={[styles.originalFooterMetaText, { color: subTextColor }]}>
+                          Spent: ₱{cat.totalSpent.toLocaleString()}
+                        </Text>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                );
+              }}
             />
 
-          {categories.length > 0 && (
-            <View style={styles.dotsRowContainer}>
-              {categories.map((_, dotIndex) => (
-                <View 
-                  key={dotIndex} 
-                  style={[styles.indicatorDot, currentCardIndex === dotIndex ? styles.activeDot : styles.inactiveDot]} 
-                />
-              ))}
-            </View>
-          )}
-        </View>
-
-        {/* Transaction History Section Block */}
-        <View style={styles.contentBody}>
-          <View style={styles.recentSectionHeader}>
-            <Text style={styles.sectionTitle}>Recent Transactions</Text>
-            <TouchableOpacity onPress={() => router.push('/transaction')}>
-              <Text style={styles.seeAllText}>See all</Text>
-            </TouchableOpacity>
+            {categories.length > 0 && (
+              <View style={styles.dotsRowContainer}>
+                {categories.map((_, dotIndex) => (
+                  <View 
+                    key={dotIndex} 
+                    style={[styles.indicatorDot, currentCardIndex === dotIndex ? styles.activeDot : styles.inactiveDot]} 
+                  />
+                ))}
+              </View>
+            )}
           </View>
 
-          {recentExpenses.length === 0 ? (
-            <View style={styles.noRecentBox}>
-              <Text style={styles.noRecentText}>No captured transaction entries found.</Text>
+          {/* Transaction History Section Block (Pabilin gihapon) */}
+          <View style={styles.contentBody}>
+            <View style={styles.recentSectionHeader}>
+              <Text style={styles.sectionTitle}>Recent Transactions</Text>
+              <TouchableOpacity onPress={() => router.push('/transaction')}>
+                <Text style={styles.seeAllText}>See all</Text>
+              </TouchableOpacity>
             </View>
-          ) : (
-            <View style={styles.recentListContainer}>
-              {recentExpenses.map((item) => (
-                <View key={item.id} style={styles.recentItem}>
-                  <View style={styles.recentLeft}>
-                    <View style={styles.iconBox}>
-                      <Ionicons name={item.category_icon || 'cash-outline'} size={18} color="#0D9488" />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.recentName} numberOfLines={1}>{item.expense_name}</Text>
-                      <Text style={styles.recentCategory}>{item.category}</Text>
-                    </View>
-                  </View>
-                  <Text style={styles.recentAmount}>-₱{item.amount.toFixed(2)}</Text>
-                </View>
-              ))}
-            </View>
-          )}
-        </View>
 
-      </View>
+            {recentExpenses.length === 0 ? (
+              <View style={styles.noRecentBox}>
+                <Text style={styles.noRecentText}>No captured transaction entries found.</Text>
+              </View>
+            ) : (
+              <View style={styles.recentListContainer}>
+                {recentExpenses.map((item) => (
+                  <View key={item.id} style={styles.recentItem}>
+                    <View style={styles.recentLeft}>
+                      <View style={styles.iconBox}>
+                        <Ionicons name={item.category_icon || 'cash-outline'} size={18} color="#0D9488" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.recentName} numberOfLines={1}>{item.expense_name}</Text>
+                        <Text style={styles.recentCategory}>{item.category}</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.recentAmount}>-₱{item.amount.toFixed(2)}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+        </View>
       </ScrollView>
 
       {/* Modal Block */}
@@ -606,7 +620,7 @@ const styles = StyleSheet.create({
   headerMetricText: { color: '#64748B', fontSize: 12, fontWeight: '600' },
 
   bodycard: {
-    backgroundColor: '#ffffff',       
+    backgroundColor: '#ffffff',      
     borderTopLeftRadius: 32,          
     borderTopRightRadius: 32,         
     paddingTop: 24,                   
@@ -624,56 +638,182 @@ const styles = StyleSheet.create({
     marginBottom: 20, 
     width: '100%',
   }, 
-  cardMainHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  cardTitleCluster: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 0.75 },
-  originalIconCircle: { width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255, 255, 255, 0.2)', justifyContent: 'center', alignItems: 'center' },
-  
-  originalCardName: { color: '#FFFFFF', fontSize: 16, fontWeight: '700', letterSpacing: -0.2 },
-  
-  remainingBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, backgroundColor: 'rgba(255, 255, 255, 0.18)' },
-  remainingBadgeText: { color: '#FFFFFF', fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.3 },
-  
-  originalCardMiddleBody: { marginVertical: 6 },
-  originalRemainingAmount: { color: '#FFFFFF', fontSize: 30, fontWeight: '800', letterSpacing: -0.5 },
-  
-  originalCardBottomFooter: { gap: 10 },
-  originalProgressBackground: { height: 5, backgroundColor: 'rgba(255,255,255,0.25)', borderRadius: 3, overflow: 'hidden' },
-  originalProgressFill: { height: '100%', backgroundColor: '#FFFFFF', borderRadius: 3 },
-  originalCardMetricsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  originalFooterMetaText: { color: 'rgba(255, 255, 255, 0.85)', fontSize: 12, fontWeight: '500' },
-
-  dotsRowContainer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 16, gap: 6 },
-  indicatorDot: { height: 6, borderRadius: 3 },
-  activeDot: { width: 16, backgroundColor: '#0D9488' },
-  inactiveDot: { width: 6, backgroundColor: '#CBD5E1' },
-
-  contentBody: { 
-    paddingHorizontal: 24, 
-    marginTop: 10
+  originalCategoryCard: {
+    width: CARD_WIDTH,
+    marginHorizontal: CARD_MARGIN,
+    borderRadius: 24,
+    padding: 20,
+    minHeight: 175,
+    justifyContent: 'space-between',
+    // Premium dynamic shading effects
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
   },
-  sectionTitle: { fontSize: 18, fontWeight: '700', color: '#0F172A', letterSpacing: -0.3 },
-  recentSectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  seeAllText: { fontSize: 14, color: '#0D9488', fontWeight: '700' },
-  
-  recentListContainer: { 
-    backgroundColor: '#FFFFFF', 
-    borderRadius: 24, 
-    overflow: 'hidden', 
-    padding: 4, 
-    shadowColor: '#000', 
-    shadowOffset: { width: 0, height: 4 }, 
-    shadowOpacity: 0.03, 
-    shadowRadius: 10, 
-    elevation: 10,
-    marginTop: 4,
-    marginBottom: 20
+  cardMainHeader: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center' 
   },
-  recentItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
-  recentLeft: { flexDirection: 'row', alignItems: 'center', gap: 14, flex: 0.75 },
-  iconBox: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#F0FDFA', justifyContent: 'center', alignItems: 'center' },
-  recentName: { fontSize: 15, fontWeight: '600', color: '#1E293B', letterSpacing: -0.1 },
-  recentCategory: { fontSize: 12, color: '#64748B', marginTop: 2, fontWeight: '500' },
-  recentAmount: { fontSize: 15, fontWeight: '700', color: '#0F172A' },
+  cardTitleCluster: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: 10, 
+    flex: 0.75 
+  },
+  originalIconCircle: { 
+    width: 34, 
+    height: 34, 
+    borderRadius: 17, 
+    backgroundColor: 'rgba(255, 255, 255, 0.85)', 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+  originalCardName: { 
+    fontSize: 16, 
+    fontWeight: '700', 
+    letterSpacing: -0.2 
+  },
+  remainingBadge: { 
+    paddingHorizontal: 10, 
+    paddingVertical: 4, 
+    borderRadius: 20, 
+  },
+  remainingBadgeText: { 
+    fontSize: 10, 
+    fontWeight: '700', 
+    textTransform: 'uppercase', 
+    letterSpacing: 0.3 
+  },
+  originalCardMiddleBody: { 
+    marginVertical: 6 
+  },
+  originalRemainingAmount: { 
+    fontSize: 30, 
+    fontWeight: '800', 
+    letterSpacing: -0.5 
+  },
+  originalCardBottomFooter: { 
+    gap: 10 
+  },
+  originalProgressBackground: { 
+    height: 5, 
+    borderRadius: 3, 
+    overflow: 'hidden' 
+  },
+  originalProgressFill: { 
+    height: '100%', 
+    borderRadius: 3 
+  },
+  originalCardMetricsRow: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center' 
+  },
+  originalFooterMetaText: { 
+    fontSize: 12, 
+    fontWeight: '600' 
+  },
+
+  // Carousel slider indicator dots row configuration
+  dotsRowContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 14,
+  },
+  indicatorDot: {
+    height: 6,
+    borderRadius: 3,
+  },
+  activeDot: {
+    width: 16,
+    backgroundColor: '#0F172A',
+  },
+  inactiveDot: {
+    width: 6,
+    backgroundColor: '#E2E8F0',
+  },
+
+  // Lower Transaction UI Components 
+  contentBody: {
+    paddingHorizontal: 24,
+    marginTop: 10,
+  },
+  recentSectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  seeAllText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0D9488',
+  },
+  noRecentBox: {
+    paddingVertical: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  noRecentText: {
+    fontSize: 14,
+    color: '#94A3B8',
+    fontWeight: '500',
+  },
+  recentListContainer: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  recentItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  recentLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    flex: 0.75,
+  },
+  iconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    backgroundColor: '#E6F4F0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  recentName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1E293B',
+  },
+  recentCategory: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#64748B',
+    marginTop: 2,
+  },
+  recentAmount: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#EF4444',
+  },
   noRecentBox: { padding: 36, backgroundColor: '#FFFFFF', borderRadius: 24, alignItems: 'center', marginBottom: 20 },
   noRecentText: { fontSize: 14, color: '#64748B', fontWeight: '500' },
   

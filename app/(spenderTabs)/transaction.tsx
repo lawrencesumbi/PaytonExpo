@@ -11,6 +11,8 @@ import {
   Modal,
   StatusBar as NativeStatusBar,
   Platform,
+  RefreshControl // Gi-import para sa pull-to-refresh
+  ,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -43,6 +45,7 @@ export default function TransactionsScreen() {
   const router = useRouter(); 
 
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false); // Lahi nga state para sa pull-to-refresh spinner
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   
   // New State alang sa Search
@@ -60,7 +63,6 @@ export default function TransactionsScreen() {
 
   const fetchTransactions = useCallback(async () => {
     try {
-      setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
@@ -92,15 +94,22 @@ export default function TransactionsScreen() {
       console.error('Fetch Transactions Error:', error.message);
     } finally {
       setLoading(false);
+      setRefreshing(false); // Hunongon ang refresh spinner
     }
   }, []);
 
   useEffect(() => {
+    setLoading(true);
     fetchTransactions();
   }, [fetchTransactions]);
 
+  // Triggered kung mobira paubos ang user sa screen
+  const handleRefresh = () => {
+    setRefreshing(true);
+    fetchTransactions();
+  };
+
   // FILTER LOGIC PARA SA SEARCH
-  // Susiha ang Description o ang Category Name base sa gi-type sa user
   const filteredTransactions = transactions.filter(tx => {
     const query = searchQuery.toLowerCase();
     const matchesDescription = tx.description?.toLowerCase().includes(query);
@@ -210,6 +219,7 @@ export default function TransactionsScreen() {
     }
   };
 
+  // Fullscreen loading spinner sa sinugdanan ra modagan kung wala pay sulod ang listahan
   if (loading && transactions.length === 0) {
     return (
       <SafeAreaView style={[styles.container, styles.centeredContent]}>
@@ -244,7 +254,7 @@ export default function TransactionsScreen() {
             placeholderTextColor="#94A3B8"
             value={searchQuery}
             onChangeText={setSearchQuery}
-            clearButtonMode="while-editing" // Para sa iOS naay x button inside
+            clearButtonMode="while-editing"
           />
           {searchQuery.length > 0 && Platform.OS === 'android' && (
             <TouchableOpacity onPress={() => setSearchQuery('')}>
@@ -256,26 +266,41 @@ export default function TransactionsScreen() {
 
       {/* DYNAMIC LISTING */}
       {filteredTransactions.length === 0 ? (
-        <View style={styles.emptyState}>
-          <View style={styles.emptyIconContainer}>
-            <Ionicons name="receipt-outline" size={32} color="#64748B" />
+        <ScrollView 
+          contentContainerStyle={{ flex: 0.8 }}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={['#10B981']} tintColor="#10B981" />
+          }
+        >
+          <View style={styles.emptyState}>
+            <View style={styles.emptyIconContainer}>
+              <Ionicons name="receipt-outline" size={32} color="#64748B" />
+            </View>
+            <Text style={styles.emptyText}>
+              {searchQuery.length > 0 ? "No Results Found" : "No Transactions Yet"}
+            </Text>
+            <Text style={styles.emptySub}>
+              {searchQuery.length > 0 
+                ? `We couldn't find any matches for "${searchQuery}". Try checking your spelling.`
+                : "Expenses that you record from your active wallet folders will display chronologically here."
+              }
+            </Text>
           </View>
-          <Text style={styles.emptyText}>
-            {searchQuery.length > 0 ? "No Results Found" : "No Transactions Yet"}
-          </Text>
-          <Text style={styles.emptySub}>
-            {searchQuery.length > 0 
-              ? `We couldn't find any matches for "${searchQuery}". Try checking your spelling.`
-              : "Expenses that you record from your active wallet folders will display chronologically here."
-            }
-          </Text>
-        </View>
+        </ScrollView>
       ) : (
         <FlatList
-          data={filteredTransactions} // Gigamit ang filtered list imbes nga katong raw data
+          data={filteredTransactions}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContainer}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              colors={['#10B981']} // Android spinner color
+              tintColor="#10B981"  // iOS spinner color
+            />
+          }
           renderItem={({ item }) => {
             const txDate = new Date(item.spent_at).toLocaleDateString(undefined, {
               month: 'short',
@@ -412,7 +437,6 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 24, fontWeight: '800', color: '#0F172A', letterSpacing: -0.5 },
   headerSubtitle: { fontSize: 13, color: '#64748B', marginTop: 2, fontWeight: '500' },
 
-  // NEW STYLES ALANG SA SEARCH INPUT
   searchContainer: {
     paddingHorizontal: 24,
     paddingBottom: 16,
@@ -431,7 +455,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.02,
     shadowRadius: 3,
-    
   },
   searchInput: {
     flex: 1,
@@ -453,7 +476,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.03,
     shadowRadius: 6,
-    
   },
   iconWrapper: {
     width: 44,
@@ -477,7 +499,7 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
   },
   deleteBtn: { backgroundColor: '#FEF2F2', borderColor: '#FEE2E2' },
-  emptyState: { flex: 0.8, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 36, gap: 14 },
+  emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 36, gap: 14, paddingTop: 60 },
   emptyIconContainer: { width: 64, height: 64, borderRadius: 20, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0' },
   emptyText: { fontSize: 18, fontWeight: '700', color: '#1E293B' },
   emptySub: { fontSize: 13, color: '#64748B', textAlign: 'center', lineHeight: 22 },
