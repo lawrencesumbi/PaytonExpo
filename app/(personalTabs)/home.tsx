@@ -8,7 +8,6 @@ import {
   Dimensions,
   FlatList,
   Image,
-  ImageBackground,
   Modal,
   Platform,
   RefreshControl,
@@ -360,59 +359,55 @@ export default function PersonalHomeScreen() {
     : 0;
 
   return (
-    <ImageBackground
-      source={require('../../assets/images/cover-bg.png')}
-      resizeMode="cover"
-      style={styles.backgroundImage}
-    >
-      <SafeAreaView style={styles.container}>
-        <ExpoStatusBar style="dark" />
-        <ScrollView 
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#0D9488']} />}
-        >
-          <View style={styles.headerBackground}>
-            <View style={styles.welcomeRow}>
-              <View style={styles.avatarRow}>
-                {avatarUrl ? (
-                  <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
-                ) : (
-                  <View style={styles.avatarPlaceholder}>
-                    <Ionicons name="person" size={16} color="#042F2E" />
-                  </View>
-                )}
-                <View>
-                  <Text style={styles.welcomeSubtext}>Hello, Welcome Back</Text>
-                  <Text style={styles.welcomeText}>{userName}</Text>
+    <SafeAreaView style={styles.container}>
+      <ExpoStatusBar style="light" />
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#C5FF42']} />}
+      >
+        {/* Emerald Header Section */}
+        <View style={styles.headerBackground}>
+          <View style={styles.welcomeRow}>
+            <View style={styles.avatarRow}>
+              {/* Conditional Rendering para sa profile image kundi fallback icon */}
+              {avatarUrl ? (
+                <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+              ) : (
+                <View style={styles.avatarPlaceholder}>
+                  <Ionicons name="person" size={15} color="#FFFFFF" />
                 </View>
-              </View>
-
-              <View style={styles.iconGroupRow}>
-                <TouchableOpacity style={styles.iconBoxTop} onPress={() => router.push('/reminders')}>
-                  <Ionicons name="calendar-outline" size={20} color="#042F2E" />
-                  <View style={styles.calendarDot} />
-                </TouchableOpacity>
+              )}
+              <View>
+                <Text style={styles.welcomeSubtext}>Hello, {userName}</Text>
+                <Text style={styles.welcomeText}>Welcome Back</Text>
               </View>
             </View>
-            
-            <TouchableOpacity activeOpacity={0.9} onPress={() => setIncomeModalVisible(true)} style={styles.balanceContainer}>
-              <Text style={styles.balanceLabel}>Remaining Balance (Unallocated)</Text>
-              <Text style={styles.mainBalance}>
-                ₱{unallocatedBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-              </Text>
-            </TouchableOpacity>
 
-            <View style={styles.headerMetricsWrapper}>
-              <View style={styles.headerProgressBarBg}>
-                <View style={[styles.headerProgressBarFill, { width: `${globalSpentPercentage}%` }]} />
-              </View>
-              <View style={styles.headerMetricsRow}>
-                <Text style={styles.headerMetricText}>Overall Income: ₱{income ? income.amount.toLocaleString() : '0'}</Text>
-                <Text style={styles.headerMetricText}>Total Spent: ₱{totalSpentAcrossSystem.toLocaleString()}</Text>
-              </View>
+            <View style={styles.iconGroupRow}>
+              <TouchableOpacity style={styles.iconBoxTop} onPress={() => router.push('/reminders')}>
+                <Ionicons name="calendar-outline" size={20} color="#FFFFFF" />
+                <View style={styles.calendarDot} />
+              </TouchableOpacity>
             </View>
           </View>
+          
+          <TouchableOpacity activeOpacity={0.9} onPress={() => setIncomeModalVisible(true)} style={styles.balanceContainer}>
+            <Text style={styles.balanceLabel}>Remaining Balance (Unallocated)</Text>
+            <Text style={styles.mainBalance}>
+              ₱{unallocatedBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+            </Text>
+          </TouchableOpacity>
+
+          <View style={styles.headerMetricsWrapper}>
+            <View style={styles.headerProgressBarBg}>
+              <View style={[styles.headerProgressBarFill, { width: `${globalSpentPercentage}%` }]} />
+            </View>
+            <View style={styles.headerMetricsRow}>
+              <Text style={styles.headerMetricText}>Overall Income: ₱{income ? income.amount.toLocaleString() : '0'}</Text>
+              <Text style={styles.headerMetricText}>Total Spent: ₱{totalSpentAcrossSystem.toLocaleString()}</Text>
+            </View>
+          </View>
+        </View>
 
         {/* Carousel Section */}
         <View style={styles.cardsSectionContainer}>
@@ -520,10 +515,10 @@ export default function PersonalHomeScreen() {
             </View>
           )}
         </View>
-        </ScrollView>
+      </ScrollView>
 
-        {/* MODAL 1: FUND ALLOCATION */}
-        <Modal animationType="fade" transparent={true} visible={allocateModalVisible} onRequestClose={() => setAllocateModalVisible(false)}>
+      {/* MODAL 1: FUND ALLOCATION */}
+      <Modal animationType="fade" transparent={true} visible={allocateModalVisible} onRequestClose={() => setAllocateModalVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
             <Text style={styles.modalTitle}>Fund Allocation Folder</Text>
@@ -568,19 +563,17 @@ export default function PersonalHomeScreen() {
           </View>
         </View>
       </Modal>
-      </SafeAreaView>
-    </ImageBackground>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  backgroundImage: { flex: 1, width: '100%', height: '100%' },
-  container: { flex: 1, backgroundColor: 'transparent' },
+  container: { flex: 1, backgroundColor: '#F8F9FA' },
   centeredLoading: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#06261D' },
   scrollContent: { paddingBottom: 40 },
   
   headerBackground: { 
-    backgroundColor: 'transparent',
+    backgroundColor: '#0F684F', 
     paddingHorizontal: 24, 
     paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight ? StatusBar.currentHeight + 14 : 45) : 16, 
     paddingBottom: 64, 
@@ -590,23 +583,23 @@ const styles = StyleSheet.create({
   welcomeRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
   avatarRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   avatarImage: { width: 40, height: 40, borderRadius: 20, resizeMode: 'cover' }, 
-  avatarPlaceholder: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.9)', justifyContent: 'center', alignItems: 'center' },
-  welcomeSubtext: { fontSize: 13, color: '#64748B' },
-  welcomeText: { fontSize: 16, fontWeight: '700', color: '#042F2E', marginTop: 1 },
+  avatarPlaceholder: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center' },
+  welcomeSubtext: { fontSize: 13, color: '#A3B8B0' },
+  welcomeText: { fontSize: 16, fontWeight: '700', color: '#FFFFFF', marginTop: 1 },
   
   iconGroupRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  iconBoxTop: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.92)', justifyContent: 'center', alignItems: 'center', position: 'relative' },
-  calendarDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#0D9488', position: 'absolute', top: 11, right: 11, borderWidth: 1.5, borderColor: '#FFFFFF' },
+  iconBoxTop: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.08)', justifyContent: 'center', alignItems: 'center', position: 'relative' },
+  calendarDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#C5FF42', position: 'absolute', top: 11, right: 11, borderWidth: 1.5, borderColor: '#06261D' },
   
-  balanceContainer: { alignItems: 'center', marginTop: 8,borderRadius: 20, paddingVertical: 16, paddingHorizontal: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 4 },
-  balanceLabel: { fontSize: 13, color: '#64748B', fontWeight: '500', marginBottom: 6 },
-  mainBalance: { fontSize: 36, fontWeight: '700', color: '#042F2E', letterSpacing: -0.5 },
+  balanceContainer: { alignItems: 'center', marginTop: 8 },
+  balanceLabel: { fontSize: 13, color: '#A3B8B0', fontWeight: '500', marginBottom: 6 },
+  mainBalance: { fontSize: 36, fontWeight: '700', color: '#FFFFFF', letterSpacing: -0.5 },
   
-  headerMetricsWrapper: { marginTop: 20, paddingTop: 14, borderTopWidth: 1, borderTopColor: 'rgba(4,47,46,0.12)' },
-  headerProgressBarBg: { height: 5, backgroundColor: 'rgba(4,47,46,0.12)', borderRadius: 10, overflow: 'hidden', marginBottom: 8 },
-  headerProgressBarFill: { height: '100%', backgroundColor: '#0D9488', borderRadius: 10 },
+  headerMetricsWrapper: { marginTop: 20, paddingTop: 14, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.08)' },
+  headerProgressBarBg: { height: 5, backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 10, overflow: 'hidden', marginBottom: 8 },
+  headerProgressBarFill: { height: '100%', backgroundColor: '#C5FF42', borderRadius: 10 },
   headerMetricsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  headerMetricText: { color: '#64748B', fontSize: 11, fontWeight: '500' },
+  headerMetricText: { color: '#A3B8B0', fontSize: 11, fontWeight: '500' },
 
   cardsSectionContainer: { marginTop: -45, marginBottom: 15, width: '100%' },
   

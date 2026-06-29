@@ -151,7 +151,7 @@ export default function SpenderExpensesScreen() {
 
       if (updateError) throw updateError;
 
-      Alert.alert("Success 🎉", `Your transaction of ₱${expenseAmount.toFixed(2)} was securely captured.`);
+      Alert.alert("Success ", `Your transaction of ₱${expenseAmount.toFixed(2)} was securely captured.`);
       
       setAmount('');
       setDescription('');
