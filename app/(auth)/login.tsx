@@ -3,7 +3,11 @@ import * as Linking from 'expo-linking';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import * as WebBrowser from 'expo-web-browser'; // 1. Import WebBrowser
 import { supabase } from '../../lib/supabase';
+
+// Allows the browser to clean up properly after redirecting back to the app
+WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -12,31 +16,13 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert("Missing Fields", "Please enter both your email and password.");
-      return;
-    }
-
-    setLoading(true);
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (authError) {
-      Alert.alert("Authentication Failed", authError.message);
-      setLoading(false);
-      return;
-    }
-
+  // Helper function to handle profile routing (used by both native & OAuth login)
+  const handleProfileRouting = async (userId: string) => {
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('role')
-      .eq('id', authData.user.id)
+      .eq('id', userId)
       .maybeSingle();
-
-    setLoading(false);
 
     if (profileError || !profile) {
       Alert.alert("Error", "Could not fetch user profile details.");
@@ -58,7 +44,75 @@ export default function LoginScreen() {
     }
   };
 
-  // 2. Forgot Password Handler with dynamic Expo Go / Build deep linking support
+  const handleLogin = async () => {
+    if (!email || !password) {
+      Alert.alert("Missing Fields", "Please enter both your email and password.");
+      return;
+    }
+
+    setLoading(true);
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (authError || !authData?.user) {
+      Alert.alert("Authentication Failed", authError?.message || "User data missing.");
+      setLoading(false);
+      return;
+    }
+
+    await handleProfileRouting(authData.user.id);
+    setLoading(false);
+  };
+
+  // 2. Google OAuth Handler
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    try {
+      // Create a dynamic deep link back to your application
+      const redirectTo = Linking.createURL('/login'); 
+
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo,
+          skipBrowserRedirect: true, // Crucial for Native: prevents Supabase from opening a standard web window automatically
+        },
+      });
+
+      if (error) throw error;
+
+      // Open the authentication URL inside the secure WebBrowser modal
+      if (data?.url) {
+        const res = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+        
+        // When the browser window closes successfully, extract session tokens
+        if (res.type === 'success' && res.url) {
+          const parsedUrl = Linking.parse(res.url);
+          const { access_token, refresh_token } = parsedUrl.queryParams || {};
+
+          if (access_token && refresh_token) {
+            const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+              access_token: access_token as string,
+              refresh_token: refresh_token as string,
+            });
+
+            if (sessionError) throw sessionError;
+
+            if (sessionData?.user) {
+              await handleProfileRouting(sessionData.user.id);
+            }
+          }
+        }
+      }
+    } catch (error: any) {
+      Alert.alert("Google Login Error", error.message || "An unexpected error occurred.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleForgotPassword = async () => {
     if (!email) {
       Alert.alert(
@@ -69,14 +123,10 @@ export default function LoginScreen() {
     }
 
     setLoading(true);
-    
-    // Automatically generates exp://... inside Expo Go, or paytonexpo:// in native builds
     const redirectUrl = Linking.createURL('reset-password');
-
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: redirectUrl, 
     });
-
     setLoading(false);
 
     if (error) {
@@ -103,7 +153,6 @@ export default function LoginScreen() {
         </View>
 
         <View style={styles.form}>
-          
           <View style={styles.inputWrapper}>
             <Feather name="mail" color="#085334" size={20} style={styles.inputIcon} />
             <TextInput
@@ -162,7 +211,12 @@ export default function LoginScreen() {
         </View>
 
         <View style={styles.socialContainer}>
-          <TouchableOpacity style={styles.socialButton} disabled={loading}>
+          {/* 3. Attach handleGoogleLogin here */}
+          <TouchableOpacity 
+            style={styles.socialButton} 
+            disabled={loading} 
+            onPress={handleGoogleLogin}
+          >
             <Text style={styles.socialButtonText}>Continue with Google</Text>
           </TouchableOpacity>
           
@@ -182,6 +236,8 @@ export default function LoginScreen() {
     </SafeAreaView>
   );
 }
+
+// ... styles remain unchanged
 
 const styles = StyleSheet.create({
   container: { 

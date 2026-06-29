@@ -1,22 +1,21 @@
 // app/(spenderTabs)/split.tsx
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router'; // 1. Gidugang para sa navigation
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  Modal,
-  Platform,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    Alert,
+    FlatList,
+    Modal,
+    Platform,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { supabase } from '../../lib/supabase';
 
@@ -255,11 +254,6 @@ export default function SplitExpenseScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
-      <LinearGradient colors = {['#e5f1d2','#aaf0d5','#68eee3','#ffffff']}
-                    start={{x: 0.10, y: 1}}
-                    end={{x: 0.20, y: .10}}
-                    style = {styles.gradient}
-    >
       {/* Header Block with Friends Button */}
       <View style={styles.header}>
         <View style={styles.headerMainRow}>
@@ -428,7 +422,6 @@ export default function SplitExpenseScreen() {
           </View>
         </View>
       </Modal>
-    </LinearGradient>
     </SafeAreaView>
   );
 }

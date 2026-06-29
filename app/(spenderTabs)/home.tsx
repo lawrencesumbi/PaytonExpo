@@ -1,25 +1,25 @@
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router'; // Siguradoon nato nga na-import ni og tarong
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Dimensions,
-  FlatList,
-  Image,
-  Modal,
-  StatusBar as NativeStatusBar,
-  Platform,
-  RefreshControl,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    FlatList,
+    Image,
+    ImageBackground,
+    Modal,
+    StatusBar as NativeStatusBar,
+    Platform,
+    RefreshControl,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { supabase } from '../../lib/supabase';
 
@@ -282,7 +282,7 @@ export default function SpenderHomeScreen() {
     stopAutoScrollEngine(); 
     if (categories.length <= 1) return;
 
-    autoScrollTimer.current = window.setInterval(() => {
+    autoScrollTimer.current = setInterval(() => {
       setCurrentCardIndex((prevIndex) => {
         const nextIndex = prevIndex >= categories.length - 1 ? 0 : prevIndex + 1;
         flatListRef.current?.scrollToOffset({
@@ -296,7 +296,7 @@ export default function SpenderHomeScreen() {
 
   const stopAutoScrollEngine = () => {
     if (autoScrollTimer.current) {
-      window.clearInterval(autoScrollTimer.current);
+      clearInterval(autoScrollTimer.current);
       autoScrollTimer.current = null;
     }
   };
@@ -339,18 +339,22 @@ export default function SpenderHomeScreen() {
     ? Math.min((summary.totalSpent / summary.totalAllowance) * 100, 100)
     : 0;
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar style="light" />
-      <LinearGradient colors = {['#cfcfce','#ccf8fa']}
-                    start={{x: 0.10, y: 1}}
-                    end={{x: 0.20, y: .10}}
-                    style = {styles.gradient}
-    >
+return (
+  <ImageBackground
+  source={require("../../assets/images/cover-bg.png")}
+  resizeMode="cover"
+  style={styles.backgroundImage}
+  > 
+  <SafeAreaView style={styles.container}>
+    <StatusBar style="dark" />
       <ScrollView 
         contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#C5FF42']} />}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#0D9488']} />
+        }
       >
+        {/* Profile & Balance Top Header Section */}
         <View style={styles.headerBackground}>
           <View style={styles.welcomeRow}>
             <View style={styles.avatarRow}>
@@ -358,7 +362,7 @@ export default function SpenderHomeScreen() {
                 <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
               ) : (
                 <View style={styles.avatarPlaceholder}>
-                  <Ionicons name="person" size={15} color="#000000" />
+                  <Ionicons name="person" size={16} color="#042F2E" />
                 </View>
               )}
               <View>
@@ -367,22 +371,19 @@ export default function SpenderHomeScreen() {
               </View>
             </View>
 
-            {/* Gitapok nako ang Mail ug Calendar Icons para nindot ang pagka-align */}
             <View style={styles.iconGroupRow}>
-              {/* Mail / Invitations Icon */}
               <TouchableOpacity 
                 style={styles.iconBoxTop} 
                 onPress={() => router.push('/invitations')}
               >
-                <Ionicons name="mail-outline" size={20} color="#000000" />
+                <Ionicons name="mail-outline" size={20} color="#042F2E" />
               </TouchableOpacity>
 
-              {/* Calendar Icon */}
               <TouchableOpacity 
                 style={styles.iconBoxTop} 
                 onPress={() => router.push('/reminders')} 
               >
-                <Ionicons name="calendar-outline" size={20} color="#000000" />
+                <Ionicons name="calendar-outline" size={20} color="#042F2E" />
                 <View style={styles.calendarDot} />
               </TouchableOpacity>
             </View>
@@ -401,25 +402,25 @@ export default function SpenderHomeScreen() {
                 <View style={[styles.headerProgressBarFill, { width: `${globalSpentPercentage}%` }]} />
               </View>
               <View style={styles.headerMetricsRow}>
-                <Text style={styles.headerMetricText}>Overall Allowance: ₱{summary.totalAllowance.toLocaleString()}</Text>
-                <Text style={styles.headerMetricText}>Total Spent: ₱{summary.totalSpent.toLocaleString()}</Text>
+                <Text style={styles.headerMetricText}>Allowance: ₱{summary.totalAllowance.toLocaleString()}</Text>
+                <Text style={styles.headerMetricText}>Spent: ₱{summary.totalSpent.toLocaleString()}</Text>
               </View>
             </View>
           )}
         </View>
 
-        {/* Carousel Section */}
+        {/* Carousel Section - Gi-maintain ang tibuok snapping engine props */}
         <View style={styles.cardsSectionContainer}>
           <FlatList
             ref={flatListRef}
             data={categories}
             horizontal
             decelerationRate="fast"
-            snapToInterval={SNAP_INTERVAL}
+            snapToInterval={SNAP_INTERVAL} // Nag-maintain sa snap sliding
             snapToAlignment="center"
             showsHorizontalScrollIndicator={false}
-            onMomentumScrollEnd={onScrollMomentumEnd}
-            onScrollBeginDrag={stopAutoScrollEngine} 
+            onMomentumScrollEnd={onScrollMomentumEnd} // Para sa active dot indicator logic
+            onScrollBeginDrag={stopAutoScrollEngine}   // Para mapunong ang auto scroll animation kung gina-drag
             contentContainerStyle={{
               paddingHorizontal: (width - CARD_WIDTH) / 2 - CARD_MARGIN
             }}
@@ -431,15 +432,14 @@ export default function SpenderHomeScreen() {
 
               return (
                 <TouchableOpacity 
-                  activeOpacity={0.9}
+                  activeOpacity={0.95}
                   onPress={() => openAllocateModal(cat)}
-                  style={[styles.originalCategoryCard, { backgroundColor: cat.color || '#1E463A' }]}
+                  style={[styles.originalCategoryCard, { backgroundColor: cat.color || '#0F766E' }]}
                 >
                   <View style={styles.cardMainHeader}>
                     <View style={styles.cardTitleCluster}>
                       <View style={styles.originalIconCircle}>
-                        {/* @ts-ignore */}
-                        <Ionicons name={cat.icon} size={18} color={cat.color || '#1E463A'} />
+                        <Ionicons name={cat.icon || 'folder'} size={16} color={cat.color || '#0F766E'} />
                       </View>
                       <Text style={styles.originalCardName} numberOfLines={1}>{cat.name}</Text>
                     </View>
@@ -480,10 +480,10 @@ export default function SpenderHomeScreen() {
           )}
         </View>
 
-        {/* Recent Transactions List */}
+        {/* Recent Transactions List Component */}
         <View style={styles.contentBody}>
           <View style={styles.recentSectionHeader}>
-            <Text style={styles.sectionTitle}>Recent Transaction</Text>
+            <Text style={styles.sectionTitle}>Recent Transactions</Text>
             <TouchableOpacity onPress={() => router.push('/transaction')}>
               <Text style={styles.seeAllText}>See all</Text>
             </TouchableOpacity>
@@ -499,8 +499,7 @@ export default function SpenderHomeScreen() {
                 <View key={item.id} style={styles.recentItem}>
                   <View style={styles.recentLeft}>
                     <View style={styles.iconBox}>
-                      {/* @ts-ignore */}
-                      <Ionicons name={item.category_icon} size={16} color="#06261D" />
+                      <Ionicons name={item.category_icon || 'cash-outline'} size={18} color="#0D9488" />
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.recentName} numberOfLines={1}>{item.expense_name}</Text>
@@ -515,7 +514,7 @@ export default function SpenderHomeScreen() {
         </View>
       </ScrollView>
 
-      {/* Allocation Budget Flow Modal Component */}
+      {/* Allocation Budget Flow Modal */}
       <Modal animationType="fade" transparent={true} visible={modalVisible} onRequestClose={() => setModalVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
@@ -547,113 +546,105 @@ export default function SpenderHomeScreen() {
           </View>
         </View>
       </Modal>
-      </LinearGradient>
-    </SafeAreaView>
-  );
+  </SafeAreaView>
+ </ImageBackground>
+);
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8F9FA' },
-  gradient: {flex: 1},
-  centeredLoading: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#06261D' },
   scrollContent: { paddingBottom: 40 },
+  backgroundImage:{flex:1 },
   
   headerBackground: { 
-    backgroundColor: '#ffffffff', 
     paddingHorizontal: 24, 
-    paddingTop: Platform.OS === 'android' ? (NativeStatusBar.currentHeight ? NativeStatusBar.currentHeight + 14 : 45) : 16, 
-    paddingBottom: 64, 
-    borderBottomColor: '#000000',
-    borderBottomLeftRadius: 50, 
-    borderBottomRightRadius: 50,
-    elevation: 10,
+    paddingTop: Platform.OS === 'android' ? (NativeStatusBar.currentHeight ? NativeStatusBar.currentHeight + 16 : 50) : 20, 
+    paddingBottom: 68, 
+    borderBottomLeftRadius: 36, 
+    borderBottomRightRadius: 36,
   },
-  welcomeRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
-  navigatorRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  welcomeRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 },
   avatarRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  avatarPlaceholder: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center' },
-  avatarImage: { width: 40, height: 40, borderRadius: 20, resizeMode: 'cover', }, 
-  welcomeSubtext: { fontSize: 13, color: '#426658' },
-  welcomeText: { fontSize: 16, fontWeight: '700', color: '#000000', marginTop: 1 },
+  avatarPlaceholder: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(13, 148, 136, 0.15)', justifyContent: 'center', alignItems: 'center' },
+  avatarImage: { width: 44, height: 44, borderRadius: 22, resizeMode: 'cover' }, 
+  welcomeSubtext: { fontSize: 13, color: '#64748B', fontWeight: '500' },
+  welcomeText: { fontSize: 17, fontWeight: '700', color: '#0F172A', marginTop: 2 },
   
-  // Bag-ong style para sa duha ka icons sa taas
   iconGroupRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  iconBoxTop: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.08)', justifyContent: 'center', alignItems: 'center', position: 'relative' },
+  iconBoxTop: { width: 42, height: 42, borderRadius: 21, backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2, position: 'relative' },
+  calendarDot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: '#0D9488', position: 'absolute', top: 12, right: 12, borderWidth: 1, borderColor: '#FFFFFF' },
   
-  calendarDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#C5FF42', position: 'absolute', top: 11, right: 11, borderWidth: 1.5, borderColor: '#06261D' },
-  balanceContainer: { alignItems: 'center', marginTop: 8 },
-  balanceLabel: { fontSize: 13, color: '#2b614c', fontWeight: '500', marginBottom: 6 },
-  mainBalance: { fontSize: 36, fontWeight: '700', color: '#000000', letterSpacing: -0.5, },
+  balanceContainer: { alignItems: 'center', marginTop: 12 },
+  balanceLabel: { fontSize: 13, color: '#475569', fontWeight: '600', letterSpacing: 0.3, marginBottom: 4 },
+  mainBalance: { fontSize: 38, fontWeight: '800', color: '#0F172A', letterSpacing: -1 },
   
-  headerMetricsWrapper: { marginTop: 20, paddingTop: 14, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.08)' },
-  headerProgressBarBg: { height: 5, backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 10, overflow: 'hidden', marginBottom: 8 },
-  headerProgressBarFill: { height: '100%', backgroundColor: '#C5FF42', borderRadius: 10 },
+  headerMetricsWrapper: { marginTop: 24, paddingHorizontal: 4 },
+  headerProgressBarBg: { height: 6, backgroundColor: 'rgba(15, 23, 42, 0.08)', borderRadius: 10, overflow: 'hidden', marginBottom: 10 },
+  headerProgressBarFill: { height: '100%', backgroundColor: '#0D9488', borderRadius: 10 },
   headerMetricsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  headerMetricText: { color: '#A3B8B0', fontSize: 11, fontWeight: '500' },
+  headerMetricText: { color: '#64748B', fontSize: 12, fontWeight: '600' },
 
-  cardsSectionContainer: { marginTop: -45, marginBottom: 15, width: '100%' },
-  
+  cardsSectionContainer: { marginTop: -40, marginBottom: 20, width: '100%' },
   originalCategoryCard: {
     width: CARD_WIDTH,
-    height: 175,
+    height: 180,
     marginHorizontal: CARD_MARGIN,
     borderRadius: 24,
-    padding: 20,
+    padding: 22,
     justifyContent: 'space-between',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    elevation: 6
+    shadowColor: '#0F766E',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 14,
+    elevation: 8
   },
   cardMainHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  cardTitleCluster: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 0.75 },
-  originalIconCircle: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center' },
-  originalCardName: { color: '#000000', fontSize: 16, fontWeight: '700', letterSpacing: -0.2 },
-  remainingBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.14)' },
-  remainingBadgeText: { color: '#FFFFFF', fontSize: 10, fontWeight: '600', textTransform: 'uppercase' },
+  cardTitleCluster: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 0.75 },
+  originalIconCircle: { width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255, 255, 255, 0.2)', justifyContent: 'center', alignItems: 'center' },
+  originalCardName: { color: '#FFFFFF', fontSize: 16, fontWeight: '700', letterSpacing: -0.2 },
+  remainingBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, backgroundColor: 'rgba(255, 255, 255, 0.18)' },
+  remainingBadgeText: { color: '#FFFFFF', fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.3 },
   
-  originalCardMiddleBody: { marginVertical: 4 },
-  originalRemainingAmount: { color: '#FFFFFF', fontSize: 28, fontWeight: '700', letterSpacing: -0.5 },
+  originalCardMiddleBody: { marginVertical: 6 },
+  originalRemainingAmount: { color: '#FFFFFF', fontSize: 30, fontWeight: '800', letterSpacing: -0.5 },
   
-  originalCardBottomFooter: { gap: 8 },
-  originalProgressBackground: { height: 5, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 3, overflow: 'hidden' },
+  originalCardBottomFooter: { gap: 10 },
+  originalProgressBackground: { height: 5, backgroundColor: 'rgba(255,255,255,0.25)', borderRadius: 3, overflow: 'hidden' },
   originalProgressFill: { height: '100%', backgroundColor: '#FFFFFF', borderRadius: 3 },
   originalCardMetricsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  originalFooterMetaText: { color: 'rgba(255,255,255,0.75)', fontSize: 11, fontWeight: '500' },
+  originalFooterMetaText: { color: 'rgba(255, 255, 255, 0.85)', fontSize: 12, fontWeight: '500' },
 
-  dotsRowContainer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 14, gap: 6 },
+  dotsRowContainer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 16, gap: 6 },
   indicatorDot: { height: 6, borderRadius: 3 },
-  activeDot: { width: 14, backgroundColor: '#06261D' },
+  activeDot: { width: 16, backgroundColor: '#0D9488' },
   inactiveDot: { width: 6, backgroundColor: '#CBD5E1' },
 
-  emptyCardsBox: { width: CARD_WIDTH, height: 175, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 24, borderWidth: 1, borderColor: '#E2E8F0', marginHorizontal: (width - CARD_WIDTH) / 2 },
-  emptyCardsText: { color: '#718096', fontSize: 13 },
-
-  contentBody: { paddingHorizontal: 24, marginTop: 10 },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#06261D', letterSpacing: -0.2 },
-  recentSectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
-  seeAllText: { fontSize: 13, color: '#718096', fontWeight: '600' },
+  contentBody: { paddingHorizontal: 24, marginTop: 12 },
+  sectionTitle: { fontSize: 18, fontWeight: '700', color: '#0F172A', letterSpacing: -0.3 },
+  recentSectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  seeAllText: { fontSize: 14, color: '#0D9488', fontWeight: '700' },
   
-  recentListContainer: { backgroundColor: '#FFFFFF', borderRadius: 20, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.03, shadowRadius: 6 },
-  recentItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#F7F9FA' },
+  recentListContainer: { backgroundColor: '#FFFFFF', borderRadius: 24, overflow: 'hidden', padding: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.03, shadowRadius: 10, elevation: 2 },
+  recentItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
   recentLeft: { flexDirection: 'row', alignItems: 'center', gap: 14, flex: 0.75 },
-  iconBox: { width: 40, height: 40, borderRadius: 14, backgroundColor: '#F0F4F2', justifyContent: 'center', alignItems: 'center' },
-  recentName: { fontSize: 14, fontWeight: '600', color: '#06261D' },
-  recentCategory: { fontSize: 11, color: '#718096', marginTop: 1 },
-  recentAmount: { fontSize: 14, fontWeight: '700', color: '#06261D' },
-  noRecentBox: { padding: 32, backgroundColor: '#FFFFFF', borderRadius: 20, alignItems: 'center' },
-  noRecentText: { fontSize: 13, color: '#718096' },
+  iconBox: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#F0FDFA', justifyContent: 'center', alignItems: 'center' },
+  recentName: { fontSize: 14, fontWeight: '600', color: '#0F172A' },
+  recentCategory: { fontSize: 12, color: '#64748B', marginTop: 2 },
+  recentAmount: { fontSize: 14, fontWeight: '700', color: '#0D9488' },
+  noRecentBox: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 32, alignItems: 'center', justifyContent: 'center' },
+  noRecentText: { fontSize: 14, color: '#64748B', textAlign: 'center' },
   
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(6, 38, 29, 0.4)', justifyContent: 'center', alignItems: 'center' },
-  modalContainer: { backgroundColor: '#FFFFFF', width: '88%', padding: 24, borderRadius: 24, shadowColor: '#06261D', shadowOpacity: 0.15, shadowRadius: 12, elevation: 8 },
-  modalTitle: { fontSize: 18, fontWeight: '700', color: '#06261D' },
-  modalSubText: { fontSize: 13, color: '#718096', marginTop: 4, marginBottom: 18, lineHeight: 18 },
-  modalInput: { borderWidth: 1, borderColor: '#E2E8F0', padding: 14, borderRadius: 14, marginBottom: 20, fontSize: 18, fontWeight: '600', color: '#06261D', backgroundColor: '#F8F9FA' },
-  modalButtonsRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10 },
-  modalButton: { paddingVertical: 12, paddingHorizontal: 18, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
+  modalContainer: { backgroundColor: '#FFFFFF', borderRadius: 20, padding: 28, width: '85%', alignItems: 'center' },
+  modalTitle: { fontSize: 18, fontWeight: '700', color: '#0F172A', marginBottom: 8 },
+  modalSubText: { fontSize: 13, color: '#64748B', textAlign: 'center', marginBottom: 20 },
+  modalInput: { width: '100%', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 12, padding: 14, fontSize: 16, marginBottom: 20, color: '#0F172A' },
+  modalButtonsRow: { flexDirection: 'row', gap: 12, width: '100%' },
+  modalButton: { flex: 1, paddingVertical: 12, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
   cancelBtn: { backgroundColor: '#F1F5F9' },
-  cancelBtnText: { color: '#475569', fontWeight: '600', fontSize: 14 },
-  confirmBtn: { backgroundColor: '#06261D', minWidth: 110 },
-  confirmBtnText: { color: '#FFFFFF', fontWeight: '600', fontSize: 14 }
-});
+  cancelBtnText: { color: '#64748B', fontSize: 14, fontWeight: '600' },
+  confirmBtn: { backgroundColor: '#0D9488' },
+  confirmBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '600' },
+  
+  centeredLoading: { justifyContent: 'center', alignItems: 'center' },
+  });

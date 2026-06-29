@@ -4,7 +4,7 @@
     "slug": "PaytonExpo",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/logo-light.png",
+    "icon": "./assets/images/logo-light1.png",
     "scheme": "paytonexpo",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -14,23 +14,23 @@
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/logo-light.png",
-        "backgroundImage": "./assets/images/logo-light.png",
-        "monochromeImage": "./assets/images/logo-light.png"
+        "foregroundImage": "./assets/images/logo-light1.png",
+        "backgroundImage": "./assets/images/logo-light1.png",
+        "monochromeImage": "./assets/images/logo-light1.png"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/logo-light1.png"
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/logo-light1.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff",
@@ -38,7 +38,8 @@
             "backgroundColor": "#000000"
           }
         }
-      ]
+      ],
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,
