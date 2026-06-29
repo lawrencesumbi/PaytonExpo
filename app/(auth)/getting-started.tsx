@@ -1,31 +1,30 @@
  // app/(auth)/getting-started.tsx
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Dimensions,
-    Image,
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Dimensions,
+  Image,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  ScrollView,
+  Platform
 } from 'react-native';
 
 const { width } = Dimensions.get('window');
 
-// Color palette configured with a clean white primary background
 const DESIGN_COLORS = {
-  bgLight: '#FFFFFF',       // Primary white background
-  bgCard: '#F3F4F6',        // Light gray background for mockup cards
-  brandGreen: '#84CC16',    // Vibrant brand accent green
-  textDark: '#111827',      // Bold dark text for headings and primary labels
-  textMuted: '#6B7280',     // Muted gray text for quotes and descriptions
-  borderLight: '#E5E7EB',   // Subtle light gray border lines
+  brandGreen: '#166534',     
+  textDark: '#0F172A',       
+  textMuted: '#64748B',      
+  borderLight: '#E2E8F0',    
 };
 
-// Onboarding structural flow steps mapping your physical sketch layout
 const ONBOARDING_STEPS = [
   {
     id: 'loading',
@@ -58,11 +57,10 @@ export default function GettingStartedScreen() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(0);
 
-  // Simulating the auto-loading timeout splash screen for Step 0
   useEffect(() => {
     if (currentStep === 0) {
       const timer = setTimeout(() => {
-        setCurrentStep(1); // Auto-advances directly to Track Expense dashboard
+        setCurrentStep(1); 
       }, 2500);
       return () => clearTimeout(timer);
     }
@@ -81,183 +79,242 @@ export default function GettingStartedScreen() {
   };
 
   const handleRedirectToLogin = () => {
-    router.push('/(auth)/login'); 
+    router.push('/login'); 
   };
 
   const step = ONBOARDING_STEPS[currentStep];
 
-  // Render Step 0: Loading Screen with Payton Logo
+  // Step 0: Splash Loading Layout 
   if (currentStep === 0) {
     return (
-      <SafeAreaView style={styles.container}>
-        <StatusBar style="dark" />
-        <View style={styles.loadingContent}>
-          <Image 
-            source={require('../../assets/images/logo-light1.png')} 
-            style={styles.mainLogo}
-            resizeMode="contain"
-          />
-          <Text style={styles.loadingText}>{step.title}</Text>
-          <ActivityIndicator size="small" color={DESIGN_COLORS.brandGreen} style={{ marginTop: 24 }} />
-        </View>
-      </SafeAreaView>
+      <LinearGradient
+        colors={['#f0fdf4', '#dcfce7']} 
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.container}
+      >
+        <SafeAreaView style={styles.safeArea}>
+          <View style={styles.loadingContent}>
+            <View style={styles.gradientLogoContainer}>
+              <Image 
+                source={require('../../assets/images/logo-light1.png')} 
+                style={styles.logoImage}
+                resizeMode="contain"
+              />
+            </View>
+            <Text style={styles.loadingText}>{step.title}</Text>
+            <ActivityIndicator size="small" color={DESIGN_COLORS.brandGreen} style={{ marginTop: 24 }} />
+          </View>
+        </SafeAreaView>
+      </LinearGradient>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar style="dark" />
-      <View style={styles.content}>
-        
-        {/* Top Graphical Zone reflecting UI element cards */}
-        <View style={styles.graphicContainer}>
-          {step.id === 'get-started' ? (
-            <Image 
-              source={require('../../assets/images/logo-light1.png')} 
-              style={styles.getStartedLogo}
-              resizeMode="contain"
-            />
-          ) : (
-            <View style={styles.mockupCard}>
-              <View style={styles.mockupTopBar}>
-                <View style={[styles.mockupPill, { backgroundColor: DESIGN_COLORS.brandGreen }]} />
+    <LinearGradient
+      colors={['#f0fdf4', '#dcfce7']} 
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.container}
+    >
+      <SafeAreaView style={styles.safeArea}>
+        <ScrollView contentContainerStyle={styles.scrollContainer} bounces={false}>
+          <View style={styles.innerContainer}>
+            
+            {/* Logo area shown EXCLUSIVELY on the final 'get-started' step */}
+            {step.id === 'get-started' && (
+              <View style={styles.gradientLogoContainer}>
+                <Image 
+                  source={require('../../assets/images/logo-light1.png')} 
+                  style={styles.logoImage}
+                  resizeMode="contain"
+                />
               </View>
+            )}
+            
+            {/* Floating Oval Content Presentation Card */}
+            <View style={styles.card}>
               
-              {step.id === 'track' && (
-                <View style={styles.mockupContent}>
-                  <Text style={styles.cardLabel}>Expense Summary</Text>
-                  <Text style={styles.cardValue}>$1,240.50</Text>
-                  <View style={styles.mockupChartRow}>
-                    <View style={[styles.chartBar, { height: 35, backgroundColor: DESIGN_COLORS.brandGreen }]} />
-                    <View style={[styles.chartBar, { height: 65, backgroundColor: DESIGN_COLORS.brandGreen }]} />
-                    <View style={[styles.chartBar, { height: 45, backgroundColor: DESIGN_COLORS.brandGreen }]} />
+              {/* Dashboard Preview Module Container */}
+              {step.id !== 'get-started' && (
+                <View style={styles.graphicContainer}>
+                  <View style={styles.mockupCard}>
+                    <View style={styles.mockupTopBar}>
+                      <View style={[styles.mockupPill, { backgroundColor: DESIGN_COLORS.brandGreen }]} />
+                    </View>
+                    
+                    {step.id === 'track' && (
+                      <View style={styles.mockupContent}>
+                        <Text style={styles.cardLabel}>Expense Summary</Text>
+                        <Text style={styles.cardValue}>$1,240.50</Text>
+                        <View style={styles.mockupChartRow}>
+                          <View style={[styles.chartBar, { height: 35, backgroundColor: DESIGN_COLORS.brandGreen }]} />
+                          <View style={[styles.chartBar, { height: 65, backgroundColor: DESIGN_COLORS.brandGreen }]} />
+                          <View style={[styles.chartBar, { height: 45, backgroundColor: DESIGN_COLORS.brandGreen }]} />
+                        </View>
+                      </View>
+                    )}
+
+                    {step.id === 'reminders' && (
+                      <View style={styles.mockupContentCentered}>
+                        <View style={styles.iconCircle}>
+                          <Text style={{ color: '#FFFFFF', fontWeight: 'bold', fontSize: 18 }}>🔔</Text>
+                        </View>
+                        <Text style={styles.cardValueText}>Electricity Bill Due</Text>
+                        <Text style={styles.cardSubText}>In 2 days</Text>
+                      </View>
+                    )}
+
+                    {step.id === 'splitting' && (
+                      <View style={styles.mockupContent}>
+                        <Text style={styles.cardLabel}>Group Expense Split</Text>
+                        <View style={styles.splitRow}><Text style={styles.darkText}>You owe</Text><Text style={styles.greenText}>$12.50</Text></View>
+                        <View style={styles.splitRow}><Text style={styles.darkText}>Alex owes</Text><Text style={styles.greenText}>$12.50</Text></View>
+                      </View>
+                    )}
                   </View>
                 </View>
               )}
 
-              {step.id === 'reminders' && (
-                <View style={styles.mockupContentCentered}>
-                  <View style={styles.iconCircle}>
-                    <Text style={{ color: '#FFFFFF', fontWeight: 'bold', fontSize: 18 }}>🔔</Text>
+              {/* Messaging Context Block */}
+              <View style={styles.textContainer}>
+                <Text style={styles.heading}>{step.title}</Text>
+                <Text style={styles.description}>{step.description}</Text>
+              </View>
+
+              {/* Progress Stepper Bullets */}
+              <View style={styles.indicatorContainer}>
+                {ONBOARDING_STEPS.slice(1).map((_, index) => (
+                  <View 
+                    key={index} 
+                    style={[
+                      styles.dot, 
+                      currentStep - 1 === index ? styles.activeDot : styles.inactiveDot
+                    ]} 
+                  />
+                ))}
+              </View>
+
+              {/* EMBEDDED NAVIGATION CONTAINER: Now inside the Card structure */}
+              <View style={styles.embeddedNavigationContainer}>
+                {step.id === 'get-started' ? (
+                  <TouchableOpacity style={styles.primaryButtonFull} onPress={handleRedirectToLogin}>
+                    <Text style={styles.primaryButtonText}>Sign In</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <View style={styles.navigationRow}>
+                    
+                    {/* Left Action Text Navigation Anchor */}
+                    {step.id === 'track' ? (
+                      <TouchableOpacity style={styles.navBarTextButton} onPress={handleRedirectToLogin}>
+                        <Text style={styles.navBarSecondaryText}>Skip</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <TouchableOpacity style={styles.navBarTextButton} onPress={handleBack}>
+                        <Text style={styles.navBarSecondaryText}>Back</Text>
+                      </TouchableOpacity>
+                    )}
+
+                    {/* Right Action Capsule Accent Anchor */}
+                    <TouchableOpacity style={styles.primaryButtonHalf} onPress={handleNext}>
+                      <Text style={styles.primaryButtonText}>Continue</Text>
+                    </TouchableOpacity>
+
                   </View>
-                  <Text style={styles.cardValueText}>Electricity Bill Due</Text>
-                  <Text style={styles.cardSubText}>In 2 days</Text>
-                </View>
-              )}
+                )}
+              </View>
 
-              {step.id === 'splitting' && (
-                <View style={styles.mockupContent}>
-                  <Text style={styles.cardLabel}>Group Expense Split</Text>
-                  <View style={styles.splitRow}><Text style={styles.darkText}>You owe</Text><Text style={styles.greenText}>$12.50</Text></View>
-                  <View style={styles.splitRow}><Text style={styles.darkText}>Alex owes</Text><Text style={styles.greenText}>$12.50</Text></View>
-                </View>
-              )}
             </View>
-          )}
-        </View>
 
-        {/* Text Content Section for Dashboard Titles and Quotes */}
-        <View style={styles.textContainer}>
-          <Text style={styles.heading}>{step.title}</Text>
-          <Text style={styles.description}>{step.description}</Text>
-        </View>
-
-        {/* Dynamic Pagination Dashboard Indicator Dots */}
-        <View style={styles.indicatorContainer}>
-          {ONBOARDING_STEPS.slice(1).map((_, index) => (
-            <View 
-              key={index} 
-              style={[
-                styles.dot, 
-                currentStep - 1 === index ? styles.activeDot : styles.inactiveDot
-              ]} 
-            />
-          ))}
-        </View>
-
-        {/* Action Buttons Interface Layer */}
-        <View style={styles.actionContainer}>
-          {step.id === 'track' && (
-            <View style={styles.buttonRow}>
-              <TouchableOpacity style={styles.secondaryButton} onPress={handleRedirectToLogin}>
-                <Text style={styles.secondaryButtonText}>Skip</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.primaryButtonHalf} onPress={handleNext}>
-                <Text style={styles.primaryButtonText}>Continue</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {(step.id === 'reminders' || step.id === 'splitting') && (
-            <View style={styles.buttonRow}>
-              <TouchableOpacity style={styles.secondaryButton} onPress={handleBack}>
-                <Text style={styles.secondaryButtonText}>Back</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.primaryButtonHalf} onPress={handleNext}>
-                <Text style={styles.primaryButtonText}>Continue</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {step.id === 'get-started' && (
-            <TouchableOpacity style={styles.primaryButtonFull} onPress={handleRedirectToLogin}>
-              <Text style={styles.primaryButtonText}>Sign In</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
-      </View>
-    </SafeAreaView>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: DESIGN_COLORS.bgLight 
+  },
+  safeArea: {
+    flex: 1,
+  },
+  scrollContainer: {
+    flexGrow: 1,
+    justifyContent: 'center', 
+  },
+  innerContainer: { 
+    paddingHorizontal: 16, 
+    paddingVertical: 24,
   },
   loadingContent: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 16,
   },
-  mainLogo: {
-    width: 150,
-    height: 150,
+  gradientLogoContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 32, 
+    width: '100%',
+    height: 160, 
+    ...Platform.select({
+      ios: {
+        shadowColor: '#166534',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.12,
+        shadowRadius: 16,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
+  },
+  logoImage: {
+    width: '100%', 
+    height: '100%', 
   },
   loadingText: {
     color: DESIGN_COLORS.textDark,
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: '800',
     marginTop: 16,
-    letterSpacing: 1,
+    letterSpacing: -0.5,
   },
-  content: { 
-    flex: 1, 
-    paddingHorizontal: 24, 
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 50,
-    paddingBottom: 40
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 44, 
+    paddingHorizontal: 24,
+    paddingTop: 32, 
+    paddingBottom: 32,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#1e293b',
+        shadowOffset: { width: 0, height: 12 },
+        shadowOpacity: 0.1,
+        shadowRadius: 28,
+      },
+      android: {
+        elevation: 8,
+      },
+    }),
   },
   graphicContainer: {
-    flex: 1.1,
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
     width: '100%',
-  },
-  getStartedLogo: { 
-    width: 130, 
-    height: 130,
+    marginBottom: 28,
   },
   mockupCard: {
-    width: width * 0.68,
-    height: '80%',
-    backgroundColor: DESIGN_COLORS.bgCard,
-    borderRadius: 24,
+    width: '100%',
+    height: 170,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 30, 
     borderWidth: 1,
     borderColor: DESIGN_COLORS.borderLight,
-    padding: 20,
+    padding: 18,
     justifyContent: 'space-between',
   },
   mockupTopBar: {
@@ -265,7 +322,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   mockupPill: {
-    width: 48,
+    width: 40,
     height: 5,
     borderRadius: 3,
   },
@@ -281,49 +338,50 @@ const styles = StyleSheet.create({
   cardLabel: {
     color: DESIGN_COLORS.textMuted,
     fontSize: 12,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   cardValue: {
     color: DESIGN_COLORS.textDark,
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: '700',
   },
   iconCircle: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: DESIGN_COLORS.textDark,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   cardValueText: {
     color: DESIGN_COLORS.textDark,
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
     textAlign: 'center',
   },
   cardSubText: {
     color: DESIGN_COLORS.textMuted,
-    fontSize: 13,
+    fontSize: 12,
     marginTop: 2,
   },
   mockupChartRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'space-between',
-    height: 80,
-    marginTop: 15,
+    height: 60,
+    marginTop: 8,
+    paddingHorizontal: 10,
   },
   chartBar: {
-    width: 18,
-    borderRadius: 4,
+    width: 20,
+    borderRadius: 6,
   },
   splitRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 10,
-    paddingBottom: 8,
+    marginTop: 8,
+    paddingBottom: 6,
     borderBottomWidth: 1,
     borderBottomColor: DESIGN_COLORS.borderLight,
   },
@@ -332,26 +390,27 @@ const styles = StyleSheet.create({
   textContainer: { 
     width: '100%', 
     alignItems: 'center', 
-    paddingHorizontal: 8,
+    marginBottom: 20,
   },
   heading: { 
     color: DESIGN_COLORS.textDark, 
-    fontSize: 26, 
+    fontSize: 24, 
     fontWeight: '700', 
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
   },
   description: {
     color: DESIGN_COLORS.textMuted,
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 22,
+    paddingHorizontal: 8,
   },
   indicatorContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginVertical: 15,
+    marginBottom: 28,
   },
   dot: {
     height: 6,
@@ -366,50 +425,68 @@ const styles = StyleSheet.create({
     width: 6,
     backgroundColor: DESIGN_COLORS.borderLight,
   },
-  actionContainer: { 
+  embeddedNavigationContainer: {
     width: '100%',
     alignItems: 'center',
+    marginTop: 4,
   },
-  buttonRow: {
+  navigationRow: {
     flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center', 
     width: '100%',
-    justifyContent: 'space-between',
-    gap: 12,
+    gap: 32, 
+  },
+  navBarTextButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  navBarSecondaryText: {
+    color: DESIGN_COLORS.brandGreen,
+    fontSize: 16,
+    fontWeight: '700',
   },
   primaryButtonHalf: {
-    flex: 1,
     backgroundColor: DESIGN_COLORS.brandGreen, 
-    height: 56, 
-    borderRadius: 28, 
+    height: 52, 
+    paddingHorizontal: 36,
+    borderRadius: 26, 
     justifyContent: 'center', 
     alignItems: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#166534',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
   },
   primaryButtonFull: {
     width: '100%',
     backgroundColor: DESIGN_COLORS.brandGreen, 
-    height: 56, 
-    borderRadius: 28, 
+    height: 54, 
+    borderRadius: 30, 
     justifyContent: 'center', 
     alignItems: 'center',
-  },
-  secondaryButton: {
-    flex: 1,
-    backgroundColor: 'transparent',
-    height: 56, 
-    borderRadius: 28, 
-    justifyContent: 'center', 
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: DESIGN_COLORS.borderLight,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#166534',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
   },
   primaryButtonText: { 
-    color: '#FFFFFF', // White text inside buttons for contrast
+    color: '#FFFFFF', 
     fontSize: 16, 
-    fontWeight: '700' 
-  },
-  secondaryButtonText: {
-    color: DESIGN_COLORS.textDark,
-    fontSize: 16,
-    fontWeight: '600'
+    fontWeight: '600' 
   }
 });

@@ -1,4 +1,4 @@
- import { Feather, FontAwesome } from '@expo/vector-icons';
+import { Feather, FontAwesome } from '@expo/vector-icons';
 import * as Linking from 'expo-linking';
 import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
@@ -149,6 +149,50 @@ export default function LoginScreen() {
     }
   };
 
+  const handleFacebookLogin = async () => {
+    setLoading(true);
+    try {
+      const redirectTo = Linking.createURL('/login'); 
+
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'facebook',
+        options: {
+          redirectTo,
+          skipBrowserRedirect: true,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.url) {
+        const res = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+        
+        if (res.type === 'success' && res.url) {
+          const normalizedUrl = res.url.replace('#', '?');
+          const parsedUrl = Linking.parse(normalizedUrl);
+          const { access_token, refresh_token } = parsedUrl.queryParams || {};
+
+          if (access_token && refresh_token) {
+            const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+              access_token: access_token as string,
+              refresh_token: refresh_token as string,
+            });
+
+            if (sessionError) throw sessionError;
+
+            if (sessionData?.user) {
+              await handleProfileRouting(sessionData.user.id);
+            }
+          }
+        }
+      }
+    } catch (error: any) {
+      Alert.alert("Facebook Login Error", error.message || "An unexpected error occurred.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleForgotPassword = async () => {
     if (!email) {
       Alert.alert(
@@ -281,7 +325,11 @@ export default function LoginScreen() {
                   <Text style={styles.socialButtonText}>Google</Text>
                 </TouchableOpacity>
                 
-                <TouchableOpacity style={styles.socialButton} disabled={loading}>
+                <TouchableOpacity 
+                  style={styles.socialButton} 
+                  disabled={loading}
+                  onPress={handleFacebookLogin}
+                >
                   <FontAwesome name="facebook-official" color="#1877F2" size={18} style={styles.socialIcon} />
                   <Text style={styles.socialButtonText}>Facebook</Text>
                 </TouchableOpacity>
@@ -312,7 +360,7 @@ const styles = StyleSheet.create({
   },
   scrollContainer: {
     flexGrow: 1,
-    justifyContent: 'flex-end', 
+    justify: 'flex-end', 
   },
   innerContainer: { 
     paddingHorizontal: 16, 
@@ -324,7 +372,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 40, 
     width: '100%',
-    height: 160, // Significantly heightened container footprint layout bounds
+    height: 160, 
     ...Platform.select({
       ios: {
         shadowColor: '#166534',
@@ -338,12 +386,12 @@ const styles = StyleSheet.create({
     }),
   },
   logoImage: {
-    width: '100%', // Fills scaled container parameters cleanly
+    width: '100%', 
     height: '100%', 
   },
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 44, // Curveness enhanced symmetric oval profile formulation
+    borderRadius: 44, 
     paddingHorizontal: 24,
     paddingVertical: 36,
     ...Platform.select({
@@ -384,7 +432,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    borderRadius: 30, // Uniform matching oval layout rule configuration
+    borderRadius: 30, 
     paddingHorizontal: 18,
     height: 54,
     marginBottom: 14,
@@ -413,7 +461,7 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     backgroundColor: '#166534',
-    borderRadius: 30, // Uniform matching oval layout rule configuration
+    borderRadius: 30, 
     height: 54,
     alignItems: 'center',
     justifyContent: 'center',
@@ -458,7 +506,7 @@ const styles = StyleSheet.create({
   socialButton: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    borderRadius: 30, // Uniform matching oval layout rule configuration
+    borderRadius: 30, 
     height: 50,
     flexDirection: 'row',
     alignItems: 'center',

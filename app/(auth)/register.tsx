@@ -1,7 +1,9 @@
-import { Feather } from '@expo/vector-icons';
+ // app/(auth)/register.tsx
+import { Feather, FontAwesome } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View, ScrollView, Platform } from 'react-native';
 import { supabase } from '../../lib/supabase';
 
 export default function RegisterScreen() {
@@ -31,7 +33,7 @@ export default function RegisterScreen() {
       password: password,
       options: {
         data: {
-          full_name: fullName, // Saved securely in user metadata
+          full_name: fullName, 
         }
       }
     });
@@ -41,166 +43,222 @@ export default function RegisterScreen() {
     if (error) {
       Alert.alert("Signup Failed", error.message);
     } else {
-      // Send them to the verification notice screen
       router.push('/verify-email');
     }
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "white"}}>
-      <View style={styles.innerContainer}>
-        
-        <View style={styles.headerContainer}>
-          <Text style={styles.title}>
-            Create an <Text style={styles.brandText}>Account</Text>
-          </Text>
-          <Text style={styles.subtitle}>
-            Sign up with your email and password to continue.
-          </Text>
-        </View>
+    <LinearGradient
+      colors={['#f0fdf4', '#dcfce7']} 
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.container}
+    >
+      <SafeAreaView style={styles.safeArea}>
+        <ScrollView contentContainerStyle={styles.scrollContainer} bounces={false}>
+          <View style={styles.innerContainer}>
+            
+            {/* Symmetric Oval Main Card Component */}
+            <View style={styles.card}>
+              
+              <View style={styles.headerContainer}>
+                <Text style={styles.titleText}>
+                  Create an <Text style={styles.brandText}>Account</Text>
+                </Text>
+                <Text style={styles.subtitle}>
+                  Sign up with your email and password to continue.
+                </Text>
+              </View>
 
-        <View style={styles.form}>
-          
-          {/* 1. FIXED: Full Name Field */}
-          <View style={styles.inputWrapper}>
-            <Feather name="user" color="#085334" size={20} style={styles.inputIcon} />
-            <TextInput
-              style={styles.input}
-              placeholder="Full Name"
-              placeholderTextColor="#A0AEC0"
-              value={fullName}
-              onChangeText={setFullName}
-              autoCapitalize="words"
-            />
+              <View style={styles.form}>
+                
+                {/* Oval Custom Input Layout: Full Name */}
+                <View style={styles.inputWrapper}>
+                  <Feather name="user" color="#64748B" size={18} style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Full Name"
+                    placeholderTextColor="#94A3B8"
+                    value={fullName}
+                    onChangeText={setFullName}
+                    autoCapitalize="words"
+                    editable={!isLoading}
+                  />
+                </View>
+
+                {/* Oval Custom Input Layout: Email */}
+                <View style={styles.inputWrapper}>
+                  <Feather name="mail" color="#64748B" size={18} style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Email Address"
+                    placeholderTextColor="#94A3B8"
+                    value={email}
+                    onChangeText={setEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    editable={!isLoading}
+                  />
+                </View>
+
+                {/* Oval Custom Input Layout: Password */}
+                <View style={styles.inputWrapper}>
+                  <Feather name="lock" color="#64748B" size={18} style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Password"
+                    placeholderTextColor="#94A3B8"
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry={!showPassword}
+                    autoCapitalize="none"
+                    editable={!isLoading}
+                  />
+                  <TouchableOpacity 
+                    onPress={() => setShowPassword(!showPassword)} 
+                    style={styles.eyeIcon}
+                    disabled={isLoading}
+                  >
+                    <Feather name={showPassword ? 'eye-off' : 'eye'} color="#94A3B8" size={18} />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Oval Custom Input Layout: Confirm Password */}
+                <View style={styles.inputWrapper}>
+                  <Feather name="lock" color="#64748B" size={18} style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Confirm Password"
+                    placeholderTextColor="#94A3B8"
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    secureTextEntry={!showPassword}
+                    autoCapitalize="none"
+                    editable={!isLoading}
+                  />
+                  <TouchableOpacity 
+                    onPress={() => setShowPassword(!showPassword)} 
+                    style={styles.eyeIcon}
+                    disabled={isLoading}
+                  >
+                    <Feather name={showPassword ? 'eye-off' : 'eye'} color="#94A3B8" size={18} />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Oval Submission Action Button */}
+                <TouchableOpacity 
+                  style={[styles.primaryButton, isLoading && { opacity: 0.8 }]} 
+                  onPress={handleRegister}
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <ActivityIndicator color="#FFFFFF" size="small" />
+                  ) : (
+                    <Text style={styles.buttonText}>Sign Up</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.dividerContainer}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>or continue with</Text>
+                <View style={styles.dividerLine} />
+              </View>
+
+              {/* Symmetric Oval Third-Party Brand Sub-Buttons */}
+              <View style={styles.socialContainer}>
+                <TouchableOpacity style={styles.socialButton} disabled={isLoading}>
+                  <FontAwesome name="google" color="#34A853" size={18} style={styles.socialIcon} />
+                  <Text style={styles.socialButtonText}>Google</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity style={styles.socialButton} disabled={isLoading}>
+                  <FontAwesome name="facebook-official" color="#1877F2" size={18} style={styles.socialIcon} />
+                  <Text style={styles.socialButtonText}>Facebook</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.footer}>
+                <Text style={styles.footerText}>Already have an account? </Text>
+                <TouchableOpacity onPress={() => router.push('/login')} disabled={isLoading}>
+                  <Text style={styles.linkText}>Sign In</Text>
+                </TouchableOpacity>
+              </View>
+
+            </View>
+
           </View>
-
-          {/* 2. FIXED: Cleaned Email Field */}
-          <View style={styles.inputWrapper}>
-            <Feather name="mail" color="#085334" size={20} style={styles.inputIcon} />
-            <TextInput
-              style={styles.input}
-              placeholder="Email Address"
-              placeholderTextColor="#A0AEC0"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-          </View>
-
-          {/* 3. FIXED: Main Password Field */}
-          <View style={styles.inputWrapper}>
-            <Feather name="lock" color="#085334" size={20} style={styles.inputIcon} />
-            <TextInput
-              style={styles.input}
-              placeholder="Password"
-              placeholderTextColor="#A0AEC0"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
-            />
-            <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
-              <Feather name={showPassword ? 'eye-off' : 'eye'} color="#718096" size={20} />
-            </TouchableOpacity>
-          </View>
-
-          {/* 4. FIXED: Confirm Password Field */}
-          <View style={styles.inputWrapper}>
-            <Feather name="lock" color="#085334" size={20} style={styles.inputIcon} />
-            <TextInput
-              style={styles.input}
-              placeholder="Confirm Password"
-              placeholderTextColor="#A0AEC0"
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              secureTextEntry={!showPassword}
-            />
-            <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
-              <Feather name={showPassword ? 'eye-off' : 'eye'} color="#718096" size={20} />
-            </TouchableOpacity>
-          </View>
-
-          {/* 5. FIXED: Points to handleRegister & handles Loading states */}
-          <TouchableOpacity 
-            style={[styles.primaryButton, isLoading && { opacity: 0.7 }]} 
-            onPress={handleRegister}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <Text style={styles.buttonText}>Sign Up</Text>
-            )}
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.dividerContainer}>
-          <Text style={styles.dividerText}>Or continue with</Text>
-        </View>
-
-        <View style={styles.socialContainer}>
-          <TouchableOpacity style={styles.socialButton}>
-            <Text style={styles.socialButtonText}>Continue with Google</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.socialButton}>
-            <Text style={styles.socialButtonText}>Continue with Facebook</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Already have an account? </Text>
-          <TouchableOpacity onPress={() => router.push('/login')}>
-            <Text style={styles.linkText}>Sign In</Text>
-          </TouchableOpacity>
-        </View>
-
-      </View>
-    </SafeAreaView>
+        </ScrollView>
+      </SafeAreaView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
+  container: { 
+    flex: 1,
+  },
+  safeArea: {
+    flex: 1,
+  },
+  scrollContainer: {
+    flexGrow: 1,
+    justifyContent: 'center', // Centered alignment window now that logo space is cleared
+  },
   innerContainer: { 
-    flex: 1, 
-    paddingHorizontal: 28, 
-    justifyContent: 'center' 
+    paddingHorizontal: 16, 
+    paddingVertical: 24,
+  },
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 44, 
+    paddingHorizontal: 24,
+    paddingVertical: 36,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#1e293b',
+        shadowOffset: { width: 0, height: 12 },
+        shadowOpacity: 0.1,
+        shadowRadius: 28,
+      },
+      android: {
+        elevation: 8,
+      },
+    }),
   },
   headerContainer: { 
-    marginBottom: 40 
+    marginBottom: 24,
+    alignItems: 'center',
   },
-  title: { 
-    fontSize: 34, 
-    fontWeight: 'bold', 
-    color: '#000000', 
-    lineHeight: 42,
-    marginBottom: 12, 
+  titleText: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: 6,
   },
   brandText: {
-    color: '#276916', 
+    color: '#166534', 
   },
   subtitle: { 
-    fontSize: 13, 
-    color: '#0e9b59',
-    lineHeight: 18,
+    fontSize: 14, 
+    color: '#64748B',
+    lineHeight: 20,
+    textAlign: 'center',
+    paddingHorizontal: 8,
   },
   form: { 
     width: '100%', 
-    marginBottom: 20 
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#e6f5ef',
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
     borderRadius: 30, 
-    paddingHorizontal: 20,
-    height: 58,
-    marginBottom: 18,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
+    paddingHorizontal: 18,
+    height: 54,
+    marginBottom: 14,
   },
   inputIcon: {
     marginRight: 12,
@@ -208,69 +266,100 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 15,
-    color: '#1A202C',
+    color: '#0F172A',
     height: '100%',
   },
   eyeIcon: {
-    padding: 4,
+    padding: 6,
   },
   primaryButton: {
-    backgroundColor: '#204d3a',
-    borderRadius: 30,
-    height: 56,
+    backgroundColor: '#166534',
+    borderRadius: 30, 
+    height: 54,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 10,
-    shadowColor: '#15492f',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 3,
+    marginTop: 8,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#166534',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
   },
   buttonText: { 
     color: '#FFFFFF', 
     fontSize: 16, 
-    fontWeight: '600' 
+    fontWeight: '600',
   },
   dividerContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 20,
+    marginVertical: 24,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#E2E8F0',
   },
   dividerText: {
-    color: '#0c9c6c',
-    fontSize: 14,
+    color: '#94A3B8',
+    fontSize: 13,
+    paddingHorizontal: 12,
+    fontWeight: '500',
   },
   socialContainer: {
+    flexDirection: 'row',
     gap: 12,
-    marginBottom: 32,
+    marginBottom: 24,
   },
   socialButton: {
-    backgroundColor: '#f3fdec',
-    borderRadius: 30,
-    height: 54,
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 30, 
+    height: 50,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: '#E2E8F0',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#0f172a',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.03,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 1,
+      },
+    }),
+  },
+  socialIcon: {
+    marginRight: 10,
   },
   socialButtonText: {
-    color: '#1A202C',
-    fontSize: 15,
-    fontWeight: '500',
+    color: '#0F172A',
+    fontSize: 14,
+    fontWeight: '600',
   },
   footer: { 
     flexDirection: 'row', 
     justifyContent: 'center', 
-    alignItems: 'center' 
+    alignItems: 'center',
+    marginTop: 4,
   },
   footerText: { 
-    color: '#3e973b', 
-    fontSize: 14 
+    color: '#64748B', 
+    fontSize: 14,
   },
   linkText: { 
-    color: '#07756c' ,
-    fontWeight: 'bold', 
-    fontSize: 14 
-  }
+    color: '#166534',
+    fontWeight: '600', 
+    fontSize: 14,
+  },
 });

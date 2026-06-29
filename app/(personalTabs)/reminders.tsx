@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router'; // Gidugang para sa navigation back to home
+import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
 import {
@@ -38,19 +38,55 @@ interface CategorySelect {
 }
 
 export default function RemindersScreen() {
-  const router = useRouter(); // Initialize ang router engine
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [categories, setCategories] = useState<CategorySelect[]>([]);
   const [markedDates, setMarkedDates] = useState<any>({});
   
-  // Modal & Selection States
-  const [selectedDate, setSelectedDate] = useState('');
+  // Expandable toggle configuration states
+  const [showFullCalendar, setShowFullCalendar] = useState(false);
+  const todayStr = new Date().toISOString().split('T')[0];
+  const [selectedDate, setSelectedDate] = useState(todayStr);
+  
+  // Modal states
   const [modalVisible, setModalVisible] = useState(false);
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  // Dynamic Current Week Range Engine
+  const getCurrentWeeklyDays = () => {
+    const current = new Date(); 
+    const dayOfWeek = current.getDay();
+    
+    const startOfWeek = new Date(current);
+    const distanceToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    startOfWeek.setDate(current.getDate() + distanceToMonday);
+
+    const days = [];
+    const dayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+    
+    for (let i = 0; i < 7; i++) {
+      const nextDay = new Date(startOfWeek);
+      nextDay.setDate(startOfWeek.getDate() + i);
+      const dateString = nextDay.toISOString().split('T')[0];
+      days.push({
+        dateString,
+        dayNum: nextDay.getDate(),
+        label: dayLabels[i],
+      });
+    }
+    return days;
+  };
+
+  const weeklyDays = getCurrentWeeklyDays();
+
+  const getHeaderMonthYear = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+  };
 
   const fetchRemindersAndCategories = async () => {
     try {
@@ -58,7 +94,6 @@ export default function RemindersScreen() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // 1. Fetch Categories
       const { data: catData } = await supabase
         .from('categories')
         .select('id, name')
@@ -66,7 +101,6 @@ export default function RemindersScreen() {
       
       if (catData) setCategories(catData);
 
-      // 2. Fetch Reminders
       const { data: remData, error: remError } = await supabase
         .from('reminders')
         .select(`
@@ -81,7 +115,6 @@ export default function RemindersScreen() {
       if (remData) {
         setReminders(remData as unknown as Reminder[]);
         
-        // Dynamic Calendar Markers
         const markers: any = {};
         remData.forEach((rem) => {
           markers[rem.due_date] = {
@@ -98,9 +131,15 @@ export default function RemindersScreen() {
     }
   };
 
-  const handleDayPress = (day: any) => {
+  const handleFullCalendarDayPress = (day: any) => {
     setSelectedDate(day.dateString);
-    setModalVisible(true);
+    setShowFullCalendar(false); 
+    setModalVisible(true);      
+  };
+
+  const handleWeeklyStripDayPress = (dateString: string) => {
+    setSelectedDate(dateString);
+    setModalVisible(true);      
   };
 
   const handleSaveReminder = async () => {
@@ -158,7 +197,6 @@ export default function RemindersScreen() {
               const { data: { user } } = await supabase.auth.getUser();
               if (!user) return;
 
-              // 1. Verify budget availability
               const { data: budget, error: budgetError } = await supabase
                 .from('budgets')
                 .select('id, remaining_amount')
@@ -180,7 +218,6 @@ export default function RemindersScreen() {
                 return;
               }
 
-              // 2. Deduct from remaining budget
               const newRemaining = Number(budget.remaining_amount) - reminder.amount;
               const { error: updateBudgetError } = await supabase
                 .from('budgets')
@@ -189,10 +226,8 @@ export default function RemindersScreen() {
 
               if (updateBudgetError) throw updateBudgetError;
 
-              // 3. Log target expenditure
               const { error: expenseError } = await supabase
-                .from('expenses')
-                .insert({
+                .from('expenses').insert({
                   budget_id: budget.id,
                   description: `Paid Bill: ${reminder.title}`,
                   amount: reminder.amount,
@@ -201,7 +236,6 @@ export default function RemindersScreen() {
 
               if (expenseError) throw expenseError;
 
-              // 4. Set reminder status to paid
               const { error: updateRemError } = await supabase
                 .from('reminders')
                 .update({ status: 'paid' })
@@ -233,7 +267,7 @@ export default function RemindersScreen() {
         </View>
         <View style={{ flex: 1 }}>
           <Text style={styles.reminderTitle}>{item.title}</Text>
-          <Text style={styles.reminderSub}>{item.due_date} • ₱{item.amount.toFixed(2)}</Text>
+          <Text style={styles.reminderSub}>₱{item.amount.toFixed(2)}</Text>
         </View>
       </View>
       
@@ -254,65 +288,102 @@ export default function RemindersScreen() {
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
       
-      {/* Clean Modern Header Section with Back Button */}
-      <View style={styles.header}>
-        <View style={styles.headerTopRow}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+      <View style={styles.calendarContainer}>
+        <View style={styles.headerRow}>
+          <TouchableOpacity style={styles.iconButton} onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={22} color="#0F172A" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Reminders</Text>
+          
+          <Text style={styles.headerTitle}>{getHeaderMonthYear(selectedDate)}</Text>
+          
+          <TouchableOpacity 
+            style={[styles.iconButton, showFullCalendar && styles.iconButtonActive]} 
+            onPress={() => setShowFullCalendar(!showFullCalendar)}
+          >
+            <Ionicons name="calendar" size={20} color={showFullCalendar ? "#10B981" : "#0F172A"} />
+          </TouchableOpacity>
         </View>
-        <Text style={styles.headerSubtext}>Tap any calendar date to schedule an upcoming payment or bill.</Text>
+
+        {showFullCalendar ? (
+          <View style={styles.fullCalendarWrapper}>
+            <Calendar
+              onDayPress={handleFullCalendarDayPress} 
+              current={selectedDate}
+              markedDates={{
+                ...markedDates,
+                [selectedDate]: { ...markedDates[selectedDate], selected: true, selectedColor: '#10B981' }
+              }}
+              theme={{
+                backgroundColor: '#FFFFFF',
+                calendarBackground: '#FFFFFF',
+                textSectionTitleColor: '#94A3B8',
+                selectedDayBackgroundColor: '#10B981',
+                selectedDayTextColor: '#FFFFFF',
+                todayTextColor: '#10B981',
+                dayTextColor: '#0F172A',
+                arrowColor: '#0F172A',
+                monthTextColor: '#0F172A',
+                indicatorColor: '#10B981',
+              }}
+            />
+          </View>
+        ) : (
+          <View style={styles.weeklyStrip}>
+            {weeklyDays.map((day) => {
+              const isSelected = day.dateString === selectedDate;
+              const hasEvent = markedDates[day.dateString]?.marked;
+              return (
+                <TouchableOpacity 
+                  key={day.dateString} 
+                  style={[styles.dayColumn, isSelected && styles.dayColumnSelected]}
+                  onPress={() => handleWeeklyStripDayPress(day.dateString)} 
+                >
+                  <Text style={[styles.dayLabel, isSelected && styles.textSelectedActive]}>{day.label}</Text>
+                  <View style={styles.dayNumWrapper}>
+                    {hasEvent && <View style={[styles.dotIndicator, { backgroundColor: markedDates[day.dateString].dotColor }]} />}
+                    <Text style={[styles.dayNum, isSelected && styles.textSelectedActive]}>{day.dayNum}</Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
+        
+        <View style={styles.notchDecorator} />
       </View>
 
-      {/* Elegant Elevated Calendar Container */}
-      <View style={styles.calendarWrapper}>
-        <Calendar
-          onDayPress={handleDayPress}
-          markedDates={{
-            ...markedDates,
-            [selectedDate]: { ...markedDates[selectedDate], selected: true, selectedColor: '#10B981' }
-          }}
-          theme={{
-            backgroundColor: '#FFFFFF',
-            calendarBackground: '#FFFFFF',
-            textSectionTitleColor: '#94A3B8',
-            selectedDayBackgroundColor: '#10B981',
-            selectedDayTextColor: '#FFFFFF',
-            todayTextColor: '#10B981',
-            dayTextColor: '#0F172A',
-            arrowColor: '#0F172A',
-            monthTextColor: '#0F172A',
-            indicatorColor: '#10B981',
-          }}
-        />
-      </View>
-
-      {/* Bill List Feed Section */}
       <View style={styles.feedWrapper}>
-        <Text style={styles.sectionTitle}>Upcoming Bills</Text>
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionTitle}>Schedule</Text>
+          
+          {/* LABELS AND ICONS CHANGED ONLY - LOGIC UNTOUCHED */}
+          <TouchableOpacity style={styles.addBillBtn} onPress={() => setModalVisible(true)}>
+            <Ionicons name="filter" size={16} color="#64748B" />
+            <Text style={styles.addBillText}>Filter By</Text>
+          </TouchableOpacity>
+        </View>
+
         {loading ? (
           <View style={styles.centeredLoader}>
             <ActivityIndicator size="small" color="#10B981" />
           </View>
         ) : (
           <FlatList
-            data={reminders}
+            data={reminders.filter(r => r.due_date === selectedDate)}
             keyExtractor={(item) => item.id}
             renderItem={renderReminderItem}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.flatListPadding}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
-                <Ionicons name="calendar-clear-outline" size={40} color="#CBD5E1" />
-                <Text style={styles.emptyText}>No upcoming bills scheduled.</Text>
+                <Ionicons name="calendar-clear-outline" size={32} color="#CBD5E1" />
+                <Text style={styles.emptyText}>No events or bills scheduled for this date.</Text>
               </View>
             }
           />
         )}
       </View>
 
-      {/* Form Bottom Presentation Slide Drawer */}
       <Modal animationType="slide" transparent={true} visible={modalVisible} onRequestClose={() => setModalVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
@@ -324,7 +395,7 @@ export default function RemindersScreen() {
             </View>
 
             <Text style={styles.label}>Bill Name</Text>
-            <TextInput style={styles.input} placeholder="e.g. Electric Bill, Rent, Internet" placeholderTextColor="#94A3B8" value={title} onChangeText={setTitle} />
+            <TextInput style={styles.input} placeholder="e.g. Electric Bill, Rent" placeholderTextColor="#94A3B8" value={title} onChangeText={setTitle} />
 
             <Text style={styles.label}>Amount (₱)</Text>
             <TextInput style={styles.input} placeholder="0.00" placeholderTextColor="#94A3B8" keyboardType="numeric" value={amount} onChangeText={setAmount} />
@@ -336,7 +407,6 @@ export default function RemindersScreen() {
                   key={cat.id}
                   style={[styles.categoryChip, selectedCategoryId === cat.id && styles.categoryChipSelected]}
                   onPress={() => setSelectedCategoryId(cat.id)}
-                  activeOpacity={0.8}
                 >
                   <Text style={[styles.chipText, selectedCategoryId === cat.id && styles.chipTextSelected]}>{cat.name}</Text>
                 </TouchableOpacity>
@@ -358,61 +428,132 @@ const styles = StyleSheet.create({
     flex: 1, 
     backgroundColor: '#F8FAFC' 
   },
-  header: { 
-    paddingHorizontal: 24, 
-    paddingTop: Platform.OS === 'android' ? 40 : 16,
-    paddingBottom: 16 
-  },
-  headerTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginLeft: -4 // I-align og gamay sa padding sa container
-  },
-  backButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+  calendarContainer: {
     backgroundColor: '#FFFFFF',
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'android' ? 45 : 15,
+    paddingBottom: 8,
     borderWidth: 1,
     borderColor: '#E2E8F0',
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  iconButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#F1F5F9',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  headerTitle: { 
-    fontSize: 28, // Gi-adjust gamay gikan sa 32 para balance sa back button
-    fontWeight: '800', 
-    color: '#0F172A', 
-    letterSpacing: -0.75 
-  },
-  headerSubtext: { 
-    fontSize: 14, 
-    color: '#64748B', 
-    marginTop: 8, 
-    fontWeight: '400' 
-  },
-  calendarWrapper: { 
-    backgroundColor: '#FFFFFF', 
-    marginHorizontal: 24,
-    borderRadius: 20, 
-    padding: 12, 
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    shadowColor: '#0F172A', 
-    shadowOffset: { width: 0, height: 2 }, 
-    shadowOpacity: 0.02, 
-    shadowRadius: 12, 
+  },
+  iconButtonActive: {
+    backgroundColor: '#E6F4EA',
+    borderColor: '#10B981',
+  },
+  headerTitle: { 
+    fontSize: 18, 
+    fontWeight: '700', 
+    color: '#0F172A',
+  },
+  weeklyStrip: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 10,
+  },
+  dayColumn: {
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    width: 44,
+  },
+  dayColumnSelected: {
+    backgroundColor: '#0F172A', 
+  },
+  dayLabel: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '600',
+    marginBottom: 6,
+  },
+  dayNumWrapper: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dayNum: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  textSelectedActive: {
+    color: '#FFFFFF', 
+  },
+  dotIndicator: {
+    position: 'absolute',
+    top: -8,
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+  },
+  fullCalendarWrapper: {
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  notchDecorator: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#E2E8F0',
+    alignSelf: 'center',
+    marginTop: 12,
+    marginBottom: 4,
   },
   feedWrapper: { 
     flex: 1, 
-    paddingHorizontal: 24, 
+    paddingHorizontal: 20, 
     marginTop: 24 
   },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
   sectionTitle: { 
-    fontSize: 16, 
+    fontSize: 14, 
     fontWeight: '700', 
-    color: '#0F172A', 
-    marginBottom: 12 
+    color: '#64748B',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  addBillBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#F1F5F9',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  addBillText: {
+    color: '#64748B',
+    fontSize: 13,
+    fontWeight: '600',
   },
   flatListPadding: { 
     paddingBottom: 40 
@@ -426,11 +567,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between', 
     alignItems: 'center', 
     backgroundColor: '#FFFFFF', 
-    padding: 14, 
+    padding: 16, 
     borderRadius: 16, 
-    marginBottom: 10, 
-    borderWidth: 1, 
-    borderColor: '#E2E8F0'
+    marginBottom: 12, 
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   reminderLeft: { 
     flexDirection: 'row', 
@@ -439,15 +580,15 @@ const styles = StyleSheet.create({
     flex: 1 
   },
   categoryIndicator: { 
-    width: 42, 
-    height: 42, 
-    borderRadius: 12, 
+    width: 38, 
+    height: 38, 
+    borderRadius: 10, 
     justifyContent: 'center', 
     alignItems: 'center'
   },
   indicatorText: { 
     color: '#FFFFFF', 
-    fontSize: 12, 
+    fontSize: 11, 
     fontWeight: '700' 
   },
   reminderTitle: { 
@@ -475,7 +616,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row', 
     alignItems: 'center', 
     gap: 4, 
-    paddingRight: 6 
   },
   paidText: { 
     color: '#10B981', 
@@ -484,7 +624,7 @@ const styles = StyleSheet.create({
   },
   emptyContainer: { 
     alignItems: 'center', 
-    marginTop: 40, 
+    marginTop: 60, 
     gap: 12 
   },
   emptyText: { 
@@ -512,9 +652,8 @@ const styles = StyleSheet.create({
   },
   modalTitle: { 
     fontSize: 18, 
-    fontWeight: '800', 
+    fontWeight: '700', 
     color: '#0F172A', 
-    letterSpacing: -0.4 
   },
   closeBtnBox: { 
     width: 32, 
@@ -531,12 +670,12 @@ const styles = StyleSheet.create({
     marginBottom: 8 
   },
   input: { 
-    borderWidth: 1, 
-    borderColor: '#E2E8F0', 
-    padding: 12, 
+    backgroundColor: '#F8FAFC', 
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 14, 
     borderRadius: 12, 
     marginBottom: 16, 
-    backgroundColor: '#F8FAFC', 
     fontSize: 15, 
     color: '#0F172A' 
   },
@@ -551,16 +690,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14, 
     borderRadius: 20, 
     backgroundColor: '#F1F5F9', 
-    borderWidth: 1, 
-    borderColor: '#E2E8F0' 
+    borderWidth: 1,
+    borderColor: '#E2E8F0'
   },
   categoryChipSelected: { 
     backgroundColor: '#E6F4EA', 
-    borderColor: '#10B981' 
+    borderColor: '#10B981'
   },
   chipText: { 
     fontSize: 12, 
-    color: '#475569', 
+    color: '#64748B', 
     fontWeight: '500' 
   },
   chipTextSelected: { 
@@ -573,10 +712,6 @@ const styles = StyleSheet.create({
     borderRadius: 14, 
     alignItems: 'center', 
     marginTop: 8,
-    shadowColor: '#10B981',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
   },
   saveBtnText: { 
     color: '#FFFFFF', 

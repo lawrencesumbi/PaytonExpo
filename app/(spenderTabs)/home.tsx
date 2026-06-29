@@ -3,23 +3,23 @@ import { useRouter } from 'expo-router'; // Siguradoon nato nga na-import ni og 
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Dimensions,
-    FlatList,
-    Image,
-    ImageBackground,
-    Modal,
-    StatusBar as NativeStatusBar,
-    Platform,
-    RefreshControl,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  FlatList,
+  Image,
+  ImageBackground,
+  Modal,
+  StatusBar as NativeStatusBar,
+  Platform,
+  RefreshControl,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { supabase } from '../../lib/supabase';
 
@@ -345,8 +345,9 @@ return (
     resizeMode="cover"
     style={styles.backgroundImage}
   >
-  <SafeAreaView style={styles.container}>
-    <StatusBar style="dark" />
+    <SafeAreaView style={styles.container}>
+      <StatusBar style="dark" />
+      
       <ScrollView 
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -354,7 +355,7 @@ return (
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#0D9488']} />
         }
       >
-        {/* Profile and Balance Section */}
+        {/* 1. Header Section: Profile & Balance (Magpabilin nga transparent para makita ang ImageBackground) */}
         <View style={styles.headerBackground}>
           <View style={styles.welcomeRow}>
             <View style={styles.avatarRow}>
@@ -412,113 +413,130 @@ return (
           )}
         </View>
 
-        {/* Categories Slider Segment */}
-        <View style= {styles.bodycard}>
-        <View style={styles.cardsSectionContainer}>
-          <FlatList
-            ref={flatListRef}
-            data={categories}
-            horizontal
-            decelerationRate="fast"
-            snapToInterval={SNAP_INTERVAL}
-            snapToAlignment="center"
-            showsHorizontalScrollIndicator={false}
-            onMomentumScrollEnd={onScrollMomentumEnd}
-            onScrollBeginDrag={stopAutoScrollEngine} 
-            contentContainerStyle={{
-              paddingHorizontal: (width - CARD_WIDTH) / 2 - CARD_MARGIN
-            }}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item: cat }) => {
-              const remainingPercentage = cat.allocatedAmount > 0 
-                ? Math.min((cat.remainingAmount / cat.allocatedAmount) * 100, 100) 
-                : 0;
+        {/* 2. ⬜ KINI ANG PUTI NGA CONTAINER PANEL (Napatong na sa ibabaw sa Image) */}
+        <View style={styles.bodycard}>
+          
+          {/* Categories Slider Segment */}
+          <View style={styles.cardsSectionContainer}>
+            <FlatList
+              ref={flatListRef}
+              data={categories}
+              horizontal
+              decelerationRate="fast"
+              snapToInterval={SNAP_INTERVAL}
+              snapToAlignment="center"
+              showsHorizontalScrollIndicator={false}
+              onMomentumScrollEnd={onScrollMomentumEnd}
+              onScrollBeginDrag={stopAutoScrollEngine} 
+              contentContainerStyle={{
+                paddingHorizontal: (width - CARD_WIDTH) / 2 - CARD_MARGIN
+              }}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item: cat }) => {
+                const remainingPercentage = cat.allocatedAmount > 0 
+                  ? Math.min((cat.remainingAmount / cat.allocatedAmount) * 100, 100) 
+                  : 0;
 
-              return (
-                <TouchableOpacity 
-                  activeOpacity={0.95}
-                  onPress={() => openAllocateModal(cat)}
-                  style={[styles.originalCategoryCard, { backgroundColor: cat.color || '#0F766E' }]}
-                >
-                  <View style={styles.cardMainHeader}>
-                    <View style={styles.cardTitleCluster}>
-                      <View style={styles.originalIconCircle}>
-                        <Ionicons name={cat.icon || 'folder'} size={16} color={cat.color || '#0F766E'} />
-                      </View>
-                      <Text style={styles.originalCardName} numberOfLines={1}>{cat.name}</Text>
-                    </View>
-                    <View style={styles.remainingBadge}>
-                      <Text style={styles.remainingBadgeText}>Remaining</Text>
-                    </View>
-                  </View>
+                renderItem={({ item: cat, index }) => { // Gidugangan og 'index' dinhi
+  const remainingPercentage = cat.allocatedAmount > 0 
+    ? Math.min((cat.remainingAmount / cat.allocatedAmount) * 100, 100) 
+    : 0;
 
-                  <View style={styles.originalCardMiddleBody}>
-                    <Text style={styles.originalRemainingAmount}>
-                      ₱{cat.remainingAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                    </Text>
-                  </View>
+  // Lista sa mga premium financial colors (pwede nimo pulihan ang hex codes)
+  const premiumColors = ['#0D9488', '#0F766E', '#115E59', '#06B6D4', '#0891B2'];
+  
+  // Gamitan og modulo (%) aron mag-rotate ang colors sa matag card index
+  const cardColor = premiumColors[index % premiumColors.length];
 
-                  <View style={styles.originalCardBottomFooter}>
-                    <View style={styles.originalProgressBackground}>
-                      <View style={[styles.originalProgressFill, { width: `${remainingPercentage}%` }]} />
-                    </View>
-                    <View style={styles.originalCardMetricsRow}>
-                      <Text style={styles.originalFooterMetaText}>Budget: ₱{cat.allocatedAmount.toLocaleString()}</Text>
-                      <Text style={styles.originalFooterMetaText}>Spent: ₱{cat.totalSpent.toLocaleString()}</Text>
-                    </View>
-                  </View>
-                </TouchableOpacity>
-              );
-            }}
-          />
-
-          {categories.length > 0 && (
-            <View style={styles.dotsRowContainer}>
-              {categories.map((_, dotIndex) => (
-                <View 
-                  key={dotIndex} 
-                  style={[styles.indicatorDot, currentCardIndex === dotIndex ? styles.activeDot : styles.inactiveDot]} 
-                />
-              ))}
+  return (
+        <TouchableOpacity 
+          activeOpacity={0.95}
+          onPress={() => openAllocateModal(cat)}
+          {/* 🎨 KINI ANG NAUSAB: Gigamit ang cardColor */}
+          style={[styles.originalCategoryCard, { backgroundColor: cardColor }]}
+        >
+          <View style={styles.cardMainHeader}>
+            <View style={styles.cardTitleCluster}>
+              <View style={styles.originalIconCircle}>
+                {/* 🎨 Gi-update pod ang icon color para counter-match sa card */}
+                <Ionicons name={cat.icon || 'folder'} size={16} color={cardColor} />
+              </View>
+              <Text style={styles.originalCardName} numberOfLines={1}>{cat.name}</Text>
             </View>
-          )}
-        </View>
-
-        {/* Transaction History Section Block */}
-        <View style={styles.contentBody}>
-          <View style={styles.recentSectionHeader}>
-            <Text style={styles.sectionTitle}>Recent Transactions</Text>
-            <TouchableOpacity onPress={() => router.push('/transaction')}>
-              <Text style={styles.seeAllText}>See all</Text>
-            </TouchableOpacity>
+            <View style={styles.remainingBadge}>
+              <Text style={styles.remainingBadgeText}>Remaining</Text>
+            </View>
           </View>
 
-          {recentExpenses.length === 0 ? (
-            <View style={styles.noRecentBox}>
-              <Text style={styles.noRecentText}>No captured transaction entries found.</Text>
+          <View style={styles.originalCardMiddleBody}>
+            <Text style={styles.originalRemainingAmount}>
+              ₱{cat.remainingAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+            </Text>
+          </View>
+
+          <View style={styles.originalCardBottomFooter}>
+            <View style={styles.originalProgressBackground}>
+              <View style={[styles.originalProgressFill, { width: `${remainingPercentage}%` }]} />
             </View>
-          ) : (
-            <View style={styles.recentListContainer}>
-              {recentExpenses.map((item) => (
-                <View key={item.id} style={styles.recentItem}>
-                  <View style={styles.recentLeft}>
-                    <View style={styles.iconBox}>
-                      <Ionicons name={item.category_icon || 'cash-outline'} size={18} color="#0D9488" />
+            <View style={styles.originalCardMetricsRow}>
+              <Text style={styles.originalFooterMetaText}>Budget: ₱{cat.allocatedAmount.toLocaleString()}</Text>
+              <Text style={styles.originalFooterMetaText}>Spent: ₱{cat.totalSpent.toLocaleString()}</Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+      );
+    }}
+            />
+
+            {categories.length > 0 && (
+              <View style={styles.dotsRowContainer}>
+                {categories.map((_, dotIndex) => (
+                  <View 
+                    key={dotIndex} 
+                    style={[styles.indicatorDot, currentCardIndex === dotIndex ? styles.activeDot : styles.inactiveDot]} 
+                  />
+                ))}
+              </View>
+            )}
+          </View>
+
+          {/* Transaction History Section Block */}
+          <View style={styles.contentBody}>
+            <View style={styles.recentSectionHeader}>
+              <Text style={styles.sectionTitle}>Recent Transactions</Text>
+              <TouchableOpacity onPress={() => router.push('/transaction')}>
+                <Text style={styles.seeAllText}>See all</Text>
+              </TouchableOpacity>
+            </View>
+
+            {recentExpenses.length === 0 ? (
+              <View style={styles.noRecentBox}>
+                <Text style={styles.noRecentText}>No captured transaction entries found.</Text>
+              </View>
+            ) : (
+              <View style={styles.recentListContainer}>
+                {recentExpenses.map((item) => (
+                  <View key={item.id} style={styles.recentItem}>
+                    <View style={styles.recentLeft}>
+                      <View style={styles.iconBox}>
+                        <Ionicons name={item.category_icon || 'cash-outline'} size={18} color="#0D9488" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.recentName} numberOfLines={1}>{item.expense_name}</Text>
+                        <Text style={styles.recentCategory}>{item.category}</Text>
+                      </View>
                     </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.recentName} numberOfLines={1}>{item.expense_name}</Text>
-                      <Text style={styles.recentCategory}>{item.category}</Text>
-                    </View>
+                    <Text style={styles.recentAmount}>-₱{item.amount.toFixed(2)}</Text>
                   </View>
-                  <Text style={styles.recentAmount}>-₱{item.amount.toFixed(2)}</Text>
-                </View>
-              ))}
-            </View>
-          )}
+                ))}
+              </View>
+            )}
+          </View>
+
         </View>
       </ScrollView>
 
-      {/* Allocation Budget Flow Modal Component */}
+      {/* Modal Block */}
       <Modal animationType="fade" transparent={true} visible={modalVisible} onRequestClose={() => setModalVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
@@ -550,23 +568,29 @@ return (
           </View>
         </View>
       </Modal>
-    </View>
     </SafeAreaView>
   </ImageBackground>
 );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, },
-  backgroundImage: { flex: 1 },
-  scrollContent: { paddingBottom: 40 },
+  container: { 
+    flex: 1, 
+  },
+  backgroundImage: { 
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
+  scrollContent: { 
+    flexGrow: 1, // Sigurohon nga mo-expand ang scroll view paubos
+  },
   
   headerBackground: { 
     paddingHorizontal: 24, 
     paddingTop: Platform.OS === 'android' ? (NativeStatusBar.currentHeight ? NativeStatusBar.currentHeight + 16 : 50) : 20, 
-    paddingBottom: 68, 
-    borderBottomLeftRadius: 36, 
-    borderBottomRightRadius: 36,
+    paddingBottom: 20, // Gi-ubusan gikan sa 68 aron sakto ang distansya sa balance
+    backgroundColor: 'transparent', // Gi-transparent aron makita ang ImageBackground sa luyo
   },
   welcomeRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 },
   avatarRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
@@ -589,20 +613,35 @@ const styles = StyleSheet.create({
   headerMetricsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   headerMetricText: { color: '#64748B', fontSize: 12, fontWeight: '600' },
 
-  cardsSectionContainer: { marginTop: -40, marginBottom: 20, width: '100%'},
-  originalCategoryCard: {
-    width: CARD_WIDTH,
-    height: 180,
-    marginHorizontal: CARD_MARGIN,
-    borderRadius: 24,
-    padding: 22,
-    justifyContent: 'space-between',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.25,
-    shadowRadius: 14,
-    elevation: 8,
+  // ⬜ ANG PUTI NGA CONTAINER SHEET (Napatong na sa ibabaw)
+  bodycard: {
+    backgroundColor: '#ffffff',       // Husto nga React Native syntax
+    borderTopLeftRadius: 32,          // Lingin nga ibabaw nga kanto para modern ang style
+    borderTopRightRadius: 32,         // Lingin nga ibabaw nga kanto
+    paddingTop: 24,                   // Space sa sulod sa dili pa magsugod ang slider cards
+    paddingBottom: 40,                // Space sa pinakaubos para dili mabitin ang scroll
+    marginTop: 20,                   
+    flex: 1,                          // Pugson nga molatid paubos sa tibuok screen
+    shadowColor: '#000000',           
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    elevation: 5,
   },
+
+  // Gi-adjust ang slider container aron dili na mag-gamit og negative margin nga makaguba sa porma
+  cardsSectionContainer: { 
+    marginTop: 0, 
+    marginBottom: 20, 
+    width: '100%',
+    backgroundColor: '#ffffff'
+  },
+
+  originalCardName: { 
+  color: '#0F172A', // Usba kung hayag ang background sa card
+  fontSize: 16, 
+  fontWeight: '700' 
+},
   cardMainHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   cardTitleCluster: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 0.75 },
   originalIconCircle: { width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255, 255, 255, 0.2)', justifyContent: 'center', alignItems: 'center' },
@@ -624,19 +663,35 @@ const styles = StyleSheet.create({
   activeDot: { width: 16, backgroundColor: '#0D9488' },
   inactiveDot: { width: 6, backgroundColor: '#CBD5E1' },
 
-  contentBody: { paddingHorizontal: 24, marginTop: 10},
+  contentBody: { 
+    paddingHorizontal: 24, 
+    marginTop: 10
+  },
   sectionTitle: { fontSize: 18, fontWeight: '700', color: '#0F172A', letterSpacing: -0.3 },
   recentSectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   seeAllText: { fontSize: 14, color: '#0D9488', fontWeight: '700' },
   
-  recentListContainer: { backgroundColor: '#FFFFFF', borderRadius: 24, bottom: 20, overflow: 'hidden', padding: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.03, shadowRadius: 10, elevation: 10 },
+  // Gi-tangtang ang "bottom: 20" nga maoy mupaluob sa listahan, gi-puliha og margin
+  recentListContainer: { 
+    backgroundColor: '#FFFFFF', 
+    borderRadius: 24, 
+    overflow: 'hidden', 
+    padding: 4, 
+    shadowColor: '#000', 
+    shadowOffset: { width: 0, height: 4 }, 
+    shadowOpacity: 0.03, 
+    shadowRadius: 10, 
+    elevation: 10,
+    marginTop: 4,
+    marginBottom: 20
+  },
   recentItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
   recentLeft: { flexDirection: 'row', alignItems: 'center', gap: 14, flex: 0.75 },
   iconBox: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#F0FDFA', justifyContent: 'center', alignItems: 'center' },
   recentName: { fontSize: 15, fontWeight: '600', color: '#1E293B', letterSpacing: -0.1 },
   recentCategory: { fontSize: 12, color: '#64748B', marginTop: 2, fontWeight: '500' },
   recentAmount: { fontSize: 15, fontWeight: '700', color: '#0F172A' },
-  noRecentBox: { padding: 36, backgroundColor: '#FFFFFF', borderRadius: 24, alignItems: 'center' },
+  noRecentBox: { padding: 36, backgroundColor: '#FFFFFF', borderRadius: 24, alignItems: 'center', marginBottom: 20 },
   noRecentText: { fontSize: 14, color: '#64748B', fontWeight: '500' },
   
   modalOverlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.3)', justifyContent: 'center', alignItems: 'center' },
