@@ -91,7 +91,7 @@ export default function RegisterScreen() {
     };
 
   return (
-    <LinearGradient colors={['#ffffff', '#dcfce7']} style={styles.container}>
+    <LinearGradient colors={['#ffffff', '#f0f5f1']} style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
           <View style={styles.headerContainer}>

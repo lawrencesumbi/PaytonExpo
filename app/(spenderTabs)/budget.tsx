@@ -1,15 +1,19 @@
-import { Ionicons } from '@expo/vector-icons';
+ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   FlatList,
+  GestureResponderEvent,
   Keyboard,
   KeyboardAvoidingView,
   Modal,
   StatusBar as NativeStatusBar,
+  PanResponder,
+  PanResponderGestureState,
   Platform,
   SafeAreaView,
   ScrollView,
@@ -48,6 +52,7 @@ export default function SpenderExpensesScreen() {
   const [description, setDescription] = useState('');
   
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [cardAnimations] = useState(budgets.map(() => new Animated.Value(0)));
 
   const fetchActiveBudgets = useCallback(async (shouldAutoSelect = false) => {
     try {
@@ -165,8 +170,42 @@ export default function SpenderExpensesScreen() {
   };
 
   const handleCardPress = (item: BudgetOption) => {
-    setSelectedBudget(item);
-    setIsModalOpen(true);
+    // Navigate to category dashboard instead of opening modal
+    router.push({
+      pathname: '/(spenderTabs)/Budgetcategorydetails',
+      params: { 
+        budgetId: item.id,
+        categoryName: item.categories.name,
+        categoryIcon: item.categories.icon,
+        categoryColor: item.categories.color,
+        allocatedAmount: item.allocated_amount.toString(),
+        remainingAmount: item.remaining_amount.toString()
+      }
+    });
+  };
+
+  const createPanResponder = (index: number) => {
+    return PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (evt: GestureResponderEvent, gestureState: PanResponderGestureState) => {
+        return Math.abs(gestureState.dy) > 10;
+      },
+      onPanResponderMove: (evt: GestureResponderEvent, gestureState: PanResponderGestureState) => {
+        if (gestureState.dy > 0) {
+          cardAnimations[index]?.setValue(gestureState.dy);
+        }
+      },
+      onPanResponderRelease: (evt: GestureResponderEvent, gestureState: PanResponderGestureState) => {
+        if (gestureState.dy > 80) {
+          handleCardPress(budgets[index]);
+        } else {
+          Animated.spring(cardAnimations[index] || new Animated.Value(0), {
+            toValue: 0,
+            useNativeDriver: false,
+          }).start();
+        }
+      },
+    });
   };
 
   if (loading && budgets.length === 0) {
@@ -228,7 +267,6 @@ export default function SpenderExpensesScreen() {
             const total = item.allocated_amount || 1; 
             const remainingPercent = Math.max(0, Math.min(100, (item.remaining_amount / total) * 100));
 
-            // KANING BAHINA: Imong dynamic custom themes array para mag-usab usab ang kolor
             const themeColors = [
               { bg: '#0F172A', text: '#FFFFFF', subText: 'rgba(255,255,255,0.6)', barTrack: 'rgba(255,255,255,0.2)' }, 
               { bg: '#087996', text: '#FFFFFF', subText: '#d5edf3', barTrack: 'rgba(255,255,255,0.25)' },         
@@ -239,53 +277,77 @@ export default function SpenderExpensesScreen() {
             
             const currentTheme = themeColors[index % themeColors.length];
 
-            return (
-              <TouchableOpacity
-                activeOpacity={0.9}
-                onPress={() => handleCardPress(item)}
-                style={[
-                  styles.modernFintechCard,
-                  { 
-                    backgroundColor: currentTheme.bg, // Gigamit ang dynamic bg color
-                    marginTop: index === 0 ? 0 : -100, // Stack effect padding
-                    zIndex: index + 1,
-                    elevation: index + 1,
-                  }
-                ]}
-              >
-                <View style={styles.modernCardHeaderRow}>
-                  <View style={styles.modernCardBadgeIconWrapper}>
-                    {/* Gi-force og ngitngit ang icon color para makita sa white background badge */}
-                    {/* @ts-ignore */}
-                    <Ionicons name={item.categories.icon || 'wallet-outline'} size={18} color={currentTheme.bg} />
-                  </View>
-                  <Text style={[styles.modernCardCategoryText, { color: currentTheme.text }]}>
-                    {item.categories.name}
-                  </Text>
-                  <Ionicons name="chevron-forward" size={16} color={currentTheme.subText} style={{ marginLeft: 'auto' }} />
-                </View>
-                
-                <View style={styles.progressBarContainer}>
-                  <View style={[styles.progressBarTrack, { backgroundColor: currentTheme.barTrack }]}>
-                    <View style={[styles.progressBarFill, { width: `${remainingPercent}%` }]} />
-                  </View>
-                  <View style={styles.progressBarLabelRow}>
-                    <Text style={[styles.progressBarLeftText, { color: currentTheme.text }]}>
-                      ₱{item.remaining_amount.toLocaleString(undefined, { maximumFractionDigits: 0 })} left
-                    </Text>
-                    <Text style={[styles.progressBarRightText, { color: currentTheme.subText }]}>
-                      of ₱{item.allocated_amount.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                    </Text>
-                  </View>
-                </View>
+            const animatedStyle = {
+              transform: [
+                {
+                  translateY: cardAnimations[index]?.interpolate({
+                    inputRange: [0, 100],
+                    outputRange: [0, 20],
+                  }) || 0,
+                }
+              ],
+              opacity: cardAnimations[index]?.interpolate({
+                inputRange: [0, 80],
+                outputRange: [1, 0.8],
+              }) || 1,
+            };
 
-                <View style={styles.modernCardBalanceContainer}>
-                  <Text style={[styles.modernCardBalanceLabel, { color: currentTheme.subText }]}>AVAILABLE BALANCE</Text>
-                  <Text style={[styles.modernCardBalanceAmount, { color: currentTheme.text }]}>
-                    ₱{item.remaining_amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                  </Text>
-                </View>
-              </TouchableOpacity>
+            return (
+              <Animated.View
+                {...(createPanResponder(index)?.panHandlers || {})}
+                style={[animatedStyle]}
+              >
+                <TouchableOpacity
+                  activeOpacity={0.9}
+                  onPress={() => handleCardPress(item)}
+                  style={[
+                    styles.modernFintechCard,
+                    { 
+                      backgroundColor: currentTheme.bg,
+                      marginTop: index === 0 ? 0 : -100,
+                      zIndex: index + 1,
+                      elevation: index + 1,
+                    }
+                  ]}
+                >
+                  <View style={styles.modernCardHeaderRow}>
+                    <View style={styles.modernCardBadgeIconWrapper}>
+                      {/* @ts-ignore */}
+                      <Ionicons name={item.categories.icon || 'wallet-outline'} size={18} color={currentTheme.bg} />
+                    </View>
+                    <Text style={[styles.modernCardCategoryText, { color: currentTheme.text }]}>
+                      {item.categories.name}
+                    </Text>
+                    <Ionicons name="chevron-forward" size={16} color={currentTheme.subText} style={{ marginLeft: 'auto' }} />
+                  </View>
+                  
+                  <View style={styles.progressBarContainer}>
+                    <View style={[styles.progressBarTrack, { backgroundColor: currentTheme.barTrack }]}>
+                      <View style={[styles.progressBarFill, { width: `${remainingPercent}%` }]} />
+                    </View>
+                    <View style={styles.progressBarLabelRow}>
+                      <Text style={[styles.progressBarLeftText, { color: currentTheme.text }]}>
+                        ₱{item.remaining_amount.toLocaleString(undefined, { maximumFractionDigits: 0 })} left
+                      </Text>
+                      <Text style={[styles.progressBarRightText, { color: currentTheme.subText }]}>
+                        of ₱{item.allocated_amount.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.modernCardBalanceContainer}>
+                    <Text style={[styles.modernCardBalanceLabel, { color: currentTheme.subText }]}>AVAILABLE BALANCE</Text>
+                    <Text style={[styles.modernCardBalanceAmount, { color: currentTheme.text }]}>
+                      ₱{item.remaining_amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </Text>
+                  </View>
+
+                  {/* Swipe Down Indicator */}
+                  <View style={styles.swipeIndicator}>
+                    <Ionicons name="chevron-down" size={14} color={currentTheme.subText} />
+                  </View>
+                </TouchableOpacity>
+              </Animated.View>
             );
           }}
         />
@@ -497,7 +559,6 @@ const styles = StyleSheet.create({
   cardSelectionTitle: { fontSize: 24, fontWeight: '800', color: '#0F172A', letterSpacing: -0.5 },
   cardSelectionSubtitle: { fontSize: 13, color: '#64748B', marginTop: 2, fontWeight: '500' },
   
-  // GI-UPDATE: Gidugangan og paddingBottom para dili maputol ang pinakaubos nga card tungod sa stack overflow
   verticalCardList: { 
     paddingHorizontal: 24, 
     paddingTop: 10,
@@ -516,6 +577,7 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.12)',
+    position: 'relative',
   },
   modernCardHeaderRow: {
     flexDirection: 'row',
@@ -580,6 +642,12 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     marginTop: 2,
     letterSpacing: -0.5,
+  },
+  swipeIndicator: {
+    position: 'absolute',
+    bottom: 8,
+    right: 16,
+    opacity: 0.5,
   },
   emptyState: { flex: 0.7, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 36, gap: 14 },
   emptyIconContainer: { width: 64, height: 64, borderRadius: 20, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0' },

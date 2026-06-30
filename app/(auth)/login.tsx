@@ -164,7 +164,7 @@ export default function LoginScreen() {
   };
 
   return (
-    <LinearGradient colors={['#ffffff', '#dcfce7']} style={styles.container}>
+    <LinearGradient colors={['#ffffff', '#f0f5f1']} style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.container}>
           <ScrollView contentContainerStyle={styles.scrollContainer} bounces={false}>

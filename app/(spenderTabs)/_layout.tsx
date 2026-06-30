@@ -10,6 +10,8 @@ export default function SpenderLayout() {
   // I-check kung ang kasamtangan nga screen kay chat o scan ba
   const isChatScreen = pathname === '/chat' || pathname.includes('chat');
   const isScanScreen = pathname === '/scan' || pathname.includes('scan');
+   const isAddExpenseScreen = pathname.includes('add-expense');  
+
 
   // Itago ang AI FAB ug ang tibuok Tab Bar kung naa sa chat OR scan screen
   const shouldHideAiButton = isChatScreen || isScanScreen;
@@ -117,6 +119,9 @@ export default function SpenderLayout() {
         <Tabs.Screen name="statistics" options={{ href: null }} />
         <Tabs.Screen name="friends" options={{ href: null }} />
         <Tabs.Screen name="invitations" options={{ href: null }} />
+        <Tabs.Screen name="Budgetcategorydetails" options={{ href: null }} /> {/* ADD THIS */}
+        <Tabs.Screen name="addExpense" options={{ href: null }} />
+         <Tabs.Screen name="add-expense" options={{ href: null }} /> {/* ✅ ADD THIS LINE */}
       </Tabs>
 
       {/* ----------------- FLOATING AI COACH BUTTON (FAB) ----------------- */}
