@@ -1,6 +1,6 @@
 // app/(spenderTabs)/friends.tsx
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router'; // 1. Gi-import ang useRouter
+import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
 import {
@@ -26,7 +26,7 @@ interface Friend {
 }
 
 export default function FriendsScreen() {
-  const router = useRouter(); // 2. Gi-initialize ang router
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [friends, setFriends] = useState<Friend[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -35,6 +35,9 @@ export default function FriendsScreen() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  // Edit Mode Trackers
+  const [editingFriendId, setEditingFriendId] = useState<string | null>(null);
 
   // FETCH FRIENDS
   const fetchFriends = async () => {
@@ -58,8 +61,8 @@ export default function FriendsScreen() {
     }
   };
 
-  // ADD FRIEND
-  const handleAddFriend = async () => {
+  // ADD OR UPDATE FRIEND (Unified Handler)
+  const handleSaveFriend = async () => {
     if (!fullName.trim() || !email.trim()) {
       Alert.alert('Missing Info', 'Please enter both a name and email.');
       return;
@@ -76,19 +79,37 @@ export default function FriendsScreen() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { error } = await supabase
-        .from('friends')
-        .insert({
-          user_id: user.id,
-          full_name: fullName.trim(),
-          email: email.trim().toLowerCase(),
-        });
+      if (editingFriendId) {
+        // UPDATE MODE
+        const { error } = await supabase
+          .from('friends')
+          .update({
+            full_name: fullName.trim(),
+            email: email.trim().toLowerCase(),
+          })
+          .eq('id', editingFriendId)
+          .eq('user_id', user.id); // Extra safety check
 
-      if (error) throw error;
+        if (error) throw error;
+        Alert.alert('Updated 🎉', `${fullName} has been updated.`);
+      } else {
+        // INSERT MODE
+        const { error } = await supabase
+          .from('friends')
+          .insert({
+            user_id: user.id,
+            full_name: fullName.trim(),
+            email: email.trim().toLowerCase(),
+          });
 
-      Alert.alert('Success 🎉', `${fullName} has been added to your friends list.`);
+        if (error) throw error;
+        Alert.alert('Success 🎉', `${fullName} has been added to your friends list.`);
+      }
+
+      // Reset Form and State
       setFullName('');
       setEmail('');
+      setEditingFriendId(null);
       Keyboard.dismiss();
       fetchFriends();
     } catch (error: any) {
@@ -98,11 +119,59 @@ export default function FriendsScreen() {
     }
   };
 
+  // START EDITING POPULATION
+  const startEdit = (friend: Friend) => {
+    setEditingFriendId(friend.id);
+    setFullName(friend.full_name);
+    setEmail(friend.email);
+  };
+
+  // CANCEL EDIT MODE
+  const cancelEdit = () => {
+    setEditingFriendId(null);
+    setFullName('');
+    setEmail('');
+    Keyboard.dismiss();
+  };
+
+  // DELETE FRIEND
+  const handleDeleteFriend = (friend: Friend) => {
+    Alert.alert(
+      'Remove Friend',
+      `Are you sure you want to remove ${friend.full_name}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { error } = await supabase
+                .from('friends')
+                .delete()
+                .eq('id', friend.id);
+
+              if (error) throw error;
+
+              // Clear form if they deleted the one they were actively editing
+              if (editingFriendId === friend.id) {
+                cancelEdit();
+              }
+
+              fetchFriends();
+            } catch (error: any) {
+              Alert.alert('Delete Error', error.message);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   useEffect(() => {
     fetchFriends();
   }, []);
 
-  // Computed local filtering logic for immediate client-side query evaluation
   const filteredFriends = friends.filter((friend) => {
     const query = searchQuery.toLowerCase();
     return (
@@ -122,7 +191,16 @@ export default function FriendsScreen() {
         <Text style={styles.friendName} numberOfLines={1}>{item.full_name}</Text>
         <Text style={styles.friendEmail} numberOfLines={1}>{item.email}</Text>
       </View>
-      <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+      
+      {/* Action Buttons Container */}
+      <View style={styles.actionRow}>
+        <TouchableOpacity onPress={() => startEdit(item)} style={styles.actionBtn} activeOpacity={0.6}>
+          <Ionicons name="pencil-outline" size={18} color="#475569" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => handleDeleteFriend(item)} style={styles.actionBtn} activeOpacity={0.6}>
+          <Ionicons name="trash-outline" size={18} color="#EF4444" />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 
@@ -133,13 +211,11 @@ export default function FriendsScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
         style={{ flex: 1 }}
       >
-        {/* Header Block with Back Button */}
         <View style={styles.header}>
           <View style={styles.headerTopRow}>
-            {/* 3. Back Button */}
             <TouchableOpacity 
               style={styles.backBtn} 
-              onPress={() => router.push('/split')} // Modiretso sa split.tsx
+              onPress={() => router.push('/split')}
               activeOpacity={0.7}
             >
               <Ionicons name="arrow-back" size={22} color="#0F172A" />
@@ -149,7 +225,6 @@ export default function FriendsScreen() {
           <Text style={styles.headerSubtext}>Manage your split-expense squad.</Text>
         </View>
 
-        {/* List & Add Form Split */}
         <FlatList
           data={filteredFriends}
           keyExtractor={(item) => item.id}
@@ -158,9 +233,11 @@ export default function FriendsScreen() {
           showsVerticalScrollIndicator={false}
           ListHeaderComponent={
             <View>
-              {/* Add New Connection Form */}
-              <View style={styles.formContainer}>
-                <Text style={styles.sectionTitle}>Add New Friend</Text>
+              {/* Form Container (Morphs depending on if you are adding or editing) */}
+              <View style={[styles.formContainer, editingFriendId ? styles.formContainerEdit : null]}>
+                <Text style={styles.sectionTitle}>
+                  {editingFriendId ? '💡 Edit Friend Details' : 'Add New Friend'}
+                </Text>
                 
                 <View style={styles.inputWrapper}>
                   <Ionicons name="person-outline" size={18} color="#94A3B8" style={styles.inputIcon} />
@@ -188,24 +265,47 @@ export default function FriendsScreen() {
                   />
                 </View>
 
-                <TouchableOpacity 
-                  style={styles.addBtn} 
-                  onPress={handleAddFriend}
-                  disabled={submitting}
-                  activeOpacity={0.8}
-                >
-                  {submitting ? (
-                    <ActivityIndicator color="#FFFFFF" size="small" />
-                  ) : (
-                    <>
-                      <Ionicons name="person-add-outline" size={16} color="#FFFFFF" />
-                      <Text style={styles.addBtnText}>Add Friend</Text>
-                    </>
+                {/* Form Buttons */}
+                <View style={styles.formBtnGroup}>
+                  {editingFriendId && (
+                    <TouchableOpacity 
+                      style={[styles.btnBase, styles.cancelBtn]} 
+                      onPress={cancelEdit}
+                      disabled={submitting}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={styles.cancelBtnText}>Cancel</Text>
+                    </TouchableOpacity>
                   )}
-                </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    style={[
+                      styles.btnBase, 
+                      editingFriendId ? styles.saveBtn : styles.addBtn,
+                      editingFriendId ? { flex: 1 } : null
+                    ]} 
+                    onPress={handleSaveFriend}
+                    disabled={submitting}
+                    activeOpacity={0.8}
+                  >
+                    {submitting ? (
+                      <ActivityIndicator color="#FFFFFF" size="small" />
+                    ) : (
+                      <>
+                        <Ionicons 
+                          name={editingFriendId ? "checkmark-circle-outline" : "person-add-outline"} 
+                          size={16} 
+                          color="#FFFFFF" 
+                        />
+                        <Text style={styles.addBtnText}>
+                          {editingFriendId ? 'Save Changes' : 'Add Friend'}
+                        </Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </View>
               </View>
 
-              {/* Network Header & Search Field Bar */}
               <Text style={[styles.sectionTitle, { marginTop: 16, marginBottom: 12 }]}>
                 Your Network ({friends.length})
               </Text>
@@ -262,13 +362,13 @@ const styles = StyleSheet.create({
   headerTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12, // Gintang-an og space ang back button ug ang titulo
+    gap: 12,
     marginBottom: 4,
   },
   backBtn: {
     padding: 6,
     borderRadius: 50,
-    backgroundColor: '#F1F5F9', // Light gray background para dali mapislit
+    backgroundColor: '#F1F5F9',
   },
   headerTitle: { 
     fontSize: 32, 
@@ -282,7 +382,7 @@ const styles = StyleSheet.create({
     color: '#64748B', 
     marginTop: 4, 
     fontWeight: '400',
-    paddingLeft: 40, // Gi-align nato sa ilawom sa Friends nga text para nindot tan-awon
+    paddingLeft: 40,
   },
   formContainer: { 
     backgroundColor: '#FFFFFF', 
@@ -295,6 +395,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.03, 
     shadowRadius: 12, 
     marginBottom: 12
+  },
+  formContainerEdit: {
+    borderColor: 'rgb(59, 246, 131)', // Highlights form blue when editing
+    backgroundColor: '#f0fff1',
   },
   sectionTitle: { 
     fontSize: 16, 
@@ -338,24 +442,47 @@ const styles = StyleSheet.create({
     fontSize: 14, 
     color: '#0F172A'
   },
-  addBtn: { 
-    backgroundColor: '#10B981', 
+  formBtnGroup: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 4,
+    width: '100%',
+  },
+  btnBase: {
     padding: 14, 
     borderRadius: 12, 
     flexDirection: 'row', 
     justifyContent: 'center', 
     alignItems: 'center', 
-    gap: 8, 
-    marginTop: 4,
+    gap: 8,
+    flex: 1,
+  },
+  addBtn: { 
+    backgroundColor: '#10B981', 
     shadowColor: '#10B981',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
   },
+  saveBtn: {
+    backgroundColor: '#1bca4f',
+    shadowColor: '#1d8d27',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+  },
+  cancelBtn: {
+    backgroundColor: '#E2E8F0',
+  },
   addBtnText: { 
     color: '#FFFFFF', 
     fontSize: 15, 
     fontWeight: '600' 
+  },
+  cancelBtnText: {
+    color: '#475569',
+    fontSize: 15,
+    fontWeight: '600'
   },
   listContent: { 
     paddingHorizontal: 24,
@@ -400,6 +527,14 @@ const styles = StyleSheet.create({
     fontSize: 13, 
     color: '#64748B', 
     marginTop: 1 
+  },
+  actionRow: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  actionBtn: {
+    padding: 8,
+    borderRadius: 8,
   },
   centerBox: { 
     alignItems: 'center', 

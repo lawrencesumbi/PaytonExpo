@@ -1,7 +1,8 @@
 // app/(spenderTabs)/scan.tsx
 import { Ionicons } from '@expo/vector-icons';
-import { CameraView, useCameraPermissions } from 'expo-camera';
-import { useRouter } from 'expo-router';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import { CameraView, FlashMode, useCameraPermissions } from 'expo-camera';
+import { Stack, useRouter } from 'expo-router'; // 1. Added Stack import
 import { StatusBar } from 'expo-status-bar';
 import React, { useRef, useState } from 'react';
 import {
@@ -19,13 +20,18 @@ import {
 
 const { width } = Dimensions.get('window');
 
+const apiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY || '';
+const genAI = new GoogleGenerativeAI(apiKey);
+
 export default function ScanReceiptScreen() {
   const router = useRouter();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanning, setScanning] = useState(false);
+  const [flash, setFlash] = useState<FlashMode>('off');
+  const [torchOn, setTorchOn] = useState<boolean>(false);
   const cameraRef = useRef<any>(null);
 
-  // 1. EVALUATE & REQUEST ACTIVE DEVICE CAMERA PERMISSIONS
+  // Evaluate & Request Active Device Camera Permissions
   if (!permission) {
     return (
       <SafeAreaView style={[styles.fallbackContainer, styles.centerAlign]}>
@@ -53,13 +59,16 @@ export default function ScanReceiptScreen() {
     );
   }
 
-  // 2. CONTROLLER TO HANDLE SNAPSHOT AND TRIGGER OCR ENGINE
+  const toggleFlash = () => {
+    setTorchOn((prev) => !prev);
+    setFlash((current) => (current === 'off' ? 'on' : 'off'));
+  };
+
   const handleTakePicture = async () => {
     if (cameraRef.current && !scanning) {
       try {
         setScanning(true);
         
-        // Target high compression ratio to optimize base64 transmission network load
         const options = { quality: 0.5, base64: true, skipProcessing: false };
         const photo = await cameraRef.current.takePictureAsync(options);
 
@@ -67,99 +76,111 @@ export default function ScanReceiptScreen() {
           throw new Error("Unable to read valid image binary base64 data stream.");
         }
 
-        // Prepare multi-part structural form parameters for OCR Space Engine API
-        const formData = new FormData();
-        formData.append('base64Image', `data:image/jpg;base64,${photo.base64}`);
-        formData.append('language', 'eng');
-        formData.append('isOverlayRequired', 'false');
-        formData.append('filetype', 'JPG');
-
-        const response = await fetch('https://api.ocr.space/parse/image', {
-          method: 'POST',
-          headers: {
-            'apikey': 'helloworld', // Replace with a dedicated premium token key in production loops
-          },
-          body: formData,
+        const model = genAI.getGenerativeModel({ 
+          model: "gemini-2.5-flash",
+          generationConfig: {
+            responseMimeType: "application/json",
+          }
         });
 
-        const jsonResult = await response.json();
-        
-        if (jsonResult.OCRExitCode === 1) {
-          const parsedText = jsonResult.ParsedResults[0].ParsedText;
+        const prompt = `
+          Analyze this receipt image. Extract structural merchant properties and transaction balances.
+          If data is missing or unreadable, perform a logical fallback assumption.
           
-          // Execute regex filter matching to parse merchant titles and high decimal balances
-          const extractedInfo = parseReceiptText(parsedText);
+          Return a strict raw JSON matching this format:
+          {
+            "name": "string (Name of the merchant / store / establishment, max 25 characters)",
+            "amount": number (The total transaction value or total balance due as a numeric float value, do not include currency symbols)"
+          }
+        `;
 
-          Alert.alert(
-            "Scan Complete 🎉",
-            `Merchant: ${extractedInfo.name}\nAmount: ₱${extractedInfo.amount.toFixed(2)}`,
-            [
-              {
-                text: "Populate Form",
-                onPress: () => {
-                  router.push({
-                    pathname: '/expenses',
-                    params: { 
-                      scannedName: extractedInfo.name, 
-                      scannedAmount: extractedInfo.amount.toString() 
-                    }
-                  });
-                }
-              },
-              { text: "Try Again", style: "cancel" }
-            ]
-          );
-        } else {
-          Alert.alert("Scan Failed ❌", "Text clarity is insufficient. Please position the invoice in a well-lit area and retry.");
-        }
+        const imagePart = {
+          inlineData: {
+            data: photo.base64,
+            mimeType: "image/jpeg"
+          },
+        };
+
+        const result = await model.generateContent([prompt, imagePart]);
+        const responseText = result.response.text();
+        
+        const cleanJsonText = responseText.replace(/```json|```/g, '').trim();
+        const extractedInfo = JSON.parse(cleanJsonText);
+
+        Alert.alert(
+          "Scan Complete 🎉",
+          `Merchant: ${extractedInfo.name || 'Scanned Receipt'}\nAmount: ₱${Number(extractedInfo.amount || 0).toFixed(2)}`,
+          [
+            {
+              text: "Populate Form",
+              onPress: () => {
+                router.push({
+                  pathname: '/budget', 
+                  params: { 
+                    scannedName: extractedInfo.name || 'Scanned Receipt', 
+                    scannedAmount: (extractedInfo.amount || 0).toString() 
+                  }
+                });
+              }
+            },
+            { text: "Try Again", style: "cancel" }
+          ]
+        );
 
       } catch (error: any) {
-        Alert.alert("OCR Engine Error", "An error occurred while parsing the text structures: " + error.message);
+        console.error("Gemini Scan Error:", error);
+        Alert.alert(
+          "Scan Failed ❌", 
+          "Gemini could not read or structuralize the text nodes accurately. Make sure the receipt matches the green framing borders."
+        );
       } finally {
         setScanning(false);
       }
     }
   };
 
-  // 3. REGEX PATTERN MATCHING ALGORITHM FOR RECEIPT VALUATION
-  const parseReceiptText = (text: string): { name: string; amount: number } => {
-    const lines = text.split('\n');
-    let detectedAmount = 0.00;
-    let detectedName = "Scanned Receipt";
-
-    // Standardized expression capturing balance tokens and trailing float decimals
-    const amountRegex = /(?:total|amount|due|cash|php|p|₱)\s*[:=]?\s*([\d,]+\.\d{2})/i;
-
-    for (let line of lines) {
-      const match = line.match(amountRegex);
-      if (match) {
-        const cleanAmount = match[1].replace(/,/g, '');
-        const val = parseFloat(cleanAmount);
-        if (val > detectedAmount) {
-          detectedAmount = val; // Always prioritize the largest parsed transactional total
-        }
-      }
-    }
-
-    // Capture fallback descriptive tags from initial row if clear
-    if (lines.length > 0 && lines[0].trim().length > 3) {
-      detectedName = lines[0].trim().substring(0, 20); 
-    }
-
-    return { name: detectedName, amount: detectedAmount || 0 };
-  };
-
   return (
     <View style={styles.container}>
+      {/* 2. DYNAMICALLY HIDES THE BOTTOM TABS BAR */}
+      <Stack.Screen 
+        options={{
+          headerShown: false,
+          tabBarVisible: false, // Legacy fallback option
+          tabBarStyle: { display: 'none' } // Hides tab menu dock natively in modern Expo layouts
+        }} 
+      />
+
       <StatusBar style="light" />
       
-      {/* Immersive Camera Interface Canvas */}
-      <CameraView style={styles.camera} ref={cameraRef}>
-        
-        {/* Modern Clean Scanning Target Reticle Overlay */}
+      <CameraView 
+        style={styles.camera} 
+        ref={cameraRef} 
+        flash={flash}
+        enableTorch={torchOn}
+      >
         <View style={styles.overlayContainer}>
-          <View style={styles.safeTopHeaderSpacer}>
-            <Text style={styles.instructionText}>Align receipt within the frame</Text>
+          <View style={styles.topUtilityRow}>
+            <TouchableOpacity 
+              style={styles.utilityRoundButton} 
+              onPress={() => router.back()}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="close" size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+
+            <Text style={styles.instructionText}>Align receipt within frame</Text>
+
+            <TouchableOpacity 
+              style={[styles.utilityRoundButton, torchOn && styles.utilityButtonActive]} 
+              onPress={toggleFlash}
+              activeOpacity={0.7}
+            >
+              <Ionicons 
+                name={torchOn ? "flash" : "flash-off-outline"} 
+                size={20} 
+                color={torchOn ? "#10B981" : "#FFFFFF"} 
+              />
+            </TouchableOpacity>
           </View>
 
           <View style={styles.scanTargetBox} />
@@ -169,7 +190,6 @@ export default function ScanReceiptScreen() {
           </View>
         </View>
 
-        {/* Dynamic Context Control Trigger Pod */}
         <View style={styles.actionControlContainer}>
           {scanning ? (
             <View style={styles.loadingBlock}>
@@ -196,31 +216,48 @@ const styles = StyleSheet.create({
   fallbackContainer: { flex: 1, backgroundColor: '#FAFBFD' },
   centerAlign: { justifyContent: 'center', alignItems: 'center' },
   camera: { flex: 1 },
-  
-  // Immersive Finder Mask
+  topUtilityRow: {
+    flexDirection: 'row',
+    width: '100%',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: Platform.OS === 'android' ? (NativeStatusBar.currentHeight ? NativeStatusBar.currentHeight + 20 : 40) : 60, 
+  },
+  utilityRoundButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(30, 41, 59, 0.7)', 
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)'
+  },
+  utilityButtonActive: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#10B981'
+  },
   overlayContainer: { 
     flex: 1, 
     justifyContent: 'space-between', 
     alignItems: 'center', 
-    backgroundColor: 'rgba(15, 23, 42, 0.45)', // Rich slate cinematic shading tint
-    paddingHorizontal: 24 
-  },
-  safeTopHeaderSpacer: { 
-    marginTop: Platform.OS === 'android' ? NativeStatusBar.currentHeight ? NativeStatusBar.currentHeight + 30 : 50 : 64, 
-    alignItems: 'center' 
+    backgroundColor: 'rgba(15, 23, 42, 0.45)', 
+    paddingHorizontal: 20 
   },
   instructionText: { 
     color: '#FFFFFF', 
-    fontSize: 16, 
+    fontSize: 15, 
     fontWeight: '600', 
     textAlign: 'center',
-    letterSpacing: -0.3
+    letterSpacing: -0.3,
+    flex: 1,
+    marginHorizontal: 10
   },
   scanTargetBox: { 
     width: width * 0.78, 
     height: width * 1.15, 
     borderWidth: 2, 
-    borderColor: '#10B981', // Clean modern Emerald green frame
+    borderColor: '#10B981', 
     borderRadius: 24, 
     backgroundColor: 'transparent' 
   },
@@ -231,14 +268,12 @@ const styles = StyleSheet.create({
     textAlign: 'center', 
     fontWeight: '500' 
   },
-  
-  // Tactical Bottom Controls Bar
   actionControlContainer: { 
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(15, 23, 42, 0.85)', // Sleek blurred-dock appearance style
+    backgroundColor: 'rgba(15, 23, 42, 0.85)', 
     paddingTop: 24,
     paddingBottom: Platform.OS === 'ios' ? 44 : 32, 
     alignItems: 'center', 
@@ -259,11 +294,8 @@ const styles = StyleSheet.create({
     borderRadius: 28, 
     backgroundColor: '#10B981' 
   },
-  
   loadingBlock: { alignItems: 'center', flexDirection: 'row', gap: 10 },
   loadingText: { color: '#FFFFFF', fontSize: 14, fontWeight: '500', letterSpacing: -0.1 },
-  
-  // Permission Core Layout System
   permissionIconCircle: { 
     width: 64, 
     height: 64, 

@@ -350,7 +350,7 @@ export default function SpenderProfileScreen() {
           {isLoggingOut ? (
             <ActivityIndicator size="small" color="#EF4444" />
           ) : (
-            <Text style={styles.modernLogoutText}>Disconnect Account</Text>
+            <Text style={styles.modernLogoutText}>Log Out</Text>
           )}
         </TouchableOpacity>
       </ScrollView>

@@ -1,14 +1,18 @@
 // app/(spenderTabs)/_layout.tsx
 import { Ionicons } from '@expo/vector-icons';
-import { Tabs, useRouter, usePathname } from 'expo-router'; // Gidugang ang useRouter ug usePathname
-import { Platform, StyleSheet, View, TouchableOpacity } from 'react-native'; // Gidugang ang TouchableOpacity
+import { Tabs, usePathname, useRouter } from 'expo-router';
+import { Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 export default function SpenderLayout() {
   const router = useRouter();
   const pathname = usePathname();
 
-  // I-check nato kung ang kasamtangan nga selyo/screen kay ang chat ba
+  // I-check kung ang kasamtangan nga screen kay chat o scan ba
   const isChatScreen = pathname === '/chat' || pathname.includes('chat');
+  const isScanScreen = pathname === '/scan' || pathname.includes('scan');
+
+  // Itago ang AI FAB ug ang tibuok Tab Bar kung naa sa chat OR scan screen
+  const shouldHideAiButton = isChatScreen || isScanScreen;
 
   return (
     <>
@@ -24,6 +28,9 @@ export default function SpenderLayout() {
             marginBottom: Platform.OS === 'ios' ? 0 : 8,
           },
           tabBarStyle: {
+            // ----- KINI NGA LINYA ANG MAG-TAGO SA TABS -----
+            display: shouldHideAiButton ? 'none' : 'flex', 
+            
             backgroundColor: '#FFFFFF',
             height: Platform.OS === 'ios' ? 88 : 64, // Saktong gitas-on para sa safe device area
             paddingTop: 8,
@@ -113,7 +120,7 @@ export default function SpenderLayout() {
       </Tabs>
 
       {/* ----------------- FLOATING AI COACH BUTTON (FAB) ----------------- */}
-      {!isChatScreen && (
+      {!shouldHideAiButton && (
         <TouchableOpacity 
           style={styles.floatingAiButton} 
           onPress={() => router.push('/chat')} 

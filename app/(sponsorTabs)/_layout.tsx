@@ -1,7 +1,7 @@
  // app/(sponsorTabs)/_layout.tsx
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
-import { Platform, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 export default function SponsorTabsLayout() {
   return (

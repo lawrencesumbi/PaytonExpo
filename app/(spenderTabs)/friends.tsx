@@ -444,8 +444,9 @@ const styles = StyleSheet.create({
   },
   formBtnGroup: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 10,
     marginTop: 4,
+    width: '100%',
   },
   btnBase: {
     padding: 14, 
@@ -454,25 +455,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center', 
     alignItems: 'center', 
     gap: 8,
+    flex: 1,
   },
   addBtn: { 
     backgroundColor: '#10B981', 
-    width: '100%',
     shadowColor: '#10B981',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
   },
   saveBtn: {
-    backgroundColor: '#1ecf53',
-    shadowColor: '#259c2f',
+    backgroundColor: '#1bca4f',
+    shadowColor: '#1d8d27',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
   },
   cancelBtn: {
     backgroundColor: '#E2E8F0',
-    paddingHorizontal: 20,
   },
   addBtnText: { 
     color: '#FFFFFF', 

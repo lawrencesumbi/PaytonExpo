@@ -1,14 +1,18 @@
 // app/(spenderTabs)/split.tsx
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router'; // 1. Gidugang para sa navigation
+import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react'; // 1. Gidugang ang useCallback
 import {
   ActivityIndicator,
   Alert,
   FlatList,
   Modal,
   Platform,
+  RefreshControl // 2. Gidugang ang RefreshControl
+  ,
+
+
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -54,9 +58,10 @@ interface ActiveSplit {
 }
 
 export default function SplitExpenseScreen() {
-  const router = useRouter(); // 2. Gi-initialize ang router
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [refreshing, setRefreshing] = useState(false); // 3. State para sa Pull-to-Refresh
   
   const [friends, setFriends] = useState<Friend[]>([]);
   const [budgets, setBudgets] = useState<UserBudget[]>([]);
@@ -73,9 +78,15 @@ export default function SplitExpenseScreen() {
   const [currentSplitToSettle, setCurrentSplitToSettle] = useState<ActiveSplit | null>(null);
 
   // DATASET SYNCHRONIZATION
-  const fetchData = async () => {
+  // Giusab aron modawat og parameter kung refresh ba aron hapsay ang loading triggers
+  const fetchData = async (isRefreshing = false) => {
     try {
-      setLoading(true);
+      if (isRefreshing) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
@@ -110,8 +121,14 @@ export default function SplitExpenseScreen() {
       console.error('Error compiling metrics:', error.message);
     } finally {
       setLoading(false);
+      setRefreshing(false); // Siguraduhong ma-off ang loading icon sa pull down
     }
   };
+
+  // 4. Function nga tawgon inig pull down sa user
+  const onRefresh = useCallback(() => {
+    fetchData(true);
+  }, []);
 
   const toggleFriendSelection = (id: string) => {
     if (selectedFriendIds.includes(id)) {
@@ -254,26 +271,37 @@ export default function SplitExpenseScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
-      
       {/* Header Block with Friends Button */}
       <View style={styles.header}>
         <View style={styles.headerMainRow}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.headerTitle}>Split Expense</Text>
+            <Text style={styles.headerTitle}>Split the Bill</Text>
           </View>
-          {/* 3. Friends Icon Button */}
           <TouchableOpacity 
             style={styles.friendsBtn} 
-            onPress={() => router.push('/friends')} // i-adjust ang path depende sa exact location sa imong friends.tsx (e.g., '../friends' o '/(spenderTabs)/friends')
+            onPress={() => router.push('/friends')} 
             activeOpacity={0.7}
           >
-            <Ionicons name="people-outline" size={22} color="#10B981" />
+            <Ionicons name="people-outline" size={22} color="#0d9e8b" />
           </TouchableOpacity>
         </View>
         <Text style={styles.headerSubtext}>Divide balances and coordinate group payouts seamlessly.</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+      {/* 5. Gidugang ang RefreshControl sa ScrollView */}
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent} 
+        keyboardShouldPersistTaps="handled" 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh} 
+            colors={['#10B981']} // Android spinner color
+            tintColor="#10B981"  // iOS spinner color
+          />
+        }
+      >
         {/* Input Details */}
         <View style={styles.mainCard}>
           <Text style={styles.sectionTitle}>Expense Details</Text>
@@ -371,7 +399,7 @@ export default function SplitExpenseScreen() {
                       </TouchableOpacity>
                     ) : (
                       <View style={styles.fullySettledBadge}>
-                        <Ionicons name="checkmark-circle" size={16} color="#10B981" />
+                        <Ionicons name="checkmark-circle" size={16} color="#9cf5f5" />
                         <Text style={styles.fullySettledText}>Settled</Text>
                       </View>
                     )}
@@ -413,7 +441,7 @@ export default function SplitExpenseScreen() {
                     </TouchableOpacity>
                   ) : (
                     <View style={styles.memberPaidBadge}>
-                      <Ionicons name="checkmark" size={14} color="#10B981" />
+                      <Ionicons name="checkmark" size={14} color="#04ad97" />
                       <Text style={styles.memberPaidText}>Paid</Text>
                     </View>
                   )}
@@ -427,10 +455,15 @@ export default function SplitExpenseScreen() {
   );
 }
 
+
+
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
     backgroundColor: '#F8FAFC' 
+  },
+  gradient: {
+    flex: 1,
   },
   header: { 
     paddingHorizontal: 24, 
@@ -444,10 +477,14 @@ const styles = StyleSheet.create({
   },
   friendsBtn: {
     padding: 8,
-    backgroundColor: '#E6F4EA',
+    backgroundColor: '#ffffff',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#A7F3D0',
+    borderColor: '#05627e',
+    elevation: 15,
+    shadowColor: "#617c7c",
+    shadowOpacity: 0.04,
+    shadowRadius: 5,
   },
   headerTitle: { 
     fontSize: 32, 
@@ -471,13 +508,13 @@ const styles = StyleSheet.create({
     padding: 20, 
     borderRadius: 20, 
     borderWidth: 1, 
-    borderColor: '#E2E8F0', 
+    borderColor: '#108d87', 
     marginBottom: 16,
     shadowColor: '#0F172A', 
     shadowOffset: { width: 0, height: 2 }, 
     shadowOpacity: 0.02, 
     shadowRadius: 12, 
-    
+    elevation: 8,
   },
   sectionTitle: { 
     fontSize: 16, 
@@ -495,12 +532,13 @@ const styles = StyleSheet.create({
   },
   input: { 
     borderWidth: 1, 
-    borderColor: '#E2E8F0', 
+    borderColor: '#000000', 
     padding: 12, 
     borderRadius: 12, 
     backgroundColor: '#F8FAFC', 
     fontSize: 15, 
-    color: '#0F172A' 
+    color: '#0F172A',
+    elevation: 5,
   },
   categoryContainer: { 
     flexDirection: 'row', 
@@ -561,7 +599,7 @@ const styles = StyleSheet.create({
     alignItems: 'center' 
   },
   checkboxChecked: { 
-    backgroundColor: '#10B981', 
+    backgroundColor: '#10b9b9', 
     borderColor: '#10B981' 
   },
   friendName: { 
@@ -587,18 +625,19 @@ const styles = StyleSheet.create({
     flex: 1 
   },
   submitBtn: { 
-    backgroundColor: '#10B981', 
+    backgroundColor: '#305c5c', 
     padding: 16, 
-    borderRadius: 14, 
+    borderRadius: 30, 
     flexDirection: 'row', 
     justifyContent: 'center', 
-    alignItems: 'center', 
+    alignItems: 'center',
+    borderColor: '#000000', 
     gap: 8,
     shadowColor: '#10B981',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 10,
-    
+    elevation: 5,
   },
   submitBtnText: { 
     color: '#FFFFFF', 

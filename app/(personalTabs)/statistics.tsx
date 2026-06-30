@@ -4,15 +4,15 @@ import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    FlatList,
-    StatusBar as NativeStatusBar,
-    Platform,
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  FlatList,
+  StatusBar as NativeStatusBar,
+  Platform,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { Circle, Path, Svg } from 'react-native-svg';
 import { supabase } from '../../lib/supabase';
@@ -47,10 +47,23 @@ export default function StatisticsScreen() {
       if (!user) return;
 
       let dateLimit = new Date();
-      if (selectedPeriod === 'Day') dateLimit.setDate(dateLimit.getDate() - 1);
-      else if (selectedPeriod === 'Week') dateLimit.setDate(dateLimit.getDate() - 7);
-      else if (selectedPeriod === 'Month') dateLimit.setMonth(dateLimit.getMonth() - 1);
-      else if (selectedPeriod === 'Year') dateLimit.setFullYear(dateLimit.getFullYear() - 1);
+      // I-reset ang oras ngadto sa pinakasugod sa adlaw (12:00 AM / 00:00:00)
+      dateLimit.setHours(0, 0, 0, 0);
+
+      if (selectedPeriod === 'Day') {
+        // Sugod karong adlawa ra gyud. Walay minusan nga adlaw aron dili maapil ang kagahapon.
+      } else if (selectedPeriod === 'Week') {
+        // Sugod sa adlaw nga DOMINGGO niining kasamtangan nga semana
+        const currentDay = dateLimit.getDay(); // 0 = Sunday, 1 = Monday, etc.
+        dateLimit.setDate(dateLimit.getDate() - currentDay);
+      } else if (selectedPeriod === 'Month') {
+        // Sugod sa Unang Adlaw (Day 1) niining bulana ra gyud
+        dateLimit.setDate(1);
+      } else if (selectedPeriod === 'Year') {
+        // Sugod sa Enero 1 niining kasamtangan nga tuig
+        dateLimit.setMonth(0);
+        dateLimit.setDate(1);
+      }
 
       const { data, error } = await supabase
         .from('expenses')
@@ -185,13 +198,12 @@ export default function StatisticsScreen() {
         ))}
       </View>
 
-      {/* MODERNIZED & COMPACT TOTAL SPENDINGS CONTAINER */}
+      {/* TOTAL SPENDINGS CONTAINER */}
       <View style={styles.spendingContainer}>
         <Text style={styles.spendingLabel}>TOTAL SPENDINGS</Text>
         <Text style={styles.spendingAmount}>
           ₱{totalSpendings.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </Text>
-        {/* Subtle insight indicator para dali masabtan ang context sa data */}
         <View style={styles.trendBadge}>
           <Ionicons name="trending-up" size={12} color="#EF4444" />
           <Text style={styles.trendText}>+12.4% {currentActive.trendText}</Text>
@@ -211,7 +223,6 @@ export default function StatisticsScreen() {
             <Circle cx={currentActive.circleCX} cy={currentActive.circleCY} r="5.5" fill="#FFFFFF" />
           </Svg>
           
-          {/* Tooltip gikan sa stat.png layout */}
           <View style={[styles.tooltipContainer, { left: currentActive.tooltipLeft }]}>
             <View style={[styles.tooltipArrow, { borderBottomColor: currentActive.activeColor }]} />
             
@@ -316,8 +327,6 @@ const styles = StyleSheet.create({
   tabButton: { flex: 1, paddingVertical: 9, alignItems: 'center', borderRadius: 20 },
   tabText: { color: 'rgba(255,255,255,0.4)', fontWeight: '600', fontSize: 13 },
   activeTabText: { color: '#061F1A', fontWeight: '700' },
-  
-  // MODERNISED SPENDING AREA STYLES
   spendingContainer: { 
     alignItems: 'center', 
     marginTop: 20, 
@@ -328,11 +337,11 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.4)', 
     fontSize: 11, 
     fontWeight: '700',
-    letterSpacing: 1 // Gipa-spaced gamay para premium look
+    letterSpacing: 1 
   },
   spendingAmount: { 
     color: '#FFFFFF', 
-    fontSize: 32, // Gidala gikan sa 36 paubos para compact ug clean
+    fontSize: 32, 
     fontWeight: '800', 
     marginTop: 4, 
     letterSpacing: -0.8 
@@ -340,7 +349,7 @@ const styles = StyleSheet.create({
   trendBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(239, 68, 68, 0.1)', // Subtle red transparent pill
+    backgroundColor: 'rgba(239, 68, 68, 0.1)', 
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 12,
@@ -352,7 +361,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600'
   },
-  
   graphSectionWrapper: {
     marginVertical: 10,
     position: 'relative'
@@ -411,7 +419,6 @@ const styles = StyleSheet.create({
   xAxisLabelGroup: { flexDirection: 'column' },
   xAxisLabelTop: { color: 'rgba(255,255,255,0.35)', fontSize: 10, fontWeight: '600', letterSpacing: 0.5 },
   xAxisLabelBottom: { color: 'rgba(255,255,255,0.35)', fontSize: 11, fontWeight: '600', marginTop: 2, textAlign: 'center' },
-  
   historyContainer: {
     flex: 1,
     backgroundColor: '#FFFFFF',

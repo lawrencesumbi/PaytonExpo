@@ -35,7 +35,7 @@ export default function ChatCoachScreen() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      text: 'Aloha bay! Ako imong AI Financial Coach. Pwede nimo i-log imong gasto (e.g., "Nipalit kog kape tag 180") o mangutana ka bahin sa imong kwarta (e.g., "Pila na akong nagasto karong semanaha?"). I-chat lang diri bay!',
+      text: 'Hey buddy! I am your AI Financial Coach. You can log an expense (e.g., "Bought coffee for 180") or ask questions about your money (e.g., "How much did I spend this week?"). Just chat with me here!',
       sender: 'bot',
       timestamp: new Date(),
     },
@@ -54,7 +54,7 @@ export default function ChatCoachScreen() {
       timestamp: new Date(),
     };
 
-    setMessages((prev) => [...prev, userMsg]);
+  	setMessages((prev) => [...prev, userMsg]);
     const currentInput = inputText;
     setInputText('');
     setIsLoading(true);
@@ -64,14 +64,14 @@ export default function ChatCoachScreen() {
     try {
       if (!apiKey) throw new Error("Missing EXPO_PUBLIC_GEMINI_API_KEY in .env");
 
-      // 🔑 Kuhaa ang kasamtangang authenticated user
+      // 🔑 Get the current authenticated user
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("No authenticated user found");
 
-      // 📅 Pagkuha sa sugod nga adlaw sa kasamtangang bulan
+      // 📅 Get the start date of the current month
       const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
       
-      // 📊 STEP A: Fetch expenses gamit ang relational inner join sa budgets table (para ma-filter sa user.id)
+      // 📊 STEP A: Fetch expenses using a relational inner join with the budgets table (to filter by user.id)
       const { data: userExpenses, error: expensesError } = await supabase
         .from('expenses')
         .select(`
@@ -92,10 +92,10 @@ export default function ChatCoachScreen() {
       if (expensesError) {
         console.error("❌ Supabase Expenses Fetch Error:", expensesError.message);
       } else {
-        console.log("📊 Pila kabuok expenses ang nakuha:", userExpenses?.length);
+        console.log("📊 Total expenses fetched:", userExpenses?.length);
       }
 
-      // 📊 STEP B: Fetch budgets para makita ang allocation ug limit sa mga kategorya
+      // 📊 STEP B: Fetch budgets to view allocation and limits per category
       const { data: userBudgets, error: budgetsError } = await supabase
         .from('budgets')
         .select(`
@@ -131,12 +131,12 @@ export default function ChatCoachScreen() {
         DIRECTIONS FOR "ASK_INSIGHT":
         - Analyze the provided FINANCIAL DATA CONTEXT to answer the user's question accurately.
         - Do the math (summing, comparing, checking balance) based on the context data.
-        - Answer directly, warmly, and encouragingly in Bisaya/Cebuano language. Use standard conversational words (e.g., "bay", "gasto", "nabilin").
+        - Answer directly, warmly, and encouragingly in English.
 
         Return a strict raw JSON matching this schema:
         {
           "intent": "LOG_EXPENSE" or "ASK_INSIGHT",
-          "reply": "Ang imong tubag sa user sa Bisaya/Cebuano.",
+          "reply": "Your response to the user in English.",
           
           // Only required if intent is LOG_EXPENSE:
           "amount": number (numeric float value, no currency symbols),
@@ -153,11 +153,11 @@ export default function ChatCoachScreen() {
 
       let savedDataToDisplay = undefined;
 
-      // 💾 KONDISYON: Kon ang tuyo sa user kay mag-LOG ug gasto
+      // 💾 CONDITION: If the user intends to LOG an expense
       if (extractedData.intent === 'LOG_EXPENSE' && extractedData.amount > 0) {
         let targetBudgetId = null;
 
-        // STEP 1: I-match ang ngalan sa kategorya
+        // STEP 1: Match the category name
         const { data: categoryData } = await supabase
           .from('categories')
           .select('id')
@@ -165,7 +165,7 @@ export default function ChatCoachScreen() {
           .maybeSingle();
 
         if (categoryData) {
-          // STEP 2: Pangitaa ang active budget sa user alang sa maong kategorya
+          // STEP 2: Find the user's active budget for that category
           const { data: budgetData } = await supabase
             .from('budgets')
             .select('id')
@@ -178,15 +178,15 @@ export default function ChatCoachScreen() {
           }
         }
 
-        // STEP 3: Isulod na sa expenses table (Gi-set nato og null ang user_id kon gusto nimo i-rely ra sa budget relasyon, apan mas maayo i-pasa gihapon ang user.id para double protection!)
+        // STEP 3: Insert into the expenses table
         const { error: insertError } = await supabase
           .from('expenses')
           .insert([
             {
-              user_id: user.id, // Gi-apil nato para dili na mag-NULL sa sunod logs
+              user_id: user.id, 
               budget_id: targetBudgetId,
               amount: Number(extractedData.amount || 0),
-              description: extractedData.description || 'Gasto gikan sa AI Chat',
+              description: extractedData.description || 'Expense from AI Chat',
               spent_at: new Date().toISOString()
             },
           ]);
@@ -203,7 +203,7 @@ export default function ChatCoachScreen() {
         }
       }
 
-      // 💬 I-update ang chat UI gamit ang tubag gikan sa AI
+      // 💬 Update the chat UI with the response from the AI
       const botReply: Message = {
         id: Date.now().toString(),
         text: extractedData.reply, 
@@ -218,7 +218,7 @@ export default function ChatCoachScreen() {
       console.error("🚨 General Chat Flow Error:", error);
       const errorReply: Message = {
         id: Date.now().toString(),
-        text: 'Pasayloa ko bay, medyo naglisod kog analyze sa imong data karon. Pwede nimo sulayan pag-usab?',
+        text: "I'm sorry, buddy. I had a bit of trouble analyzing your data just now. Could you please try again?",
         sender: 'bot',
         timestamp: new Date(),
       };
@@ -240,7 +240,7 @@ export default function ChatCoachScreen() {
           <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>AI FinCoach</Text>
-        <Text style={styles.headerSubtitle}>Online • Imong Kaabag sa Kwarta</Text>
+        <Text style={styles.headerSubtitle}>Online • Your Money Assistant</Text>
       </View>
 
       {/* CHAT MESSAGES LIST */}
@@ -255,18 +255,18 @@ export default function ChatCoachScreen() {
             <View style={[styles.messageBubble, item.sender === 'user' ? styles.userBubble : styles.botBubble]}>
               <Text style={item.sender === 'user' ? styles.userText : styles.botText}>{item.text}</Text>
 
-              {/* DYNAMIC EXPENSE CARD (Mo-pakita lang kung nag-log og gasto) */}
+              {/* DYNAMIC EXPENSE CARD (Shows up only when logging an expense) */}
               {item.extractedData && item.extractedData.amount > 0 && (
                 <View style={styles.dataCard}>
                   <View style={styles.dataRow}>
                     <Ionicons name="checkmark-circle" size={16} color="#10B981" />
-                    <Text style={styles.dataCardTitle}>Gi-log ug Gi-save Na Bay!</Text>
+                    <Text style={styles.dataCardTitle}>Logged and Saved, Buddy!</Text>
                   </View>
                   <Text style={styles.dataDetails}>
                     ₱{item.extractedData.amount} • {item.extractedData.category}
                   </Text>
                   <TouchableOpacity style={styles.viewBtn} onPress={() => router.push('/transaction')}>
-                    <Text style={styles.viewBtnText}>Tan-awon sa Records</Text>
+                    <Text style={styles.viewBtnText}>View Records</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -279,7 +279,7 @@ export default function ChatCoachScreen() {
       {isLoading && (
         <View style={styles.loadingWrapper}>
           <ActivityIndicator size="small" color="#005B60" />
-          <Text style={styles.loadingText}>Nag-analisar sa imong kwarta, bay...</Text>
+          <Text style={styles.loadingText}>Analyzing your finances, buddy...</Text>
         </View>
       )}
 
@@ -287,7 +287,7 @@ export default function ChatCoachScreen() {
       <View style={styles.inputContainer}>
         <TextInput
           style={styles.input}
-          placeholder="Pangutana o i-log imong gasto diri, bay..."
+          placeholder="Ask a question or log your expense here..."
           placeholderTextColor="#A0AEC0"
           value={inputText}
           onChangeText={setInputText}

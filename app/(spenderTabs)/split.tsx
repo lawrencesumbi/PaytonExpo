@@ -1,21 +1,24 @@
 // app/(spenderTabs)/split.tsx
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router'; // 1. Gidugang para sa navigation
+import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react'; // 1. Gidugang ang useCallback
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    Modal,
-    Platform,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Modal,
+  Platform,
+  RefreshControl // 2. Gidugang ang RefreshControl
+  ,
+
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { supabase } from '../../lib/supabase';
 
@@ -54,9 +57,10 @@ interface ActiveSplit {
 }
 
 export default function SplitExpenseScreen() {
-  const router = useRouter(); // 2. Gi-initialize ang router
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [refreshing, setRefreshing] = useState(false); // 3. State para sa Pull-to-Refresh
   
   const [friends, setFriends] = useState<Friend[]>([]);
   const [budgets, setBudgets] = useState<UserBudget[]>([]);
@@ -73,9 +77,15 @@ export default function SplitExpenseScreen() {
   const [currentSplitToSettle, setCurrentSplitToSettle] = useState<ActiveSplit | null>(null);
 
   // DATASET SYNCHRONIZATION
-  const fetchData = async () => {
+  // Giusab aron modawat og parameter kung refresh ba aron hapsay ang loading triggers
+  const fetchData = async (isRefreshing = false) => {
     try {
-      setLoading(true);
+      if (isRefreshing) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
@@ -110,8 +120,14 @@ export default function SplitExpenseScreen() {
       console.error('Error compiling metrics:', error.message);
     } finally {
       setLoading(false);
+      setRefreshing(false); // Siguraduhong ma-off ang loading icon sa pull down
     }
   };
+
+  // 4. Function nga tawgon inig pull down sa user
+  const onRefresh = useCallback(() => {
+    fetchData(true);
+  }, []);
 
   const toggleFriendSelection = (id: string) => {
     if (selectedFriendIds.includes(id)) {
@@ -260,7 +276,6 @@ export default function SplitExpenseScreen() {
           <View style={{ flex: 1 }}>
             <Text style={styles.headerTitle}>Split the Bill</Text>
           </View>
-          {/* 3. Friends Icon Button */}
           <TouchableOpacity 
             style={styles.friendsBtn} 
             onPress={() => router.push('/friends')} 
@@ -272,7 +287,20 @@ export default function SplitExpenseScreen() {
         <Text style={styles.headerSubtext}>Divide balances and coordinate group payouts seamlessly.</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+      {/* 5. Gidugang ang RefreshControl sa ScrollView */}
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent} 
+        keyboardShouldPersistTaps="handled" 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh} 
+            colors={['#10B981']} // Android spinner color
+            tintColor="#10B981"  // iOS spinner color
+          />
+        }
+      >
         {/* Input Details */}
         <View style={styles.mainCard}>
           <Text style={styles.sectionTitle}>Expense Details</Text>
@@ -425,6 +453,8 @@ export default function SplitExpenseScreen() {
     </SafeAreaView>
   );
 }
+
+
 
 const styles = StyleSheet.create({
   container: { 
