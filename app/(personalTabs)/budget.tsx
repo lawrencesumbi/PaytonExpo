@@ -4,22 +4,22 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  Keyboard,
-  KeyboardAvoidingView,
-  Modal,
-  StatusBar as NativeStatusBar,
-  Platform,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-  View
+    ActivityIndicator,
+    Alert,
+    FlatList,
+    Keyboard,
+    KeyboardAvoidingView,
+    Modal,
+    StatusBar as NativeStatusBar,
+    Platform,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    TouchableWithoutFeedback,
+    View
 } from 'react-native';
 import { supabase } from '../../lib/supabase';
 
@@ -165,10 +165,13 @@ export default function SpenderExpensesScreen() {
     }
   };
 
-  const handleCardPress = (item: BudgetOption) => {
-    setSelectedBudget(item);
-    setIsModalOpen(true);
-  };
+   const handleCardPress = (item: BudgetOption) => {
+  // Pass the full budget object to the dashboard
+  router.push({
+      pathname: '/(personalTabs)/category-dashboard',
+      params: { budgetData: JSON.stringify(item) }
+   });
+};
 
   if (loading && budgets.length === 0) {
     return (

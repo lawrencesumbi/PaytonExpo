@@ -7,7 +7,6 @@ import {
   Alert,
   Modal,
   Platform,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,6 +14,8 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+// Gi-import nato kini para sa saktong padding sa ibabaw sa screen
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
 
 interface Expense {
@@ -24,8 +25,11 @@ interface Expense {
   spent_at: string;
 }
 
-export default function BudgetCategoryDetailsScreen() {
+// Gi-separate nato ang Main Content para magamit ang useSafeAreaInsets sa sulod
+function BudgetCategoryDetailsContent() {
   const router = useRouter();
+  const insets = useSafeAreaInsets(); // Kani ang mokuha sa saktong sukod sa ibabaw sa screen
+  
   const params = useLocalSearchParams<{
     budgetId: string;
     categoryName: string;
@@ -35,14 +39,12 @@ export default function BudgetCategoryDetailsScreen() {
     remainingAmount: string;
   }>();
 
-  // State Updates
   const [loading, setLoading] = useState(true);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [filteredExpenses, setFilteredExpenses] = useState<Expense[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [totalSpent, setTotalSpent] = useState(0);
 
-  // Bag-ong mga States para sa Modal ug Form Inputs
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [expenseDescription, setExpenseDescription] = useState('');
   const [expenseAmount, setExpenseAmount] = useState('');
@@ -79,7 +81,6 @@ export default function BudgetCategoryDetailsScreen() {
     fetchExpenses();
   }, [fetchExpenses]);
 
-  // Submit Handler para sa bag-ong Expense
   const handleAddExpense = async () => {
     if (!expenseDescription.trim() || !expenseAmount.trim()) {
       Alert.alert("Missing Info", "Please fill in all fields.");
@@ -108,12 +109,10 @@ export default function BudgetCategoryDetailsScreen() {
 
       if (error) throw error;
 
-      // I-reset ang porma ug i-close ang modal
       setExpenseDescription('');
       setExpenseAmount('');
       setIsModalVisible(false);
       
-      // I-refresh ang listahan sa transactions
       fetchExpenses();
       Alert.alert("Success", "Expense added successfully!");
     } catch (error: any) {
@@ -163,19 +162,25 @@ export default function BudgetCategoryDetailsScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, styles.centeredContent]}>
+      <View style={[styles.container, styles.centeredContent]}>
         <StatusBar style="dark" />
         <ActivityIndicator size="large" color={themeColor} />
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    // Gi-apil ang dynamic padding sa container gamit ang insets.bottom para sa ubos
+    <View style={[styles.container, { paddingBottom: insets.bottom }]}>
       <StatusBar style="dark" />
 
-      {/* Header Section */}
-      <View style={styles.header}>
+      {/* HEADER SECTION WITH DYNAMIC INSET PADDING 
+        Gidugangan og insets.top aron automatic manaog kon naay notch o status bar ang phone
+      */}
+      <View style={[
+        styles.header, 
+        { paddingTop: Platform.OS === 'android' ? insets.top + 16 : insets.top + 10 }
+      ]}>
         <TouchableOpacity 
           activeOpacity={0.7}
           onPress={() => router.replace('/(spenderTabs)/budget')}
@@ -188,7 +193,6 @@ export default function BudgetCategoryDetailsScreen() {
           <Text style={styles.headerTitle} numberOfLines={1}>{params.categoryName || 'Category'}</Text>
         </View>
 
-        {/* MOPAKITA NA ANG MODAL KON PISLITON KINI */}
         <TouchableOpacity
           activeOpacity={0.7}
           onPress={() => setIsModalVisible(true)}
@@ -299,7 +303,7 @@ export default function BudgetCategoryDetailsScreen() {
         )}
       </ScrollView>
 
-      {/* ==================== ADD EXPENSE MODAL COMPONENT ==================== */}
+      {/* ADD EXPENSE MODAL COMPONENT */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -308,7 +312,6 @@ export default function BudgetCategoryDetailsScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            {/* Modal Header */}
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Add New Expense</Text>
               <TouchableOpacity 
@@ -319,7 +322,6 @@ export default function BudgetCategoryDetailsScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Form Fields */}
             <View style={styles.modalForm}>
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Description</Text>
@@ -344,7 +346,6 @@ export default function BudgetCategoryDetailsScreen() {
                 />
               </View>
 
-              {/* Submit Button */}
               <TouchableOpacity 
                 activeOpacity={0.8}
                 style={[styles.submitButton, { backgroundColor: themeColor }]}
@@ -361,7 +362,16 @@ export default function BudgetCategoryDetailsScreen() {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
+  );
+}
+
+// Wrapper aron masiguro nga naay SafeAreaProvider ang tibuok screen context
+export default function BudgetCategoryDetailsScreen() {
+  return (
+    <SafeAreaProvider>
+      <BudgetCategoryDetailsContent />
+    </SafeAreaProvider>
   );
 }
 
@@ -379,8 +389,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 24,
-    paddingTop: Platform.OS === 'android' ? 16 : 12,
-    paddingBottom: 16,
+    paddingBottom: 16, // Gi-remove ang hardcoded paddingTop kay dynamic na sa taas
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
@@ -617,12 +626,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 18,
   },
-  
-  /* Modal Styling Added Here */
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.4)', // semi-transparent neutral background
-    justifyContent: 'flex-end', // transitions the modal from the bottom up
+    backgroundColor: 'rgba(15, 23, 42, 0.4)',
+    justifyContent: 'flex-end',
   },
   modalContent: {
     backgroundColor: '#FFFFFF',
@@ -630,7 +637,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 28,
     paddingHorizontal: 24,
     paddingTop: 24,
-    paddingBottom: Platform.OS === 'ios' ? 40 : 28, // handles device notch padding
+    paddingBottom: Platform.OS === 'ios' ? 40 : 28,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.1,
